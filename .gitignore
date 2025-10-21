@@ -243,46 +243,151 @@ cython_debug/
 
 # pdm
 #   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
-#   pdm stores project-wide configurations in .pdm.toml, but it is recommended to not include it
-#   in version control.
-#   https://pdm.fming.dev/#use-with-ide
+# ==============================================
+# FRONTEND – React (Vite / TypeScript)
+# ==============================================
 
-# PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
+# Dependencies
+node_modules/
 
-# Celery stuff
+# Build output
+dist/
+build/
 
-# SageMath parsed files
+# Local environment files
+.env
+.env.*
+!.env.example
 
-# Environments
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
-# Spyder project settings
+# Editor / IDE
+.idea/
+.vscode/
+.DS_Store
 
-# Rope project settings
+# Testing / coverage
+coverage/
+vitest.config.*
+*.test.*
+*.spec.*
 
-# mkdocs documentation
+# ==============================================
+# BACKEND – Django / Python
+# ==============================================
 
-# mypy
+# Python bytecode / cache
+__pycache__/
+*.py[cod]
+*$py.class
 
-# Pyre type checker
+# Virtual environments
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
 
-# pytype static type analyzer
+# Django database & media
+db.sqlite3
+db.sqlite3-journal
+media/
+local_settings.py
 
-# Cython debug symbols
+# Logs
+*.log
 
-# PyCharm
-#  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
-#  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
-#  and can be added to the global gitignore or merged into this file.  For a more nuclear
-#  option (not recommended) you can uncomment the following to ignore the entire idea folder.
+# PyInstaller
+*.manifest
+*.spec
 
-### Python Patch ###
-# Poetry local configuration file - https://python-poetry.org/docs/configuration/#local-configuration
-poetry.toml
+# Build / dist folders
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# ruff
+# Test / coverage
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Translations
+*.mo
+*.pot
+
+# Static / collected assets
+staticfiles/
+
+# Documentation
+docs/_build/
+site/
+
+# Type checkers / linters
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
 .ruff_cache/
 
-# LSP config files
+# Tools / configs
+.poetry/
+poetry.toml
 pyrightconfig.json
+.pdm.toml
+__pypackages__/
 
-# End of https://www.toptal.com/developers/gitignore/api/django,linux,python
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# Jupyter
+.ipynb_checkpoints
+
+# ==============================================
+# SYSTEM / OS / EDITOR
+# ==============================================
+
+# Linux / macOS
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# PyCharm / JetBrains
+.idea/
+
+# Misc
+*.swp
+*.swo
+
