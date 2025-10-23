@@ -48,6 +48,10 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'social_django',
     'google',
+    'django_otp',
+    'django_otp.plugins.otp_totp',
+    'two_factor',
+    'django_otp.plugins.otp_email',
 ]
 
 MIDDLEWARE = [
@@ -58,6 +62,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django_otp.middleware.OTPMiddleware',
 ]
 
 ROOT_URLCONF = 'BetBetter.urls'
@@ -95,6 +101,8 @@ DATABASES = {
     }
 }
 
+LOGIN_URL = 'two_factor:login'
+LOGIN_REDIRECT_URL = '/'
 
 
 # Password validation
@@ -156,6 +164,7 @@ AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
 )
 
+AUTH_USER_MODEL = 'users.User'
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.getenv("GOOGLE_CLIENT_ID")
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 LOGIN_REDIRECT_URL = '/api/auth/google/success/'

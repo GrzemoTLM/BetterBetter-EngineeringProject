@@ -18,7 +18,7 @@ from django.contrib import admin
 from django.contrib.auth.views import LogoutView
 from django.urls import path, include
 
-from users.views import RegisterView, LoginView, google_login_succes
+from users.viewsLoginRegister import RegisterView, LoginView, google_login_succes
 urlpatterns = [
    # path('admin/', admin.site.urls),
     #path('api/', include('users.urls')),
