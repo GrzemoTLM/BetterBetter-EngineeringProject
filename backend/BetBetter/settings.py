@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'django_otp.plugins.otp_totp',
     'two_factor',
     'django_otp.plugins.otp_email',
+    'coupons'
 ]
 
 MIDDLEWARE = [
