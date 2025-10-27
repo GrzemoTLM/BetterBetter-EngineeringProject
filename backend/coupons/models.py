@@ -1,8 +1,7 @@
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
-# Create your models here.
-
+from common.choices import CouponType
 
 class Bookmaker(models.Model):
     name = models.CharField(max_length=255, unique=True, help_text="Bookmaker name, e.g., 'STS'")
@@ -51,11 +50,6 @@ class Coupon(models.Model):
         related_query_name='coupon',
         help_text="The strategy that this coupon should be applied to."
     )
-    class CouponType(models.TextChoices):
-        SOLO = "SOLO", "Solo"
-        AKO = "AKO", "Accumulator"
-        SYSTEM = "SYSTEM", "System"
-
     class CouponStatus(models.TextChoices):
         IN_PROGRESS = "in_progress", "In progress"
         WON = "won", "Won"
@@ -65,10 +59,10 @@ class Coupon(models.Model):
     coupon_type = models.CharField(
         max_length=10,
         choices=CouponType.choices,
-        default='SOLO',
-        help_text="Type of the coupon: SOLO or COMBO"
+        default=CouponType.SOLO,
+        db_index=True,
     )
-    bet_stake= models.DecimalField(
+    bet_stake = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         help_text="Total stake amount for the coupon"
@@ -111,6 +105,13 @@ class Coupon(models.Model):
     #         odds *= float(bet.odds)
     #     self.multiplier = round(odds, 2)
 
+class Discipline(models.Model):
+    code = models.CharField(max_length=32, unique=True)
+    name = models.CharField(max_length=128)
+
+class BetTypeDict(models.Model):
+    code = models.CharField(max_length=32, unique=True)
+    name = models.CharField(max_length=128)
 
 class Bet(models.Model):
     class BetResult(models.TextChoices):
@@ -124,13 +125,17 @@ class Bet(models.Model):
         related_name='bet',
         related_query_name='coupon this bet belongs to'
     )
-    event_name = models.CharField(
-        max_length=255,
-        help_text="Name of the event, e.g., 'Team A vs Team B'"
+    bet_type = models.ForeignKey(
+        BetTypeDict,
+        null=True,
+        on_delete=models.SET_NULL,
+        db_index=True
     )
-    bet_type = models.CharField(
-        max_length=255,
-        help_text="Type of the bet, e.g. 'Full Time', 'Over/Under', BTTS"
+    discipline = models.ForeignKey(
+        Discipline,
+        null=True,
+        on_delete=models.SET_NULL,
+        db_index=True
     )
     odds = models.DecimalField(
         max_digits=10,
