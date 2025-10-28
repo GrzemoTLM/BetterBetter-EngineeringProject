@@ -10,7 +10,8 @@ from .views import (
     google_login_succes,
     TwoFactorStartView,
     TwoFactorVerifyView,
-    TwoFactorLoginView
+    TwoFactorLoginView,
+    UserSettingsView,
 )
 
 router = routers.DefaultRouter()
@@ -22,6 +23,7 @@ urlpatterns = [
     path('auth/login/verify-2fa/', TwoFactorLoginView.as_view(), name='login_verify_2fa'),
     path('logout/', LogoutView.as_view(), name='user-logout'),
     path('me/', MeView.as_view(), name='user-me'),
+    path('settings/', UserSettingsView.as_view(), name='user-settings'),
     path('auth/google/', GoogleAuthView.as_view(), name='google-auth'),
     path('auth/google/success/', google_login_succes, name='google-login-success'),
     path('two-factor/start/', TwoFactorStartView.as_view(), name='two_factor_start'),
