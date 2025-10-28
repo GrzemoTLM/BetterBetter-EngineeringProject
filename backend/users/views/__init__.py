@@ -7,6 +7,7 @@ from .google_auth import GoogleAuthView, google_login_succes
 from .two_factor_start import TwoFactorStartView
 from .two_factor_verify import TwoFactorVerifyView
 from .two_factor_login import TwoFactorLoginView
+from .user_settings import UserSettingsView
 
 __all__ = [
     'UserView',
@@ -19,5 +20,6 @@ __all__ = [
     'TwoFactorStartView',
     'TwoFactorVerifyView',
     'TwoFactorLoginView',
+    'UserSettingsView',
 ]
 
