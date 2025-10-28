@@ -1,9 +1,10 @@
 from __future__ import annotations
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-from django.core.validators import MinValueValidator, RegexValidator
+from django.core.validators import MinValueValidator
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
+from common.models import Currency
 
 class UserStatus(models.TextChoices):
     ACTIVE = 'active', _('Active')
@@ -23,21 +24,6 @@ class NotificationGate(models.TextChoices):
     TELEGRAM = 'telegram', _('Telegram')
     NONE = 'none', _('None')
 
-class Currency(models.Model):
-    code = models.CharField(max_length=3,
-                            unique=True,
-                            validators=[RegexValidator(r'^[A-Z]{3}$', 'Currency code must be 3 uppercase letters.')]
-    )
-    name = models.CharField(max_length=255)
-    symbol = models.CharField(max_length=10)
-    value = models.DecimalField(max_digits=10, decimal_places=2)
-    is_active = models.BooleanField(default=True)
-
-    class Meta:
-        db_table = 'currencies'
-
-    def __str__(self):
-        return f"{self.code} ({self.symbol})"
 
 class User(AbstractUser):
     status = models.CharField(max_length=10, choices=UserStatus.choices, default=UserStatus.ACTIVE)
