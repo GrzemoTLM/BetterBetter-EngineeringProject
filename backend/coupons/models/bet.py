@@ -1,4 +1,6 @@
 from django.db import models
+from django.core.validators import MinValueValidator
+from decimal import Decimal
 from .bet_type_dict import BetTypeDict
 from .discipline import Discipline
 
@@ -12,8 +14,12 @@ class Bet(models.Model):
     coupon = models.ForeignKey(
         'Coupon',
         on_delete=models.CASCADE,
-        related_name='bet',
-        related_query_name='coupon this bet belongs to'
+        related_name='bets'
+    )
+    event_name = models.CharField(
+        max_length=255,
+        default='',
+        help_text="Event name (e.g., 'Barcelona vs Real Madrid')"
     )
     bet_type = models.ForeignKey(
         BetTypeDict,
@@ -27,10 +33,16 @@ class Bet(models.Model):
         on_delete=models.SET_NULL,
         db_index=True
     )
+    line = models.CharField(
+        max_length=50,
+        default='',
+        help_text="Bet line/selection (e.g., '1', 'X', '2', 'OVER 2.5', 'UNDER 2.5')"
+    )
     odds = models.DecimalField(
         max_digits=10,
         decimal_places=2,
-        help_text="Odds for the bet"
+        validators=[MinValueValidator(Decimal('1.01'))],
+        help_text="Odds for the bet (must be > 1.00)"
     )
     result = models.CharField(
         max_length=10,
