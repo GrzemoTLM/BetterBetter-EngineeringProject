@@ -4,6 +4,7 @@ from .coupon import Coupon
 from .discipline import Discipline
 from .bet_type_dict import BetTypeDict
 from .bet import Bet
+from .currency import Currency
 
 __all__ = [
     "Bookmaker",
@@ -12,4 +13,5 @@ __all__ = [
     "Discipline",
     "BetTypeDict",
     "Bet",
+    "Currency",
 ]

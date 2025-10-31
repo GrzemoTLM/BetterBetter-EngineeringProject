@@ -12,6 +12,9 @@ from .views import (
     TwoFactorVerifyView,
     TwoFactorLoginView,
     UserSettingsView,
+    RequestPasswordResetView,
+    ConfirmPasswordResetView,
+    ResendPasswordResetView,
 )
 
 router = routers.DefaultRouter()
@@ -28,4 +31,7 @@ urlpatterns = [
     path('auth/google/success/', google_login_succes, name='google-login-success'),
     path('two-factor/start/', TwoFactorStartView.as_view(), name='two_factor_start'),
     path('two-factor/verify/', TwoFactorVerifyView.as_view(), name='two_factor_verify'),
+    path('password/reset/', RequestPasswordResetView.as_view(), name='password_reset'),
+    path('password/reset/confirm/', ConfirmPasswordResetView.as_view(), name='password_reset_confirm'),
+    path('password/reset/resend/', ResendPasswordResetView.as_view(), name='password_reset_resend'),
 ]

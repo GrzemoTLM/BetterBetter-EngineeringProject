@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from common.models import Currency
+from coupons.models import Currency
+from rest_framework import serializers
 from ..models import UserSettings
 
 

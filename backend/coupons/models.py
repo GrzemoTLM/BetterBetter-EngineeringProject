@@ -1,3 +1,4 @@
+from coupons.models import Currency
 from .models import Bookmaker, Strategy, Coupon, Discipline, BetTypeDict, Bet
 
 __all__ = [
@@ -7,4 +8,5 @@ __all__ = [
     "Discipline",
     "BetTypeDict",
     "Bet",
+    "Currency",
 ]
