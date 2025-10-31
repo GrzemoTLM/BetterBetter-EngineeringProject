@@ -8,6 +8,7 @@ from .two_factor_start import TwoFactorStartView
 from .two_factor_verify import TwoFactorVerifyView
 from .two_factor_login import TwoFactorLoginView
 from .user_settings import UserSettingsView
+from .password_reset_view import RequestPasswordResetView, ConfirmPasswordResetView, ResendPasswordResetView
 
 __all__ = [
     'UserView',
@@ -21,5 +22,7 @@ __all__ = [
     'TwoFactorVerifyView',
     'TwoFactorLoginView',
     'UserSettingsView',
+    'RequestPasswordResetView',
+    'ConfirmPasswordResetView',
+    'ResendPasswordResetView',
 ]
-
