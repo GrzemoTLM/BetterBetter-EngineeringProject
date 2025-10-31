@@ -1,7 +1,8 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.conf import settings
-from .models import UserSettings, Currency
+from .models import UserSettings
+from coupons.models import Currency
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def create_user_settings(sender, instance, created, **kwargs):
@@ -18,4 +19,3 @@ def create_user_settings(sender, instance, created, **kwargs):
             two_factor_enabled=False,
             two_factor_method='none'
         )
-
