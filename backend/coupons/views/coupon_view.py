@@ -19,6 +19,11 @@ class CouponListCreateView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Coupon.objects.none()
+        user = getattr(self.request, 'user', None)
+        if not user or not user.is_authenticated:
+            return Coupon.objects.none()
         return list_coupons(user=self.request.user)
 
     def get_serializer_class(self):
@@ -43,6 +48,11 @@ class CouponDetailsView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Coupon.objects.none()
+        user = getattr(self.request, 'user', None)
+        if not user or not user.is_authenticated:
+            return Coupon.objects.none()
         return Coupon.objects.filter(user=self.request.user)
 
     def get_serializer_class(self):
