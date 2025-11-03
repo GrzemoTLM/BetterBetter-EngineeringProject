@@ -18,6 +18,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'common',
     'core.apps.CoreConfig',
+    'coupons.apps.CouponsConfig',
+    'coupon_analytics.apps.CouponAnalyticsConfig',
+    'finances.apps.FinancesConfig',
     'users',
     'rest_framework',
     'rest_framework_simplejwt',
@@ -28,11 +31,15 @@ INSTALLED_APPS = [
     'django_otp.plugins.otp_totp',
     'two_factor',
     'django_otp.plugins.otp_email',
-    'coupons.apps.CouponsConfig',
-    'coupon_analytics.apps.CouponAnalyticsConfig',
-    'finances.apps.FinancesConfig',
-    'drf_yasg'
 ]
+
+# Optionally enable drf_yasg if installed so migrations don't fail on missing package
+try:
+    import drf_yasg  # noqa: F401
+    INSTALLED_APPS.append('drf_yasg')
+    DRF_YASG_AVAILABLE = True
+except Exception:  # ImportError or any runtime issue
+    DRF_YASG_AVAILABLE = False
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -42,7 +49,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django_otp.middleware.OTPMiddleware',
 ]
 
