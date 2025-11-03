@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     'django_otp.plugins.otp_email',
     'coupons.apps.CouponsConfig',
     'coupon_analytics.apps.CouponAnalyticsConfig',
+    'finances.apps.FinancesConfig',
 ]
 
 MIDDLEWARE = [
