@@ -52,8 +52,7 @@ class CouponSerializer(serializers.ModelSerializer):
             'id',
             'created_at',
             'updated_at',
-            'balance',
-            'potential_payout'
+            'potential_payout',
         )
 
 class CouponCreateSerializer(CouponBaseSerializer):
@@ -87,7 +86,7 @@ class CouponCreateSerializer(CouponBaseSerializer):
         ]
 
     def validate_created_coupon(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
-        bets: List[Dict[str, Any]] = attrs.get('bets', [])
+        bets = attrs.get('bets', [])  # type: List[Dict[str, Any]]
         if not bets:
             raise serializers.ValidationError("At least one bet must be provided.")
         return attrs
@@ -113,8 +112,9 @@ class CouponUpdateSerializer(CouponBaseSerializer):
 
     class Meta:
         model = Coupon
-        fields = ['strategy', 'coupon_type', 'bet_stake', 'multiplier', 'status']
+        fields = ['bookmaker', 'strategy', 'coupon_type', 'bet_stake', 'multiplier', 'status']
         extra_kwargs = {
+            'bookmaker': {'required': False},
             'strategy': {'required': False},
             'coupon_type': {'required': False},
             'bet_stake': {'required': False},

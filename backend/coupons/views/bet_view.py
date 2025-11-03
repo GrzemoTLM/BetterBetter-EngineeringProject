@@ -9,6 +9,11 @@ class BetListCreateView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Bet.objects.none()
+        user = getattr(self.request, 'user', None)
+        if not user or not user.is_authenticated:
+            return Bet.objects.none()
         coupon_id = self.kwargs.get('coupon_id')
         try:
             coupon = Coupon.objects.get(id=coupon_id, user=self.request.user)
@@ -37,6 +42,11 @@ class BetDetailsView(generics.RetrieveUpdateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Bet.objects.none()
+        user = getattr(self.request, 'user', None)
+        if not user or not user.is_authenticated:
+            return Bet.objects.none()
         return Bet.objects.filter(coupon__user=self.request.user)
 
     def get_serializer_class(self):

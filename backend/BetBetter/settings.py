@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'coupons.apps.CouponsConfig',
     'coupon_analytics.apps.CouponAnalyticsConfig',
     'finances.apps.FinancesConfig',
+    'drf_yasg'
 ]
 
 MIDDLEWARE = [
@@ -76,7 +77,7 @@ DATABASES = {
     }
 }
 
-LOGIN_URL = 'two_factor:login'
+LOGIN_URL = 'user-login'
 LOGIN_REDIRECT_URL = '/'
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -126,3 +127,15 @@ SIMPLE_JWT = {
 
 DEFAULT_FROM_EMAIL = "no-reply@betterbetter.app"
 MAILERSEND_API_TOKEN = os.getenv("MAILERSEND_API_KEY")
+
+SWAGGER_SETTINGS = {
+    'USE_SESSION_AUTH': False,
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header',
+            'description': 'JWT Authorization header using the Bearer scheme. Example: "Bearer <token>"',
+        }
+    },
+}
