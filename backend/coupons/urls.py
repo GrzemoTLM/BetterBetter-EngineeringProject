@@ -4,10 +4,12 @@ from .views.bet_type_dict_view import BetTypeDictViewSet
 from .views.discipline_view import DisciplineViewSet
 from .views.coupon_view import CouponListCreateView, CouponDetailsView
 from .views.bet_view import BetListCreateView, BetDetailsView
+from .views.event_view import EventViewSet
 
 router = routers.DefaultRouter()
 router.register(r'bet-types', BetTypeDictViewSet, basename='bet-type')
 router.register(r'disciplines', DisciplineViewSet, basename='discipline')
+router.register(r'events', EventViewSet, basename='event')
 
 urlpatterns = [
     path('', include(router.urls)),
