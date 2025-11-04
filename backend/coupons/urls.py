@@ -2,7 +2,7 @@ from django.urls import path, include
 from rest_framework import routers
 from .views.bet_type_dict_view import BetTypeDictViewSet
 from .views.discipline_view import DisciplineViewSet
-from .views.coupon_view import CouponListCreateView, CouponDetailsView
+from .views.coupon_view import CouponListCreateView, CouponDetailsView, CouponRecalcView, CouponSettleView
 from .views.bet_view import BetListCreateView, BetDetailsView
 from .views.event_view import EventViewSet
 
@@ -15,6 +15,8 @@ urlpatterns = [
     path('', include(router.urls)),
     path('coupons/', CouponListCreateView.as_view(), name='coupon-list-create'),
     path('coupons/<int:pk>/', CouponDetailsView.as_view(), name='coupon-detail'),
+    path('coupons/<int:pk>/recalc/', CouponRecalcView.as_view(), name='coupon-recalc'),
+    path('coupons/<int:pk>/settle/', CouponSettleView.as_view(), name='coupon-settle'),
     path('coupons/<int:coupon_id>/bets/', BetListCreateView.as_view(), name='bet-list-create'),
     path('coupons/<int:coupon_id>/bets/<int:pk>/', BetDetailsView.as_view(), name='bet-detail'),
 ]
