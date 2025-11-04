@@ -3,6 +3,7 @@ from django.core.validators import MinValueValidator
 from decimal import Decimal
 from .bet_type_dict import BetTypeDict
 from .discipline import Discipline
+from .event import Event
 
 
 class Bet(models.Model):
@@ -15,6 +16,15 @@ class Bet(models.Model):
         'Coupon',
         on_delete=models.CASCADE,
         related_name='bets'
+    )
+    event = models.ForeignKey(
+        Event,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='bets',
+        db_index=True,
+        help_text="Related event for this bet"
     )
     event_name = models.CharField(
         max_length=255,
@@ -58,4 +68,3 @@ class Bet(models.Model):
 
     def __str__(self):
         return f"Bet<{self.pk}> • {self.bet_type} • {self.result}"
-

@@ -2,7 +2,7 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 from common.choices import CouponType
-from .bookmaker import Bookmaker
+from decimal import Decimal, ROUND_HALF_UP
 
 
 class Coupon(models.Model):
@@ -20,10 +20,12 @@ class Coupon(models.Model):
         on_delete=models.CASCADE,
         related_name='coupons'
     )
-    bookmaker = models.ForeignKey(
-        Bookmaker,
-        on_delete=models.CASCADE,
-        related_name='coupons'
+    bookmaker_account = models.ForeignKey(
+        'finances.BookmakerAccountModel',
+        on_delete=models.PROTECT,
+        related_name='coupons',
+        null=True,
+        blank=True,
     )
     strategy = models.ForeignKey(
         'Strategy',
@@ -70,13 +72,22 @@ class Coupon(models.Model):
         return f"Coupon<{pk}> • {label} • {status}"
 
     def save(self, *args, **kwargs):
-        if self.bookmaker:
-            self.tax_multiplier = self.bookmaker.tax_multiplier
         super().save(*args, **kwargs)
 
     @property
     def potential_payout(self) -> float:
-        return (float(self.bet_stake) * float(self.multiplier) *
-                float(self.bookmaker.tax_multiplier)
-        )
+        try:
+            tax_mult = Decimal(str(self.bookmaker_account.bookmaker.tax_multiplier))
+            currency_code = getattr(self.bookmaker_account.currency, 'code', None)
+        except Exception:
+            tax_mult = Decimal('1.00')
+            currency_code = None
 
+        bet_stake = Decimal(str(self.bet_stake))
+        multiplier = Decimal(str(self.multiplier))
+        gross = bet_stake * multiplier * tax_mult
+
+        if currency_code == 'PLN' and gross > Decimal('2280.00'):
+            gross = gross * (Decimal('1.00') - Decimal('0.10'))
+
+        return float(gross.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))

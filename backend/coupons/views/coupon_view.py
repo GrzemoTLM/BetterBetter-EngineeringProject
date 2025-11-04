@@ -12,6 +12,8 @@ from ..services.coupon_service import (
     create_coupon,
     update_coupon,
     delete_coupon,
+    recalc_coupon_odds,
+    settle_coupon,
 )
 
 
@@ -76,5 +78,50 @@ class CouponDetailsView(generics.RetrieveUpdateDestroyAPIView):
 
     def destroy(self, request, *args, **kwargs):
         coupon = self.get_object()
+        coupon_id = coupon.id
         delete_coupon(coupon=coupon)
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(
+            {"detail": f"Coupon {coupon_id} was successfully deleted."},
+            status=status.HTTP_200_OK
+        )
+
+
+class CouponRecalcView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = CouponSerializer
+
+    def post(self, request, pk, *args, **kwargs):
+        try:
+            coupon = Coupon.objects.get(id=pk, user=request.user)
+        except Coupon.DoesNotExist:
+            return Response({"detail": "Coupon not found."}, status=status.HTTP_404_NOT_FOUND)
+        updated = recalc_coupon_odds(coupon)
+        out_serializer = self.get_serializer(updated, context={'request': request})
+        return Response(out_serializer.data)
+
+
+class CouponSettleView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = CouponSerializer
+
+    def post(self, request, pk, *args, **kwargs):
+        """
+        Settle a coupon by setting the status and calculating final balance.
+
+        Request body should contain bet results:
+        {
+            "bets": [
+                {"bet_id": 1, "result": "win"},
+                {"bet_id": 2, "result": "lost"},
+                ...
+            ]
+        }
+        """
+        try:
+            coupon = Coupon.objects.get(id=pk, user=request.user)
+        except Coupon.DoesNotExist:
+            return Response({"detail": "Coupon not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        updated = settle_coupon(coupon=coupon, data=request.data)
+        out_serializer = self.get_serializer(updated, context={'request': request})
+        return Response(out_serializer.data, status=status.HTTP_200_OK)
