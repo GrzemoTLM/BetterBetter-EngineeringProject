@@ -12,13 +12,16 @@ class BetListCreateView(generics.ListCreateAPIView):
         if getattr(self, 'swagger_fake_view', False):
             return Bet.objects.none()
         user = getattr(self.request, 'user', None)
+
         if not user or not user.is_authenticated:
             return Bet.objects.none()
         coupon_id = self.kwargs.get('coupon_id')
+
         try:
             coupon = Coupon.objects.get(id=coupon_id, user=self.request.user)
         except Coupon.DoesNotExist:
             raise NotFound("Coupon not found.")
+
         return list_bets(user=self.request.user, coupon_id=coupon_id)
 
     def get_serializer_class(self):
@@ -26,15 +29,36 @@ class BetListCreateView(generics.ListCreateAPIView):
 
     def create(self, request, *args, **kwargs):
         coupon_id = self.kwargs.get('coupon_id')
-        try:
-            bet = create_bet(
-                user=request.user,
-                coupon_id=coupon_id,
-                data=request.data
-            )
-        except Coupon.DoesNotExist:
-            raise NotFound("Coupon not found.")
-        out_serializer = BetSerializer(bet, context={'request': request})
+        payload = request.data
+
+        if isinstance(payload, dict) and 'bets' in payload:
+            items = payload['bets']
+
+        elif isinstance(payload, list):
+            items = payload
+
+        else:
+            items = [payload]
+
+        created = []
+        for item in items:
+            in_serializer = BetCreateSerializer(data=item, context={'request': request})
+            in_serializer.is_valid(raise_exception=True)
+
+            try:
+                bet = create_bet(
+                    user=request.user,
+                    coupon_id=coupon_id,
+                    data=in_serializer.validated_data
+                )
+            except Coupon.DoesNotExist:
+                raise NotFound("Coupon not found.")
+            created.append(bet)
+
+        if len(created) == 1:
+            out_serializer = BetSerializer(created[0], context={'request': request})
+            return Response(out_serializer.data, status=status.HTTP_201_CREATED)
+        out_serializer = BetSerializer(created, many=True, context={'request': request})
         return Response(out_serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -65,3 +89,4 @@ class BetDetailsView(generics.RetrieveUpdateAPIView):
 
     def perform_destroy(self, instance):
         delete_bet(user=self.request.user, bet_id=instance.id)
+

@@ -1,14 +1,30 @@
-from decimal import Decimal, ROUND_HALF_UP
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from django.db import transaction
-from ..models import Bet, Coupon
+from django.utils import timezone
+from ..models import Bet, Coupon, Event
 from ..services.coupon_service import recalc_coupon_odds
+from ..services.coupon_service import settle_coupon
 
 class BetService:
+
+    def _auto_settle_if_resolved(self, coupon: Coupon) -> None:
+        if coupon.status == Coupon.CouponStatus.IN_PROGRESS:
+            settle_coupon(coupon=coupon, data={'bets': []})
 
     @transaction.atomic
     def _create_bet(self, coupon: Coupon, bet_data: Dict[str, Any]) -> Bet:
         coupon = Coupon.objects.select_for_update().get(id=coupon.id, user=coupon.user)
+        event = bet_data.get('event')
+        event_name = bet_data.get('event_name')
+        discipline = bet_data.get('discipline')
+        if event is None and event_name:
+            event_obj, _created = Event.objects.get_or_create(
+                name=event_name,
+                discipline=discipline,
+                defaults={"start_time": timezone.now()},
+            )
+            bet_data['event'] = event_obj
+
         bet = Bet.objects.create(coupon=coupon, **bet_data)
         recalc_coupon_odds(coupon)
         return bet
@@ -16,10 +32,17 @@ class BetService:
     @transaction.atomic
     def _update_bet(self, bet: Bet, bet_data: Dict[str, Any]) -> Bet:
         coupon = Coupon.objects.select_for_update().get(id=bet.coupon.id, user=bet.coupon.user)
+
+        result_updated = 'result' in bet_data
+
         for field, value in bet_data.items():
             setattr(bet, field, value)
         bet.save()
         recalc_coupon_odds(coupon)
+
+        if result_updated:
+            self._auto_settle_if_resolved(coupon)
+
         return bet
 
     @transaction.atomic
