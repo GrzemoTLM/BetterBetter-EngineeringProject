@@ -4,6 +4,7 @@ from rest_framework import serializers
 from coupons.models import Bookmaker
 from finances.models.bookmaker_account import BookmakerAccountModel
 from finances.models.transactions import Transaction
+from common.serializers.fields import UserAwareDateTimeField
 
 class TransactionSerializer(serializers.ModelSerializer):
     bookmaker = serializers.SlugRelatedField(
@@ -16,6 +17,8 @@ class TransactionSerializer(serializers.ModelSerializer):
         read_only=True, slug_field="id"
     )
     display_name = serializers.CharField(read_only=True)
+    created_at = UserAwareDateTimeField(read_only=True)
+    updated_at = UserAwareDateTimeField(read_only=True)
 
     class Meta:
         model = Transaction
