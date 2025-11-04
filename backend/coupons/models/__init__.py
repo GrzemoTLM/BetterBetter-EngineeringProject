@@ -5,6 +5,7 @@ from .discipline import Discipline
 from .bet_type_dict import BetTypeDict
 from .bet import Bet
 from .currency import Currency
+from .event import Event
 
 __all__ = [
     "Bookmaker",
@@ -14,4 +15,5 @@ __all__ = [
     "BetTypeDict",
     "Bet",
     "Currency",
+    "Event",
 ]
