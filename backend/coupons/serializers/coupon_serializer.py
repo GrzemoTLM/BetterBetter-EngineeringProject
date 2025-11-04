@@ -5,6 +5,7 @@ from rest_framework import serializers
 from common.choices import CouponType
 from ..models import Coupon, Bookmaker, Strategy
 from .bet_serializer import BetSerializer, BetCreateSerializer
+from common.serializers.fields import UserAwareDateTimeField
 
 class CouponBaseSerializer(serializers.ModelSerializer):
 
@@ -33,6 +34,8 @@ class CouponSerializer(serializers.ModelSerializer):
     )
     bets = BetSerializer(many=True, read_only=True)
     potential_payout = serializers.FloatField(read_only=True)
+    created_at = UserAwareDateTimeField(read_only=True)
+    updated_at = UserAwareDateTimeField(read_only=True)
 
     class Meta:
         model = Coupon
