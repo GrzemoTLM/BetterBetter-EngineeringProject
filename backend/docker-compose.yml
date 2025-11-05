@@ -30,5 +30,18 @@ services:
     depends_on:
       - db
 
+  telegram_bot:
+    build: .
+    container_name: betbetter_telegram_bot
+    restart: unless-stopped
+    working_dir: /app
+    command: python bot/telegram_min.py
+    env_file:
+      - .env
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+    depends_on:
+      - db
+
 volumes:
   postgres_data:
