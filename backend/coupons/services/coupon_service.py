@@ -1,6 +1,6 @@
 from typing import List, Dict, Optional, Any
 from django.db import transaction
-from django.db.models import QuerySet
+from django.db.models import QuerySet, F
 from ..models import Coupon, Bet, Event, Discipline
 from decimal import Decimal, ROUND_HALF_UP
 from common.choices import CouponType
@@ -94,6 +94,16 @@ class CouponService:
                         coupon.status = Coupon.CouponStatus.IN_PROGRESS
 
         coupon.save()
+
+        if coupon.bookmaker_account and coupon.status in [Coupon.CouponStatus.WON, Coupon.CouponStatus.LOST]:
+            bookmaker_account = coupon.bookmaker_account
+            balance_change = coupon.balance
+
+            from finances.models import BookmakerAccountModel
+            BookmakerAccountModel.objects.filter(id=bookmaker_account.id).update(
+                balance=F('balance') + Decimal(str(balance_change))
+            )
+
         return coupon
 
     @transaction.atomic
@@ -150,6 +160,13 @@ class CouponService:
             if coupon.coupon_type != CouponType.SOLO:
                 coupon.coupon_type = CouponType.SOLO
                 coupon.save(update_fields=['coupon_type'])
+
+        if coupon.bookmaker_account:
+            from finances.models import BookmakerAccountModel
+            BookmakerAccountModel.objects.filter(id=coupon.bookmaker_account.id).update(
+                balance=F('balance') - coupon.bet_stake
+            )
+
         return coupon
 
     @transaction.atomic
@@ -162,8 +179,15 @@ class CouponService:
 
     @transaction.atomic
     def delete_coupon(self, *, coupon: Coupon) -> None:
-        Coupon.objects.select_for_update().get(id=coupon.id, user=coupon.user)
-        coupon.delete()
+        locked_coupon = Coupon.objects.select_for_update().get(id=coupon.id, user=coupon.user)
+
+        if coupon.bookmaker_account and coupon.status == Coupon.CouponStatus.IN_PROGRESS:
+            from finances.models import BookmakerAccountModel
+            BookmakerAccountModel.objects.filter(id=coupon.bookmaker_account.id).update(
+                balance=F('balance') + coupon.bet_stake
+            )
+
+        locked_coupon.delete()
 
     def get_coupon(self, coupon_id: int, user) -> Coupon:
         return Coupon.objects.get(id=coupon_id, user=user)
