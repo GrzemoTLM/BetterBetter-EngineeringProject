@@ -8,6 +8,7 @@ from finances.services.bookmaker_account_service import (
     get_bookmaker_account,
     list_bookmaker_accounts,
     delete_bookmaker_account,
+    get_total_balance,
 )
 
 
@@ -89,3 +90,15 @@ class BookmakerAccountDetailView(APIView):
 
     def delete(self, request, pk):
         return handle_delete_bookmaker_account(request, pk)
+
+class TotalBalanceView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        try:
+            total_balance = get_total_balance(request.user)
+            return Response({
+                "total_balance": float(total_balance)
+            })
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
