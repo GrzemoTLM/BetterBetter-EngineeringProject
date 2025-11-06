@@ -16,6 +16,8 @@ from .views import (
     RequestPasswordResetView,
     ConfirmPasswordResetView,
     ResendPasswordResetView,
+    GenerateTelegramAuthCodeView,
+    ConnectTelegramView,
 )
 
 router = routers.DefaultRouter()
@@ -36,4 +38,6 @@ urlpatterns = [
     path('password/reset/', RequestPasswordResetView.as_view(), name='password_reset'),
     path('password/reset/confirm/', ConfirmPasswordResetView.as_view(), name='password_reset_confirm'),
     path('password/reset/resend/', ResendPasswordResetView.as_view(), name='password_reset_resend'),
+    path('telegram/auth-code/generate/', GenerateTelegramAuthCodeView.as_view(), name='telegram-generate-auth-code'),
+    path('telegram/connect/', ConnectTelegramView.as_view(), name='telegram-connect'),
 ]

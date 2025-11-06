@@ -1,0 +1,9 @@
+Django==5.0
+djangorestframework==3.14.0
+djangorestframework-simplejwt==5.5.1
+psycopg2-binary==2.9.9
+python-dotenv==1.0.0
+python-telegram-bot==22.5
+drf-yasg==1.21.7
+django-cors-headers==4.3.1
+social-auth-app-django==5.4.1

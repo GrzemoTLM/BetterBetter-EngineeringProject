@@ -9,6 +9,7 @@ from .two_factor_verify import TwoFactorVerifyView
 from .two_factor_login import TwoFactorLoginView
 from .user_settings import UserSettingsView
 from .password_reset_view import RequestPasswordResetView, ConfirmPasswordResetView, ResendPasswordResetView
+from .telegram_view import GenerateTelegramAuthCodeView, ConnectTelegramView
 
 __all__ = [
     'UserView',
@@ -25,4 +26,6 @@ __all__ = [
     'RequestPasswordResetView',
     'ConfirmPasswordResetView',
     'ResendPasswordResetView',
+    'GenerateTelegramAuthCodeView',
+    'ConnectTelegramView',
 ]

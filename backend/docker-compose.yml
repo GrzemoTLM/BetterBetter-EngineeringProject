@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   db:
     image: postgres:16
@@ -27,6 +25,22 @@ services:
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
     ports:
       - "5050:80"
+    depends_on:
+      - db
+
+  telegram_bot:
+    build: .
+    container_name: betbetter_telegram_bot
+    restart: unless-stopped
+    working_dir: /app
+    command: python bot/telegram_min.py
+    env_file:
+      - .env
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      DJANGO_SETTINGS_MODULE: BetBetter.settings_bot
+      DB_HOST: db
+      DB_PORT: 5432
     depends_on:
       - db
 
