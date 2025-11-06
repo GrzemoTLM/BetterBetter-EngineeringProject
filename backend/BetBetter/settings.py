@@ -33,12 +33,11 @@ INSTALLED_APPS = [
     'django_otp.plugins.otp_email',
 ]
 
-# Optionally enable drf_yasg if installed so migrations don't fail on missing package
 try:
     import drf_yasg  # noqa: F401
     INSTALLED_APPS.append('drf_yasg')
     DRF_YASG_AVAILABLE = True
-except Exception:  # ImportError or any runtime issue
+except Exception:
     DRF_YASG_AVAILABLE = False
 
 MIDDLEWARE = [

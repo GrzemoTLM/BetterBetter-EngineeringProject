@@ -50,61 +50,76 @@ class CouponService:
                     pass
 
         self.recalc_coupon_odds(coupon)
+        return self._evaluate_and_finalize(coupon)
+
+    def _evaluate_and_finalize(self, coupon: Coupon) -> Coupon:
         all_bets = Bet.objects.filter(coupon=coupon)
         bets_count = all_bets.count()
+        prev_status = coupon.status
 
         if bets_count == 0:
-            coupon.status = Coupon.CouponStatus.CANCELED
-            coupon.balance = Decimal('0.00')
+            new_status = Coupon.CouponStatus.CANCELED
+            new_balance = Decimal('0.00')
         else:
             lost_bets = all_bets.filter(result=Bet.BetResult.LOST).count()
+            unresolved_bets = all_bets.filter(result__isnull=True).count()
+            canceled_bets = all_bets.filter(result=Bet.BetResult.CANCELED).count()
+            won_bets = all_bets.filter(result=Bet.BetResult.WIN).count()
 
             if lost_bets > 0:
-                coupon.status = Coupon.CouponStatus.LOST
-                coupon.balance = -coupon.bet_stake
+                new_status = Coupon.CouponStatus.LOST
+                new_balance = -coupon.bet_stake
+            elif unresolved_bets > 0:
+                new_status = Coupon.CouponStatus.IN_PROGRESS
+                new_balance = coupon.balance
             else:
-                unresolved_bets = all_bets.filter(result__isnull=True).count()
-
-                if unresolved_bets > 0:
-                    coupon.status = Coupon.CouponStatus.IN_PROGRESS
+                if canceled_bets == bets_count:
+                    new_status = Coupon.CouponStatus.CANCELED
+                    new_balance = Decimal('0.00')
+                elif won_bets == bets_count:
+                    new_status = Coupon.CouponStatus.WON
+                    try:
+                        tax_mult = Decimal(str(coupon.bookmaker_account.bookmaker.tax_multiplier))
+                    except Exception:
+                        tax_mult = Decimal('1.00')
+                    gross_payout = coupon.bet_stake * coupon.multiplier * tax_mult
+                    try:
+                        currency_code = coupon.bookmaker_account.currency.code
+                        if currency_code == 'PLN' and gross_payout > Decimal('2280.00'):
+                            gross_payout *= (Decimal('1.00') - Decimal('0.10'))
+                    except Exception:
+                        pass
+                    new_balance = (gross_payout - coupon.bet_stake).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                 else:
+                    new_status = Coupon.CouponStatus.WON
+                    try:
+                        tax_mult = Decimal(str(coupon.bookmaker_account.bookmaker.tax_multiplier))
+                    except Exception:
+                        tax_mult = Decimal('1.00')
+                    gross_payout = coupon.bet_stake * coupon.multiplier * tax_mult
+                    try:
+                        currency_code = coupon.bookmaker_account.currency.code
+                        if currency_code == 'PLN' and gross_payout > Decimal('2280.00'):
+                            gross_payout *= (Decimal('1.00') - Decimal('0.10'))
+                    except Exception:
+                        pass
+                    new_balance = (gross_payout - coupon.bet_stake).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
-                    won_bets = all_bets.filter(result=Bet.BetResult.WIN).count()
-                    canceled_bets = all_bets.filter(result=Bet.BetResult.CANCELED).count()
+        coupon.status = new_status
+        coupon.balance = new_balance
+        coupon.save(update_fields=['status', 'balance'])
 
-                    if won_bets + canceled_bets == bets_count:
-                        coupon.status = Coupon.CouponStatus.WON
-
-                        try:
-                            tax_mult = Decimal(str(coupon.bookmaker_account.bookmaker.tax_multiplier))
-                        except Exception:
-                            tax_mult = Decimal('1.00')
-
-                        gross_payout = coupon.bet_stake * coupon.multiplier * tax_mult
-
-                        try:
-                            currency_code = coupon.bookmaker_account.currency.code
-                            if currency_code == 'PLN' and gross_payout > Decimal('2280.00'):
-                                gross_payout = gross_payout * (Decimal('1.00') - Decimal('0.10'))
-                        except Exception:
-                            pass
-
-                        coupon.balance = (gross_payout - coupon.bet_stake).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-                    else:
-                        coupon.status = Coupon.CouponStatus.IN_PROGRESS
-
-        coupon.save()
-
-        if coupon.bookmaker_account and coupon.status in [Coupon.CouponStatus.WON, Coupon.CouponStatus.LOST]:
-            bookmaker_account = coupon.bookmaker_account
-            balance_change = coupon.balance
-
+        final_statuses = {Coupon.CouponStatus.WON, Coupon.CouponStatus.LOST}
+        if coupon.bookmaker_account and new_status in final_statuses and prev_status not in final_statuses:
             from finances.models import BookmakerAccountModel
-            BookmakerAccountModel.objects.filter(id=bookmaker_account.id).update(
-                balance=F('balance') + Decimal(str(balance_change))
+            BookmakerAccountModel.objects.filter(id=coupon.bookmaker_account.id).update(
+                balance=F('balance') + Decimal(str(new_balance))
             )
-
         return coupon
+
+    def recalc_and_evaluate_coupon(self, coupon: Coupon) -> Coupon:
+        self.recalc_coupon_odds(coupon)
+        return self._evaluate_and_finalize(coupon)
 
     @transaction.atomic
     def create_coupon(self, *, user, data: Dict[str, Any]) -> Coupon:
@@ -224,3 +239,6 @@ def list_coupons(user) -> QuerySet[Coupon]:
 def settle_coupon(coupon: Coupon, data: Dict[str, Any]) -> Coupon:
     return _service.settle_coupon(coupon=coupon, data=data)
 
+
+def recalc_and_evaluate_coupon(coupon: Coupon) -> Coupon:
+    return _service.recalc_and_evaluate_coupon(coupon)
