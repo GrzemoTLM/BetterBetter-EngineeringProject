@@ -7,6 +7,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+
 CMD ["python", "bot/telegram_min.py"]
 
 
