@@ -14,6 +14,7 @@ from ..services.coupon_service import (
     delete_coupon,
     settle_coupon,
     recalc_and_evaluate_coupon,
+    force_settle_coupon_won,
 )
 
 
@@ -112,5 +113,19 @@ class CouponSettleView(generics.GenericAPIView):
             return Response({"detail": "Coupon not found."}, status=status.HTTP_404_NOT_FOUND)
 
         updated = settle_coupon(coupon=coupon, data=request.data)
+        out_serializer = self.get_serializer(updated, context={'request': request})
+        return Response(out_serializer.data, status=status.HTTP_200_OK)
+
+
+class CouponForceWinView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = CouponSerializer
+
+    def post(self, request, pk, *args, **kwargs):
+        try:
+            coupon = Coupon.objects.get(id=pk, user=request.user)
+        except Coupon.DoesNotExist:
+            return Response({"detail": "Coupon not found."}, status=status.HTTP_404_NOT_FOUND)
+        updated = force_settle_coupon_won(coupon)
         out_serializer = self.get_serializer(updated, context={'request': request})
         return Response(out_serializer.data, status=status.HTTP_200_OK)

@@ -210,6 +210,51 @@ class CouponService:
     def list_coupons(self, user) -> QuerySet[Coupon]:
         return Coupon.objects.filter(user=user).all()
 
+    @transaction.atomic
+    def force_settle_coupon_won(self, coupon: Coupon) -> Coupon:
+        locked_coupon = Coupon.objects.select_for_update().get(id=coupon.id)
+        bets = list(Bet.objects.filter(coupon=locked_coupon))
+        for b in bets:
+            if b.result != Bet.BetResult.WIN:
+                b.result = Bet.BetResult.WIN
+        Bet.objects.bulk_update(bets, ["result"]) if bets else None
+
+        self.recalc_coupon_odds(locked_coupon)
+
+        try:
+            tax_mult = Decimal(str(locked_coupon.bookmaker_account.bookmaker.tax_multiplier))
+        except Exception:
+            tax_mult = Decimal('1.00')
+        gross_payout = locked_coupon.bet_stake * locked_coupon.multiplier * tax_mult
+        try:
+            currency_code = locked_coupon.bookmaker_account.currency.code
+            if currency_code == 'PLN' and gross_payout > Decimal('2280.00'):
+                gross_payout *= (Decimal('1.00') - Decimal('0.10'))
+        except Exception:
+            pass
+        new_balance = (gross_payout - locked_coupon.bet_stake).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+        prev_status = locked_coupon.status
+        prev_change = Decimal('0.00')
+        if prev_status == Coupon.CouponStatus.WON:
+            prev_change = Decimal(str(locked_coupon.balance))
+        elif prev_status == Coupon.CouponStatus.LOST:
+            prev_change = Decimal(str(-locked_coupon.bet_stake))
+        else:
+            prev_change = Decimal('0.00')
+        delta = new_balance - prev_change
+
+        locked_coupon.status = Coupon.CouponStatus.WON
+        locked_coupon.balance = new_balance
+        locked_coupon.save(update_fields=["status", "balance"])
+
+        if locked_coupon.bookmaker_account and delta != 0:
+            from finances.models import BookmakerAccountModel
+            BookmakerAccountModel.objects.filter(id=locked_coupon.bookmaker_account.id).update(
+                balance=F('balance') + Decimal(str(delta))
+            )
+        return locked_coupon
+
 _service = CouponService()
 
 def recalc_coupon_odds(coupon: Coupon) -> Coupon:
@@ -242,3 +287,7 @@ def settle_coupon(coupon: Coupon, data: Dict[str, Any]) -> Coupon:
 
 def recalc_and_evaluate_coupon(coupon: Coupon) -> Coupon:
     return _service.recalc_and_evaluate_coupon(coupon)
+
+
+def force_settle_coupon_won(coupon: Coupon) -> Coupon:
+    return _service.force_settle_coupon_won(coupon)
