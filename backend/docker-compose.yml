@@ -30,7 +30,7 @@ services:
 
   telegram_bot:
     build: .
-    container_name: betbetter_telegram_bot
+    container_name: betterbetter_telegram_bot
     restart: unless-stopped
     working_dir: /app
     command: python bot/telegram_min.py
