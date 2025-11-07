@@ -26,6 +26,7 @@ urlpatterns = [
     path('api/users/', include('users.urls')),
     path('api/coupons/', include('coupons.urls')),
     path('api/finances/', include('finances.urls')),
+    path('api/analytics/', include('coupon_analytics.urls')),
     path('auth/', include('social_django.urls', namespace='social')),
     path('api/auth/google/success/', google_login_succes, name='google-success'),
 ]

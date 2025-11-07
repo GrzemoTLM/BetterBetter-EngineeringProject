@@ -124,8 +124,8 @@ SESSION_COOKIE_DOMAIN = None
 SOCIAL_AUTH_REDIRECT_IS_HTTPS = False
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=int(os.getenv('ACCESS_TOKEN_HOURS', '3'))),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=int(os.getenv('REFRESH_TOKEN_DAYS', '1'))),
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
