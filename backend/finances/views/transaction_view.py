@@ -3,6 +3,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from finances.serializers.transaction_serializer import TransactionSerializer
 from finances.services.transaction_service import create_transaction, update_transaction, get_transaction, list_transactions, delete_transaction
+from finances.services.transaction_service import user_transactions_summary
+from decimal import Decimal
 
 
 def handle_get_transaction(request, pk):
@@ -79,3 +81,17 @@ class TransactionDetailView(APIView):
 
     def delete(self, request, pk):
         return handle_delete_transaction(request, pk)
+
+
+class TransactionSummaryView(APIView):
+    def get(self, request):
+        try:
+            summary = user_transactions_summary(request.user)
+            net = (summary['total_deposited'] or Decimal('0.00')) - (summary['total_withdrawn'] or Decimal('0.00'))
+            return Response({
+                'total_deposited': float(summary['total_deposited']),
+                'total_withdrawn': float(summary['total_withdrawn']),
+                'net_deposits': float(net),
+            })
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)

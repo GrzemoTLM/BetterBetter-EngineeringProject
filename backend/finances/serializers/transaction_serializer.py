@@ -8,7 +8,7 @@ from common.serializers.fields import UserAwareDateTimeField
 
 class TransactionSerializer(serializers.ModelSerializer):
     bookmaker = serializers.SlugRelatedField(
-        read_only=True, slug_field="code", source="bookmaker_account.bookmaker"
+        read_only=True, slug_field="name", source="bookmaker_account.bookmaker"
     )
     currency = serializers.SlugRelatedField(
         read_only=True, slug_field="code", source="bookmaker_account.currency"
@@ -30,7 +30,6 @@ class TransactionSerializer(serializers.ModelSerializer):
             "currency",
             "transaction_type",
             "amount",
-            "fee",
             "created_at",
             "updated_at",
             "display_name",
@@ -40,7 +39,7 @@ class TransactionSerializer(serializers.ModelSerializer):
 
 class TransactionCreateSerializer(serializers.ModelSerializer):
     bookmaker = serializers.SlugRelatedField(
-        slug_field="code", queryset=Bookmaker.objects.all(), write_only=True, required=False
+        slug_field="name", queryset=Bookmaker.objects.all(), write_only=True, required=False
     )
     bookmaker_account = serializers.SlugRelatedField(
         slug_field="id", queryset=BookmakerAccountModel.objects.all(), required=False
@@ -54,7 +53,6 @@ class TransactionCreateSerializer(serializers.ModelSerializer):
             "bookmaker",
             "transaction_type",
             "amount",
-            "fee",
             "created_at",
             "updated_at",
         ]
@@ -64,7 +62,6 @@ class TransactionCreateSerializer(serializers.ModelSerializer):
         bookmaker = attrs.get("bookmaker")
         bookmaker_account = attrs.get("bookmaker_account")
         amount = attrs.get("amount")
-        fee = attrs.get("fee", 0)
 
         if not user:
             raise serializers.ValidationError("User is required.")
@@ -80,18 +77,13 @@ class TransactionCreateSerializer(serializers.ModelSerializer):
             attrs["bookmaker_account"] = bookmaker_account
         if amount <= 0:
             raise serializers.ValidationError("Amount must be greater than zero.")
-        if fee < 0:
-            raise serializers.ValidationError("Fee cannot be negative.")
-        if fee >= amount:
-            raise serializers.ValidationError("Fee must be less than the amount.")
         return attrs
 
 
 class TransactionUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Transaction
-        fields = ["amount", "fee"]
+        fields = ["amount"]
         extra_kwargs = {
             "amount": {"required": False},
-            "fee": {"required": False},
         }
