@@ -4,18 +4,19 @@ import django
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 from dotenv import load_dotenv
-from decimal import Decimal
 from asgiref.sync import sync_to_async
+from django.utils import timezone
 
 load_dotenv()
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'BetBetter.settings_bot')
 django.setup()
 
-from users.models import TelegramUser, User, TelegramAuthCode
+from users.models import TelegramUser
 from users.services.telegram_service import TelegramService
 from finances.models import BookmakerAccountModel
 from finances.services.bookmaker_account_service import get_total_balance
+from coupon_analytics.models import AlertEvent
 
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 
@@ -130,7 +131,7 @@ async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         )
 
         accounts_qs = BookmakerAccountModel.objects.filter(user=user).select_related('bookmaker')
-        accounts = await sync_to_async(list)(accounts_qs)
+        accounts = await sync_to_async(lambda: list(accounts_qs))()
         if accounts:
             balance_message += "Account details:\n"
             for account in accounts:
@@ -167,6 +168,28 @@ async def refresh(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text("⚠️ Failed to refresh username. Try later.")
 
 
+async def send_pending_alert_events(context: ContextTypes.DEFAULT_TYPE) -> None:
+    try:
+        pending_events = await sync_to_async(lambda: list(AlertEvent.objects.filter(sent_at__isnull=True).select_related('user', 'rule')))()
+        if not pending_events:
+            return
+        for ev in pending_events:
+            try:
+                tg_profile = await sync_to_async(TelegramUser.objects.get)(user=ev.user)
+            except TelegramUser.DoesNotExist:
+                continue
+            base_msg = ev.message_rendered or (
+                f"⚠️ Alert: {ev.metric} {ev.comparator} {ev.threshold_value}.\n"
+                f"Okno: {ev.window_start.date()} — {ev.window_end.date()}\n"
+                f"Wartość: {ev.metric_value}"
+            )
+            await context.bot.send_message(chat_id=tg_profile.telegram_id, text=base_msg)
+            ev.sent_at = timezone.now()
+            await sync_to_async(ev.save)(update_fields=['sent_at'])
+    except Exception as e:
+        logger.error(f"Error sending pending alert events: {e}")
+
+
 def main() -> None:
     if not TELEGRAM_BOT_TOKEN:
         raise ValueError("TELEGRAM_BOT_TOKEN is not set in environment variables!")
@@ -179,7 +202,10 @@ def main() -> None:
     application.add_handler(CommandHandler("balance", balance))
     application.add_handler(CommandHandler("refresh", refresh))
 
-    logger.info("Bot started...")
+    # JobQueue dostępna dzięki zainstalowaniu python-telegram-bot[job-queue]
+    application.job_queue.run_repeating(send_pending_alert_events, interval=120, first=5)
+
+    logger.info("Bot started with JobQueue alert events task...")
     application.run_polling()
 
 

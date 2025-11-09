@@ -4,6 +4,7 @@ from django.db.models import QuerySet, F
 from ..models import Coupon, Bet, Event, Discipline
 from decimal import Decimal, ROUND_HALF_UP
 from common.choices import CouponType
+from coupon_analytics.services.alert_service import notify_yield_alerts_on_coupon_settle
 
 
 class CouponService:
@@ -34,6 +35,9 @@ class CouponService:
 
     @transaction.atomic
     def settle_coupon(self, coupon: Coupon, data: Dict[str, Any]) -> Coupon:
+        set_all = data.get('set_all_result')
+        if set_all in [Bet.BetResult.WIN, Bet.BetResult.LOST, Bet.BetResult.CANCELED]:
+            Bet.objects.filter(coupon=coupon).update(result=set_all)
 
         bets_data = data.get('bets', [])
 
@@ -110,11 +114,14 @@ class CouponService:
         coupon.save(update_fields=['status', 'balance'])
 
         final_statuses = {Coupon.CouponStatus.WON, Coupon.CouponStatus.LOST}
+
         if coupon.bookmaker_account and new_status in final_statuses and prev_status not in final_statuses:
             from finances.models import BookmakerAccountModel
             BookmakerAccountModel.objects.filter(id=coupon.bookmaker_account.id).update(
                 balance=F('balance') + Decimal(str(new_balance))
             )
+        if new_status in final_statuses and prev_status not in final_statuses:
+            transaction.on_commit(lambda: notify_yield_alerts_on_coupon_settle(coupon.user))
         return coupon
 
     def recalc_and_evaluate_coupon(self, coupon: Coupon) -> Coupon:
@@ -257,6 +264,7 @@ class CouponService:
 
 _service = CouponService()
 
+
 def recalc_coupon_odds(coupon: Coupon) -> Coupon:
     return _service.recalc_coupon_odds(coupon)
 
@@ -291,3 +299,4 @@ def recalc_and_evaluate_coupon(coupon: Coupon) -> Coupon:
 
 def force_settle_coupon_won(coupon: Coupon) -> Coupon:
     return _service.force_settle_coupon_won(coupon)
+
