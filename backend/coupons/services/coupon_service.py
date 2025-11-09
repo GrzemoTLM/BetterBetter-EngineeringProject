@@ -4,7 +4,6 @@ from django.db.models import QuerySet, F
 from ..models import Coupon, Bet, Event, Discipline
 from decimal import Decimal, ROUND_HALF_UP
 from common.choices import CouponType
-from coupon_analytics.services.alert_service import notify_yield_alerts_on_coupon_settle
 
 
 class CouponService:
@@ -121,7 +120,14 @@ class CouponService:
                 balance=F('balance') + Decimal(str(new_balance))
             )
         if new_status in final_statuses and prev_status not in final_statuses:
-            transaction.on_commit(lambda: notify_yield_alerts_on_coupon_settle(coupon.user))
+            from coupon_analytics.services.streak_alert_service import check_and_send_streak_loss_alert, cleanup_streak_alerts_on_win
+
+            # If WON, clean up old streak alerts first
+            if new_status == Coupon.CouponStatus.WON:
+                cleanup_streak_alerts_on_win(coupon.user)
+            # Then check/send streak alerts (for LOST status)
+            elif new_status == Coupon.CouponStatus.LOST:
+                check_and_send_streak_loss_alert(coupon.user)
         return coupon
 
     def recalc_and_evaluate_coupon(self, coupon: Coupon) -> Coupon:

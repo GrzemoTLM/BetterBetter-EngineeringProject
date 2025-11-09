@@ -15,7 +15,17 @@ class AlertRuleListCreateView(generics.ListCreateAPIView):
         return AlertRule.objects.filter(user=self.request.user).order_by('-created_at')
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user, metric=serializer.validated_data.get('metric').lower())
+        metric = serializer.validated_data.get('metric', '').lower()
+
+        # If creating a streak_loss alert rule, deactivate all old ones
+        if metric == 'streak_loss':
+            AlertRule.objects.filter(
+                user=self.request.user,
+                metric='streak_loss',
+                is_active=True
+            ).update(is_active=False)
+
+        serializer.save(user=self.request.user, metric=metric)
 
 
 class AlertRuleDetailView(generics.RetrieveUpdateDestroyAPIView):
