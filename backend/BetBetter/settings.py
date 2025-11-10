@@ -22,6 +22,7 @@ INSTALLED_APPS = [
     'coupon_analytics.apps.CouponAnalyticsConfig',
     'finances.apps.FinancesConfig',
     'users',
+    'tickets.apps.TicketsConfig',
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
@@ -31,6 +32,7 @@ INSTALLED_APPS = [
     'django_otp.plugins.otp_totp',
     'two_factor',
     'django_otp.plugins.otp_email',
+    'django_filters',
 ]
 
 try:
