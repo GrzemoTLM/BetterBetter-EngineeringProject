@@ -20,4 +20,9 @@ urlpatterns = [
     path('coupons/<int:pk>/force-win/', CouponForceWinView.as_view(), name='coupon-force-win'),
     path('coupons/<int:coupon_id>/bets/', BetListCreateView.as_view(), name='bet-list-create'),
     path('coupons/<int:coupon_id>/bets/<int:pk>/', BetDetailsView.as_view(), name='bet-detail'),
+    # Aliasowe krótsze ścieżki (bez powtórzenia 'coupons/') dla operacji na pojedynczym kuponie
+    path('<int:pk>/', CouponDetailsView.as_view(), name='coupon-detail-short'),
+    path('<int:pk>/recalc/', CouponRecalcView.as_view(), name='coupon-recalc-short'),
+    path('<int:pk>/settle/', CouponSettleView.as_view(), name='coupon-settle-short'),
+    path('<int:pk>/force-win/', CouponForceWinView.as_view(), name='coupon-force-win-short'),
 ]

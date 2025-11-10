@@ -8,14 +8,12 @@ INSTALLED_APPS = [
     'users',
     'coupons',
     'finances',
+    'coupon_analytics.apps.CouponAnalyticsConfig',
 ]
 
-# Bot doesn't run Django views; keep middleware minimal.
 MIDDLEWARE = []
 
-# Disable drf_yasg auto-append if inherited
 try:
     DRF_YASG_AVAILABLE = False
 except Exception:
     pass
-
