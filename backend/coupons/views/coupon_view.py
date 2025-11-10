@@ -142,3 +142,24 @@ class CouponForceWinView(_CouponRetrieveMixin, generics.GenericAPIView):
         out_serializer = self.get_serializer(updated, context={'request': request})
         return Response(out_serializer.data, status=status.HTTP_200_OK)
 
+
+class CouponCopyView(_CouponRetrieveMixin, generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, pk, *args, **kwargs):
+        coupon, error = self._fetch_or_404(pk, request)
+        if error:
+            return error
+
+        from ..serializers.coupon_serializer import CouponCopySerializer
+
+        copy_data = {
+            'bookmaker_account': coupon.bookmaker_account_id,
+            'strategy': coupon.strategy.code if coupon.strategy else None,
+            'coupon_type': coupon.coupon_type,
+            'bet_stake': coupon.bet_stake,
+            'bets': coupon.bets.all(),
+        }
+
+        serializer = CouponCopySerializer(copy_data, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)

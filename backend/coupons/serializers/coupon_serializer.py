@@ -128,3 +128,20 @@ class CouponUpdateSerializer(CouponBaseSerializer):
         if account is not None and (not user or account.user_id != user.id):
             raise serializers.ValidationError({"bookmaker_account": "Account does not belong to the current user."})
         return attrs
+
+class CouponCopySerializer(serializers.Serializer):
+
+    bookmaker_account = serializers.IntegerField()
+    strategy = serializers.CharField(allow_null=True, required=False)
+    coupon_type = serializers.CharField()
+    bet_stake = serializers.DecimalField(max_digits=10, decimal_places=2)
+    bets = BetCreateSerializer(many=True, read_only=True)
+
+    class Meta:
+        fields = [
+            'bookmaker_account',
+            'strategy',
+            'coupon_type',
+            'bet_stake',
+            'bets',
+        ]
