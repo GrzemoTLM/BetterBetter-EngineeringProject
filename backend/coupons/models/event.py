@@ -19,6 +19,20 @@ class Event(models.Model):
         verbose_name=_("Event name"),
         help_text=_("Name of the event (e.g., Team A vs Team B)"),
     )
+    home_team = models.CharField(
+        max_length=200,
+        verbose_name=_("Home team"),
+        help_text=_("Name of the home team"),
+        blank=True,
+        null=True,
+    )
+    away_team = models.CharField(
+        max_length=200,
+        verbose_name=_("Away team"),
+        help_text=_("Name of the away team"),
+        blank=True,
+        null=True,
+    )
     discipline = models.ForeignKey(
         Discipline,
         on_delete=models.CASCADE,
