@@ -27,7 +27,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name='discipline',
-            constraint=models.CheckConstraint(condition=models.Q(('code', ''), _negated=True), name='sport_code_not_blank'),
+            constraint=models.CheckConstraint(check=models.Q(('code', ''), _negated=True), name='sport_code_not_blank'),
         ),
         migrations.AddField(
             model_name='bet',

@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 from pathlib import Path
 from datetime import timedelta
+import importlib.util
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(os.path.join(BASE_DIR, '.env'))
@@ -35,12 +36,9 @@ INSTALLED_APPS = [
     'django_filters',
 ]
 
-try:
-    import drf_yasg  # noqa: F401
+DRF_YASG_AVAILABLE = importlib.util.find_spec("drf_yasg") is not None
+if DRF_YASG_AVAILABLE:
     INSTALLED_APPS.append('drf_yasg')
-    DRF_YASG_AVAILABLE = True
-except Exception:
-    DRF_YASG_AVAILABLE = False
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -84,7 +82,7 @@ DATABASES = {
 }
 
 LOGIN_URL = 'user-login'
-LOGIN_REDIRECT_URL = '/'
+LOGIN_REDIRECT_URL = '/api/auth/google/success/'
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -118,7 +116,6 @@ AUTHENTICATION_BACKENDS = (
 
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.getenv("GOOGLE_CLIENT_ID")
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
-LOGIN_REDIRECT_URL = '/api/auth/google/success/'
 LOGOUT_REDIRECT_URL = '/'
 
 CSRF_TRUSTED_ORIGINS = ["http://127.0.0.1:8000", "http://localhost:8000"]

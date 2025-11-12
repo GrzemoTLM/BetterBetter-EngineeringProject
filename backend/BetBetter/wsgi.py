@@ -1,13 +1,12 @@
-"""
-WSGI config for BetBetter project.
-
-It exposes the WSGI callable as a module-level variable named ``application``.
-
-For more information on this file, see
-https://docs.djangoproject.com/en/5.2/howto/deployment/wsgi/
-"""
 
 import os
+import warnings
+
+warnings.filterwarnings(
+    "ignore",
+    message=r"pkg_resources is deprecated as an API",
+    category=UserWarning,
+)
 
 from django.core.wsgi import get_wsgi_application
 
