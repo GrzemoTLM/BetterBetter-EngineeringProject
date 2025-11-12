@@ -6,6 +6,7 @@ from .views.coupon_view import CouponListCreateView, CouponDetailsView, CouponRe
 from .views.coupon_filter_view import CouponFilterByTeamView, CouponFilterByQueryBuilderView, CouponFilterBarcelonaWinsView
 from .views.bet_view import BetListCreateView, BetDetailsView
 from .views.event_view import EventViewSet
+from .views.ocr_view import OCRTestView
 
 router = routers.DefaultRouter()
 router.register(r'bet-types', BetTypeDictViewSet, basename='bet-type')
@@ -13,6 +14,10 @@ router.register(r'disciplines', DisciplineViewSet, basename='discipline')
 router.register(r'events', EventViewSet, basename='event')
 
 urlpatterns = [
+    path('ocr/', OCRTestView.as_view(), name='ocr-test'),
+    path('ocr/extract/', OCRTestView.as_view(), name='ocr-extract'),
+    path('coupons/ocr/', OCRTestView.as_view(), name='ocr-test-legacy'),
+    path('coupons/ocr/extract/', OCRTestView.as_view(), name='ocr-extract-legacy'),
     path('', include(router.urls)),
     path('coupons/', CouponListCreateView.as_view(), name='coupon-list-create'),
     path('coupons/<int:pk>/', CouponDetailsView.as_view(), name='coupon-detail'),

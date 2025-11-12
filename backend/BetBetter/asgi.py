@@ -1,13 +1,12 @@
-"""
-ASGI config for BetBetter project.
-
-It exposes the ASGI callable as a module-level variable named ``application``.
-
-For more information on this file, see
-https://docs.djangoproject.com/en/5.2/howto/deployment/asgi/
-"""
 
 import os
+import warnings
+
+warnings.filterwarnings(
+    "ignore",
+    message=r"pkg_resources is deprecated as an API",
+    category=UserWarning,
+)
 
 from django.core.asgi import get_asgi_application
 
