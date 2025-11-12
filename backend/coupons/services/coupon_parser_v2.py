@@ -160,8 +160,7 @@ class CouponParserV2:
     
     def _extract_coupon_type(self):
         text_combined = ' '.join(self.text_lines).upper()
-        
-        # Szukaj wskaźników AKO
+
         if any(kw in text_combined for kw in ['AKO', '2UP', '3UP', '4UP', 'MULTIPLE']):
             self.parsed_data['coupon_type'] = 'AKO'
         else:
