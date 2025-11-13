@@ -5,7 +5,9 @@ from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from coupon_analytics.services.analytics_service import get_coupon_analytics_summary
+from coupon_analytics.services.analytics_service import get_coupon_analytics_summary, get_coupon_analytics_summary_for_queryset
+from coupon_analytics.services.query_builder import AnalyticsQueryBuilder
+from coupon_analytics.models.queries import AnalyticsQuery
 
 try:
     from drf_yasg.utils import swagger_auto_schema
@@ -52,3 +54,21 @@ class CouponAnalyticsSummaryView(APIView):
         summary = get_coupon_analytics_summary(request.user, date_from=date_from, date_to=date_to)
         return Response(summary, status=status.HTTP_200_OK)
 
+
+class CouponAnalyticsQuerySummaryView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_description="Zwróć podsumowanie analityczne (ROI, yield, itp.) dla zapisanego AnalyticsQuery.",
+        responses={200: 'Analytics summary for query'}
+    )
+    def get(self, request, pk: int):
+        try:
+            aq = AnalyticsQuery.objects.get(id=pk, user=request.user)
+        except AnalyticsQuery.DoesNotExist:
+            return Response({"detail": "AnalyticsQuery not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        builder = AnalyticsQueryBuilder(aq)
+        qs = builder.apply()
+        summary = get_coupon_analytics_summary_for_queryset(qs)
+        return Response(summary, status=status.HTTP_200_OK)

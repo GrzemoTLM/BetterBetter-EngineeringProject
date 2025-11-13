@@ -3,7 +3,7 @@ from rest_framework import routers
 from .views.bet_type_dict_view import BetTypeDictViewSet
 from .views.discipline_view import DisciplineViewSet
 from .views.coupon_view import CouponListCreateView, CouponDetailsView, CouponRecalcView, CouponSettleView, CouponForceWinView, CouponCopyView
-from .views.coupon_filter_view import CouponFilterByTeamView, CouponFilterByQueryBuilderView, CouponFilterBarcelonaWinsView
+from .views.coupon_filter_view import CouponFilterByTeamView, CouponFilterByQueryBuilderView, CouponFilterUniversalView
 from .views.bet_view import BetListCreateView, BetDetailsView
 from .views.event_view import EventViewSet
 from .views.ocr_view import OCRTestView, OCRParseView
@@ -31,9 +31,8 @@ urlpatterns = [
     path('coupons/<int:coupon_id>/bets/<int:pk>/', BetDetailsView.as_view(), name='bet-detail'),
     path('filter/team/', CouponFilterByTeamView.as_view(), name='coupon-filter-team'),
     path('filter/query-builder/', CouponFilterByQueryBuilderView.as_view(), name='coupon-filter-query-builder'),
-    path('filter/barcelona-wins/', CouponFilterBarcelonaWinsView.as_view(), name='coupon-filter-barcelona-wins'),
+    path('filter/universal/', CouponFilterUniversalView.as_view(), name='coupon-filter-universal'),
     path('<int:pk>/', CouponDetailsView.as_view(), name='coupon-detail-short'),
-    path('<int:pk>/recalc/', CouponRecalcView.as_view(), name='coupon-recalc-short'),
     path('<int:pk>/settle/', CouponSettleView.as_view(), name='coupon-settle-short'),
     path('<int:pk>/force-win/', CouponForceWinView.as_view(), name='coupon-force-win-short'),
     path('<int:pk>/copy/', CouponCopyView.as_view(), name='coupon-copy-short'),

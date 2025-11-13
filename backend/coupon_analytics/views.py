@@ -1,4 +1,7 @@
-from coupon_analytics.api.analytics_views import CouponAnalyticsSummaryView
+from coupon_analytics.api.analytics_views import (
+    CouponAnalyticsSummaryView,
+    CouponAnalyticsQuerySummaryView,
+)
 from coupon_analytics.api.alert_views import (
     AlertRuleListCreateView,
     AlertRuleDetailView,
@@ -8,6 +11,7 @@ from coupon_analytics.api.alert_views import (
 
 __all__ = [
     'CouponAnalyticsSummaryView',
+    'CouponAnalyticsQuerySummaryView',
     'AlertRuleListCreateView',
     'AlertRuleDetailView',
     'AlertRuleEvaluateView',
