@@ -1,8 +1,7 @@
 from dataclasses import dataclass, asdict
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Optional, Dict, Any
-from django.db.models import Sum, Count, Q, Avg, F
-from django.utils import timezone
+from django.db.models import Sum, Q, Avg
 
 from coupons.models import Coupon
 
@@ -51,16 +50,10 @@ def _percent(numerator: Decimal, denominator: Decimal) -> Optional[Decimal]:
 
 class AnalyticsService:
 
-    def coupon_summary(self, *, user, date_from=None, date_to=None) -> CouponAnalyticsResult:
-        qs = Coupon.objects.filter(user=user)
-        if date_from:
-            qs = qs.filter(created_at__gte=date_from)
-        if date_to:
-            qs = qs.filter(created_at__lte=date_to)
-
+    def _summary_from_queryset(self, qs) -> CouponAnalyticsResult:
         total_coupons = qs.count()
         finished_filter = Q(status=Coupon.CouponStatus.WON) | Q(status=Coupon.CouponStatus.LOST) | Q(status=Coupon.CouponStatus.CANCELED)
-        result_filter = Q(status=Coupon.CouponStatus.WON) | Q(status=Coupon.CouponStatus.LOST)  # tylko rozstrzygnięte z wynikiem finansowym
+        result_filter = Q(status=Coupon.CouponStatus.WON) | Q(status=Coupon.CouponStatus.LOST)
 
         finished_coupons = qs.filter(finished_filter).count()
         in_progress_coupons = qs.filter(status=Coupon.CouponStatus.IN_PROGRESS).count()
@@ -99,8 +92,22 @@ class AnalyticsService:
             avg_multiplier=Decimal(avg_agg['avg_multiplier']) if avg_agg['avg_multiplier'] is not None else None,
         )
 
+    def coupon_summary(self, *, user, date_from=None, date_to=None) -> CouponAnalyticsResult:
+        qs = Coupon.objects.filter(user=user)
+        if date_from:
+            qs = qs.filter(created_at__gte=date_from)
+        if date_to:
+            qs = qs.filter(created_at__lte=date_to)
+        return self._summary_from_queryset(qs)
+
 _service = AnalyticsService()
+
 
 def get_coupon_analytics_summary(user, *, date_from=None, date_to=None) -> Dict[str, Any]:
     result = _service.coupon_summary(user=user, date_from=date_from, date_to=date_to)
+    return result.to_representation()
+
+
+def get_coupon_analytics_summary_for_queryset(qs) -> Dict[str, Any]:
+    result = _service._summary_from_queryset(qs)
     return result.to_representation()

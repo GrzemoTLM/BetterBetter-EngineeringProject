@@ -1,7 +1,6 @@
-import json
 import re
 from datetime import datetime
-from typing import Dict, List, Any, Optional
+from typing import List, Optional
 from dataclasses import dataclass, asdict
 
 
@@ -62,9 +61,9 @@ class CouponParserV2:
         return coupon
     
     def _extract_dates_and_times(self):
-        dates = []
-        times = []
-        
+        dates: List[str] = []
+        times: List[str] = []
+
         for line in self.text_lines:
             date_match = re.search(r'(\d{1,2}[./]\d{1,2}[./]\d{4})', line)
             if date_match:
@@ -83,59 +82,58 @@ class CouponParserV2:
             self.parsed_data['placed_at'] = self._format_datetime(date_str, time_str)
     
     def _extract_bets_and_odds(self):
-        bets = []
-        processed_indices = set()
-
+        normalized: List[str] = []
+        skip_next = False
         for i, line in enumerate(self.text_lines):
-            if i in processed_indices:
+            if skip_next:
+                skip_next = False
                 continue
+            if i + 1 < len(self.text_lines):
+                nxt = self.text_lines[i + 1]
 
-            if ' - ' in line:
-                odds = "1.00"
+                if ' - ' not in line and (nxt.startswith('-') or nxt.startswith(' - ')):
+                    if not re.match(r'^\d+[.,]?\d*$', line):
+                        right = re.sub(r'^\s*-\s*', '', nxt)
+                        merged = (line + ' - ' + right).replace('  ', ' ').strip()
+                        normalized.append(merged)
+                        skip_next = True
+                        continue
+            normalized.append(line)
 
-                parts = line.split(' - ')
+        bets: List[Bet] = []
+        used_indices = set()
 
-                if len(parts) >= 2:
-                    team1 = parts[-2].strip()
-                    team2 = parts[-1].strip()
-                    event_name = f"{team1} - {team2}"
+        def is_event_line(l: str) -> bool:
+            return ' - ' in l and len(l.split(' - ')) >= 2 and all(part.strip() for part in l.split(' - '))
 
-                    team1_clean = re.sub(r'^\d+\s+', '', team1)
-                    team1_clean = re.sub(r'^\w+\s+kurs:\s+\d+\s+', '', team1_clean, flags=re.IGNORECASE)
-                    team1_clean = re.sub(r'^\w+\s+', '', team1_clean).strip()
-
-                    if team1_clean:
-                        event_name = f"{team1_clean} - {team2}"
-
-                    odds_match = re.search(r'(\d+\.\d{2})', line)
-                    if odds_match:
-                        odds_str = odds_match.group(1)
-                        if float(odds_str) < 1.0 or float(odds_str) > 100.0:
-                            odds = "1.00"
-                        else:
-                            odds = odds_str
-
-                if odds == "1.00":
-                    for j in range(i+1, min(i+4, len(self.text_lines))):
-                        next_line = self.text_lines[j].strip()
-                        if re.match(r'^\d+\.\d{2}$', next_line):
-                            odds = next_line
-                            processed_indices.add(j)
-                            break
-
-                bets.append(Bet(
-                    event_name=event_name,
-                    odds=odds,
-                    bet_type="1X2"
-                ))
-                processed_indices.add(i)
+        for i, line in enumerate(normalized):
+            if i in used_indices:
+                continue
+            if not is_event_line(line):
+                continue
+            event_name = re.sub(r'\s+', ' ', line.strip())
+            odds = "1.00"
+            for j in range(i + 1, min(i + 9, len(normalized))):
+                if is_event_line(normalized[j]):
+                    break
+                candidate = normalized[j].strip()
+                if re.search(r'(Stawka|Vynik|Wygrana|Informacje|Bonusy|Wskaznik|Pitka|Udostepnij|Kopiuj|Zglos|Zmien|Calkowity|Kurs)', candidate, re.IGNORECASE):
+                    continue
+                if re.match(r'^\d+\.\d{2}$', candidate):
+                    val = float(candidate)
+                    if 1.01 <= val <= 100.0:
+                        odds = candidate
+                        used_indices.add(j)
+                        break
+            bets.append(Bet(event_name=event_name, odds=odds, bet_type="1X2"))
+            used_indices.add(i)
 
         self.parsed_data['bets'] = bets
     
     def _extract_stake(self):
         for i, line in enumerate(self.text_lines):
             if 'Stawka' in line:
-                match = re.search(r'(\d+[.,]\d+)', line)
+                match = re.search(r'(\d+[.,]?\d+)', line)
                 if match:
                     amount = match.group(1).replace(',', '.')
                     self.parsed_data['bet_stake'] = f"{float(amount):.2f}"
@@ -166,7 +164,7 @@ class CouponParserV2:
         else:
             self.parsed_data['coupon_type'] = 'SOLO'
     
-    def _format_datetime(self, date_str: str, time_str: str) -> str:
+    def _format_datetime(self, date_str: str, time_str: str) -> Optional[str]:
         try:
             parts = date_str.replace('/', '.').split('.')
             day, month, year = int(parts[0]), int(parts[1]), int(parts[2])
@@ -177,11 +175,8 @@ class CouponParserV2:
             dt = datetime(year, month, day, hour, minute, 0)
             
             return dt.isoformat() + '+01:00'
-        except Exception as e:
-            print(f"Błąd parsowania daty: {e}")
+        except Exception:
             return None
 
 
 CouponParser = CouponParserV2
-
-
