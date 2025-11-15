@@ -121,13 +121,14 @@ class CouponService:
             )
         if new_status in final_statuses and prev_status not in final_statuses:
             from coupon_analytics.services.streak_alert_service import check_and_send_streak_loss_alert, cleanup_streak_alerts_on_win
+            from coupon_analytics.services.alert_service import notify_yield_alerts_on_coupon_settle
 
-            # If WON, clean up old streak alerts first
             if new_status == Coupon.CouponStatus.WON:
                 cleanup_streak_alerts_on_win(coupon.user)
-            # Then check/send streak alerts (for LOST status)
             elif new_status == Coupon.CouponStatus.LOST:
                 check_and_send_streak_loss_alert(coupon.user)
+
+            notify_yield_alerts_on_coupon_settle(coupon.user)
         return coupon
 
     def recalc_and_evaluate_coupon(self, coupon: Coupon) -> Coupon:
@@ -266,6 +267,9 @@ class CouponService:
             BookmakerAccountModel.objects.filter(id=locked_coupon.bookmaker_account.id).update(
                 balance=F('balance') + Decimal(str(delta))
             )
+
+        from coupon_analytics.services.alert_service import notify_yield_alerts_on_coupon_settle
+        notify_yield_alerts_on_coupon_settle(locked_coupon.user)
         return locked_coupon
 
 _service = CouponService()
@@ -305,4 +309,3 @@ def recalc_and_evaluate_coupon(coupon: Coupon) -> Coupon:
 
 def force_settle_coupon_won(coupon: Coupon) -> Coupon:
     return _service.force_settle_coupon_won(coupon)
-

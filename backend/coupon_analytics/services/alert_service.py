@@ -78,14 +78,44 @@ def _render_message(rule: AlertRule, *, metric_value: Decimal | None, start: dat
     return msg
 
 
+def _get_calendar_period(now: datetime, window_days: int) -> tuple[datetime, datetime]:
+
+    if window_days == 7:
+
+        current_weekday = now.isoweekday()
+        days_since_sunday = current_weekday % 7
+
+        start_date = (now - timedelta(days=days_since_sunday)).date()
+        end_date = start_date + timedelta(days=6)
+
+    elif window_days == 30:
+        start_date = now.date().replace(day=1)
+
+        if now.month == 12:
+            next_month_first = start_date.replace(year=now.year + 1, month=1)
+        else:
+            next_month_first = start_date.replace(month=now.month + 1)
+        end_date = next_month_first - timedelta(days=1)
+
+    elif window_days == 365:
+        start_date = now.date().replace(month=1, day=1)
+        end_date = now.date().replace(month=12, day=31)
+    else:
+        start_date = (now - timedelta(days=window_days)).date()
+        end_date = now.date()
+
+    start_dt = datetime.combine(start_date, time.min, tzinfo=now.tzinfo)
+    end_dt = datetime.combine(end_date, time.max, tzinfo=now.tzinfo)
+
+    return start_dt, end_dt
+
+
 def evaluate_alert_rules_for_user(user: User) -> None:
     now = timezone.now()
     rules = AlertRule.objects.filter(user=user, is_active=True).exclude(metric='streak_loss')
     for rule in rules:
-        days = rule.window_days or 30
-        start = now - timedelta(days=days)
-        start_dt = datetime.combine(start.date(), time.min, tzinfo=now.tzinfo)
-        end_dt = datetime.combine(now.date(), time.max, tzinfo=now.tzinfo)
+        window_days = rule.window_days or 30
+        start_dt, end_dt = _get_calendar_period(now, window_days)
 
         metric = (rule.metric or '').lower()
 
@@ -94,13 +124,17 @@ def evaluate_alert_rules_for_user(user: User) -> None:
 
         value = _compute_metric_value(rule, user=user, start=start_dt, end=end_dt)
         comp = _COMPARATORS.get(rule.comparator)
+
         if comp is None or value is None:
             continue
         threshold = _dec_or_none(rule.threshold_value)
+
         if not comp(value, threshold):
             continue
+
         if AlertEvent.objects.filter(rule=rule, window_start=start_dt, window_end=end_dt).exists():
             continue
+
         rendered = _render_message(rule, metric_value=value, start=start_dt, end=end_dt)
         AlertEvent.objects.create(
             rule=rule,
@@ -114,8 +148,5 @@ def evaluate_alert_rules_for_user(user: User) -> None:
             message_rendered=rendered,
         )
 
-
 def notify_yield_alerts_on_coupon_settle(user: User) -> None:
     evaluate_alert_rules_for_user(user)
-
-
