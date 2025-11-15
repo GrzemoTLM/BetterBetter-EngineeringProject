@@ -19,6 +19,7 @@ from bot.commands.auth import start, login
 from bot.commands.balance import balance
 from bot.commands.budget import budget
 from bot.commands.utils import help_command, refresh
+from bot.commands.ingame import ingame
 from bot.notifications.alerts import send_pending_alert_events
 from bot.notifications.budget_monitor import check_budget_exceeded
 
@@ -35,7 +36,8 @@ def main() -> None:
     application.add_handler(CommandHandler("balance", balance))
     application.add_handler(CommandHandler("budget", budget))
     application.add_handler(CommandHandler("refresh", refresh))
-    
+    application.add_handler(CommandHandler("ingame", ingame))
+
     application.job_queue.run_repeating(send_pending_alert_events, interval=5, first=2)
     application.job_queue.run_repeating(check_budget_exceeded, interval=30, first=5)
     
