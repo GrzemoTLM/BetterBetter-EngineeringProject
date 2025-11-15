@@ -33,7 +33,7 @@ services:
     container_name: betterbetter_telegram_bot
     restart: unless-stopped
     working_dir: /app
-    command: python bot/telegram_min.py
+    command: python bot/main.py
     env_file:
       - .env
     environment:

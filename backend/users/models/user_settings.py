@@ -1,6 +1,5 @@
 from django.conf import settings
 from django.db import models
-from django.core.validators import MinValueValidator
 
 from coupons.models import Currency
 from .choices import NotificationGate, TwoFactorMethod
@@ -47,6 +46,7 @@ class UserSettings(models.Model):
         blank=True,
         null=True
     )
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

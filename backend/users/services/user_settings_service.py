@@ -1,5 +1,4 @@
 from django.contrib.auth import get_user_model
-from django.utils.formats import date_format
 from ..models import UserSettings, NotificationGate
 
 User = get_user_model()
