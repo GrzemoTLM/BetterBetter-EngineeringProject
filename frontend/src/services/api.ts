@@ -62,10 +62,11 @@ class ApiService {
   private getErrorMessage(error: unknown): string {
     if (error instanceof AxiosError) {
       if (error.response?.data) {
-        const data = error.response.data as Record<string, any>;
+        const data = error.response.data as Record<string, unknown>;
 
         if (typeof data === 'object') {
           const firstKey = Object.keys(data)[0];
+
           if (firstKey && Array.isArray(data[firstKey])) {
             return data[firstKey][0];
           }
