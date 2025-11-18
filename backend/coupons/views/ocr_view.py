@@ -3,6 +3,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from pathlib import Path
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 from coupons.services.ocr_service import OCRService
 from coupons.services.coupon_parser_v2 import CouponParser
 
@@ -11,6 +13,15 @@ logger = logging.getLogger(__name__)
 
 class OCRTestView(APIView):
 
+    @swagger_auto_schema(
+        operation_summary='List available OCR test images',
+        operation_description='Get list of available images for OCR testing',
+        responses={
+            200: openapi.Response('List of available images'),
+            404: openapi.Response('Images directory not found'),
+            500: openapi.Response('Server error'),
+        }
+    )
     def get(self, request, *args, **kwargs):
         try:
             images_dir = Path(__file__).parent.parent.parent / 'coupons_images'
@@ -45,6 +56,25 @@ class OCRTestView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
+    @swagger_auto_schema(
+        operation_summary='Extract text from image using OCR',
+        operation_description='Extract text from coupon image using PaddleOCR, optionally parse it',
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'image_name': openapi.Schema(type=openapi.TYPE_STRING, description='Image filename'),
+                'parse': openapi.Schema(type=openapi.TYPE_BOOLEAN, default=False, description='Parse extracted text'),
+                'bookmaker_account': openapi.Schema(type=openapi.TYPE_INTEGER, default=1, description='Bookmaker account ID'),
+            },
+            required=['image_name']
+        ),
+        responses={
+            200: openapi.Response('OCR extraction result'),
+            400: openapi.Response('Bad request'),
+            404: openapi.Response('Image not found'),
+            500: openapi.Response('Server error'),
+        }
+    )
     def post(self, request, *args, **kwargs):
         try:
             image_name = request.data.get('image_name')
@@ -108,6 +138,25 @@ class OCRTestView(APIView):
 
 
 class OCRParseView(APIView):
+
+    @swagger_auto_schema(
+        operation_summary='Parse coupon from image',
+        operation_description='Extract and parse coupon data from image',
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'image_name': openapi.Schema(type=openapi.TYPE_STRING, description='Image filename'),
+                'bookmaker_account': openapi.Schema(type=openapi.TYPE_INTEGER, default=1, description='Bookmaker account ID'),
+            },
+            required=['image_name']
+        ),
+        responses={
+            200: openapi.Response('Parsed coupon data'),
+            400: openapi.Response('Bad request'),
+            404: openapi.Response('Image not found'),
+            500: openapi.Response('Server error'),
+        }
+    )
     def post(self, request, *args, **kwargs):
         try:
             image_name = request.data.get('image_name')

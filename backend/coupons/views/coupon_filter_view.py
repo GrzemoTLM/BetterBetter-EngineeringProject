@@ -2,6 +2,8 @@ from decimal import Decimal
 from rest_framework import status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 from coupons.services.team_filter import TeamFilterService
 from coupons.services.coupon_filter_service import UniversalCouponFilterService
@@ -75,6 +77,22 @@ class CouponFilterByTeamView(APIView, CouponStatsMixin):
 
     permission_classes = [permissions.IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_summary='Filter coupons by team',
+        operation_description='Filter coupons by team name and position (home/away)',
+        manual_parameters=[
+            openapi.Parameter('team_name', openapi.IN_QUERY, type=openapi.TYPE_STRING, required=True, description='Team name'),
+            openapi.Parameter('position', openapi.IN_QUERY, type=openapi.TYPE_STRING, enum=['home', 'away', 'any'], default='any', description='Team position'),
+            openapi.Parameter('bet_type', openapi.IN_QUERY, type=openapi.TYPE_STRING, description='Bet type code'),
+            openapi.Parameter('only_won', openapi.IN_QUERY, type=openapi.TYPE_BOOLEAN, default=True, description='Only won coupons'),
+            openapi.Parameter('status', openapi.IN_QUERY, type=openapi.TYPE_STRING, description='Coupon status'),
+        ],
+        responses={
+            200: openapi.Response('Filtered coupons with statistics', CouponFilterResponseSerializer(many=True)),
+            400: openapi.Response('Bad request'),
+            401: openapi.Response('Unauthorized'),
+        }
+    )
     def get(self, request):
         serializer = SimpleFilterRequestSerializer(data=request.query_params)
         if not serializer.is_valid():
@@ -152,6 +170,16 @@ class CouponFilterByQueryBuilderView(APIView, CouponStatsMixin):
 
     permission_classes = [permissions.IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_summary='Filter coupons with custom query',
+        operation_description='Build and execute custom coupon queries with multiple conditions',
+        request_body=QueryBuilderRequestSerializer,
+        responses={
+            200: openapi.Response('Filtered coupons with statistics'),
+            400: openapi.Response('Bad request'),
+            401: openapi.Response('Unauthorized'),
+        }
+    )
     def post(self, request):
         serializer = QueryBuilderRequestSerializer(data=request.data)
         if not serializer.is_valid():
@@ -183,6 +211,22 @@ class CouponFilterUniversalView(APIView, CouponStatsMixin):
 
     permission_classes = [permissions.IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_summary='Universal coupon filter',
+        operation_description='Filter coupons with flexible options - team, position, bet type, and filter mode (all/won_coupons/won_bets)',
+        manual_parameters=[
+            openapi.Parameter('team_name', openapi.IN_QUERY, type=openapi.TYPE_STRING, description='Team name'),
+            openapi.Parameter('position', openapi.IN_QUERY, type=openapi.TYPE_STRING, enum=['home', 'away', 'any'], default='any', description='Team position'),
+            openapi.Parameter('bet_type_code', openapi.IN_QUERY, type=openapi.TYPE_STRING, description='Bet type code'),
+            openapi.Parameter('filter_mode', openapi.IN_QUERY, type=openapi.TYPE_STRING, enum=['all', 'won_coupons', 'won_bets'], default='all', description='Filter mode'),
+            openapi.Parameter('only_won', openapi.IN_QUERY, type=openapi.TYPE_BOOLEAN, default=False, description='Backward compatibility - maps to won_bets'),
+        ],
+        responses={
+            200: openapi.Response('Filtered coupons with statistics'),
+            400: openapi.Response('Bad request'),
+            401: openapi.Response('Unauthorized'),
+        }
+    )
     def get(self, request):
         team_name = request.query_params.get('team_name')
         position = request.query_params.get('position', 'any')

@@ -4,6 +4,8 @@ from django.contrib.auth import login
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 from ..models import UserSettings
 from ..serializers import LoginSerializer, UserSerializer
@@ -16,6 +18,15 @@ class LoginView(generics.CreateAPIView):
     serializer_class = LoginSerializer
     permission_classes = [AllowAny]
 
+    @swagger_auto_schema(
+        operation_summary='User login',
+        operation_description='Authenticate user with email and password. May require 2FA verification.',
+        request_body=LoginSerializer,
+        responses={
+            200: openapi.Response('Login successful or 2FA required'),
+            400: openapi.Response('Invalid credentials or 2FA setup required'),
+        }
+    )
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)

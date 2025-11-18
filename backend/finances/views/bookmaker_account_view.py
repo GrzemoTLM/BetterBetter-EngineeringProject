@@ -1,6 +1,8 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 from finances.serializers.bookmaker_account_serializer import BookmakerAccountSerializer
 from finances.services.bookmaker_account_service import (
     create_bookmaker_account,
@@ -59,6 +61,14 @@ def handle_delete_bookmaker_account(request, pk):
 class BookmakerAccountListView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_summary='List bookmaker accounts',
+        operation_description='Get all bookmaker accounts for authenticated user',
+        responses={
+            200: openapi.Response('List of bookmaker accounts', BookmakerAccountSerializer(many=True)),
+            400: openapi.Response('Error retrieving accounts'),
+        }
+    )
     def get(self, request):
         try:
             accounts = list_bookmaker_accounts(request.user)
@@ -71,6 +81,15 @@ class BookmakerAccountListView(APIView):
 class BookmakerAccountCreateView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_summary='Create bookmaker account',
+        operation_description='Create a new bookmaker account',
+        request_body=BookmakerAccountSerializer,
+        responses={
+            201: openapi.Response('Account created', BookmakerAccountSerializer),
+            400: openapi.Response('Invalid data'),
+        }
+    )
     def post(self, request):
         try:
             account = create_bookmaker_account(request.data, request=request)
@@ -83,15 +102,55 @@ class BookmakerAccountCreateView(APIView):
 class BookmakerAccountDetailView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_summary='Get bookmaker account',
+        operation_description='Retrieve a specific bookmaker account',
+        responses={
+            200: openapi.Response('Account details', BookmakerAccountSerializer),
+            403: openapi.Response('Not authorized'),
+            404: openapi.Response('Account not found'),
+        }
+    )
     def get(self, request, pk):
         return handle_get_bookmaker_account(request, pk)
 
+    @swagger_auto_schema(
+        operation_summary='Update bookmaker account',
+        operation_description='Update a bookmaker account (PUT)',
+        request_body=BookmakerAccountSerializer,
+        responses={
+            200: openapi.Response('Account updated', BookmakerAccountSerializer),
+            400: openapi.Response('Invalid data'),
+            403: openapi.Response('Not authorized'),
+            404: openapi.Response('Account not found'),
+        }
+    )
     def put(self, request, pk):
         return handle_update_bookmaker_account(request, pk)
 
+    @swagger_auto_schema(
+        operation_summary='Partial update bookmaker account',
+        operation_description='Update a bookmaker account (PATCH)',
+        request_body=BookmakerAccountSerializer,
+        responses={
+            200: openapi.Response('Account updated', BookmakerAccountSerializer),
+            400: openapi.Response('Invalid data'),
+            403: openapi.Response('Not authorized'),
+            404: openapi.Response('Account not found'),
+        }
+    )
     def patch(self, request, pk):
         return handle_update_bookmaker_account(request, pk)
 
+    @swagger_auto_schema(
+        operation_summary='Delete bookmaker account',
+        operation_description='Delete a bookmaker account',
+        responses={
+            204: openapi.Response('Account deleted'),
+            403: openapi.Response('Not authorized'),
+            404: openapi.Response('Account not found'),
+        }
+    )
     def delete(self, request, pk):
         return handle_delete_bookmaker_account(request, pk)
 
@@ -99,6 +158,14 @@ class BookmakerAccountDetailView(APIView):
 class TotalBalanceView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_summary='Get total balance',
+        operation_description='Get total balance across all bookmaker accounts',
+        responses={
+            200: openapi.Response('Total balance'),
+            400: openapi.Response('Error calculating balance'),
+        }
+    )
     def get(self, request):
         try:
             total_balance = get_total_balance(request.user)
@@ -110,6 +177,15 @@ class TotalBalanceView(APIView):
 class BookmakerAccountSummaryView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_summary='Get bookmaker account summary',
+        operation_description='Get summary statistics for a specific bookmaker account',
+        responses={
+            200: openapi.Response('Account summary'),
+            403: openapi.Response('Not authorized'),
+            404: openapi.Response('Account not found'),
+        }
+    )
     def get(self, request, pk):
         try:
             account = get_bookmaker_account(pk)
@@ -140,6 +216,14 @@ class BookmakerAccountSummaryView(APIView):
 class BookmakerAccountsSummaryView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_summary='Get all bookmaker accounts summary',
+        operation_description='Get summary statistics for all bookmaker accounts',
+        responses={
+            200: openapi.Response('Accounts summary'),
+            400: openapi.Response('Error calculating summary'),
+        }
+    )
     def get(self, request):
         try:
             qs = (

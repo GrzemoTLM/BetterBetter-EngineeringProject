@@ -1,6 +1,8 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 from users.serializers.telegram_serializer import (
     TelegramAuthCodeSerializer,
     ConnectTelegramSerializer,
@@ -12,6 +14,15 @@ from users.services.telegram_service import TelegramService
 class GenerateTelegramAuthCodeView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_summary='Generate Telegram auth code',
+        operation_description='Generate authorization code for Telegram connection',
+        responses={
+            201: openapi.Response('Auth code generated', TelegramAuthCodeSerializer),
+            400: openapi.Response('Error generating code'),
+            401: openapi.Response('Unauthorized'),
+        }
+    )
     def post(self, request):
         try:
             auth_code = TelegramService.generate_auth_code(request.user)
@@ -31,6 +42,16 @@ class GenerateTelegramAuthCodeView(APIView):
 class ConnectTelegramView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_summary='Connect Telegram account',
+        operation_description='Connect user account with Telegram',
+        request_body=ConnectTelegramSerializer,
+        responses={
+            201: openapi.Response('Telegram account connected', TelegramUserSerializer),
+            400: openapi.Response('Invalid code or connection failed'),
+            401: openapi.Response('Unauthorized'),
+        }
+    )
     def post(self, request):
         serializer = ConnectTelegramSerializer(data=request.data)
         if serializer.is_valid():
