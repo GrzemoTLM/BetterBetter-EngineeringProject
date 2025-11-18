@@ -1,6 +1,8 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 from finances.serializers.transaction_serializer import TransactionSerializer
 from finances.services.transaction_service import create_transaction, update_transaction, get_transaction, list_transactions, delete_transaction
 from finances.services.transaction_service import user_transactions_summary
@@ -48,6 +50,14 @@ def handle_delete_transaction(request, pk):
 
 
 class TransactionListView(APIView):
+    @swagger_auto_schema(
+        operation_summary='List user transactions',
+        operation_description='Get all transactions for authenticated user',
+        responses={
+            200: openapi.Response('List of transactions', TransactionSerializer(many=True)),
+            400: openapi.Response('Error retrieving transactions'),
+        }
+    )
     def get(self, request):
         try:
             transactions = list_transactions(request.user)
@@ -58,6 +68,15 @@ class TransactionListView(APIView):
 
 
 class TransactionCreateView(APIView):
+    @swagger_auto_schema(
+        operation_summary='Create transaction',
+        operation_description='Create a new financial transaction',
+        request_body=TransactionSerializer,
+        responses={
+            201: openapi.Response('Transaction created', TransactionSerializer),
+            400: openapi.Response('Invalid data'),
+        }
+    )
     def post(self, request):
         try:
             data = request.data.copy()
@@ -70,20 +89,68 @@ class TransactionCreateView(APIView):
 
 
 class TransactionDetailView(APIView):
+    @swagger_auto_schema(
+        operation_summary='Get transaction',
+        operation_description='Retrieve a specific transaction',
+        responses={
+            200: openapi.Response('Transaction details', TransactionSerializer),
+            403: openapi.Response('Not authorized'),
+            404: openapi.Response('Transaction not found'),
+        }
+    )
     def get(self, request, pk):
         return handle_get_transaction(request, pk)
 
+    @swagger_auto_schema(
+        operation_summary='Update transaction',
+        operation_description='Update a transaction (PUT)',
+        request_body=TransactionSerializer,
+        responses={
+            200: openapi.Response('Transaction updated', TransactionSerializer),
+            400: openapi.Response('Invalid data'),
+            403: openapi.Response('Not authorized'),
+            404: openapi.Response('Transaction not found'),
+        }
+    )
     def put(self, request, pk):
         return handle_update_transaction(request, pk)
 
+    @swagger_auto_schema(
+        operation_summary='Partial update transaction',
+        operation_description='Update a transaction (PATCH)',
+        request_body=TransactionSerializer,
+        responses={
+            200: openapi.Response('Transaction updated', TransactionSerializer),
+            400: openapi.Response('Invalid data'),
+            403: openapi.Response('Not authorized'),
+            404: openapi.Response('Transaction not found'),
+        }
+    )
     def patch(self, request, pk):
         return handle_update_transaction(request, pk)
 
+    @swagger_auto_schema(
+        operation_summary='Delete transaction',
+        operation_description='Delete a transaction',
+        responses={
+            204: openapi.Response('Transaction deleted'),
+            403: openapi.Response('Not authorized'),
+            404: openapi.Response('Transaction not found'),
+        }
+    )
     def delete(self, request, pk):
         return handle_delete_transaction(request, pk)
 
 
 class TransactionSummaryView(APIView):
+    @swagger_auto_schema(
+        operation_summary='Get transaction summary',
+        operation_description='Get summary of deposits, withdrawals and net deposits',
+        responses={
+            200: openapi.Response('Transaction summary'),
+            400: openapi.Response('Error calculating summary'),
+        }
+    )
     def get(self, request):
         try:
             summary = user_transactions_summary(request.user)

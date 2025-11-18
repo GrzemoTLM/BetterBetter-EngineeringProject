@@ -1,5 +1,7 @@
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 from ..models import Coupon
 from ..serializers.coupon_serializer import (
@@ -108,6 +110,15 @@ class CouponRecalcView(_CouponRetrieveMixin, generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = CouponSerializer
 
+    @swagger_auto_schema(
+        operation_summary='Recalculate coupon',
+        operation_description='Recalculate coupon status and evaluate results',
+        responses={
+            200: openapi.Response('Updated coupon', CouponSerializer),
+            404: openapi.Response('Coupon not found'),
+            401: openapi.Response('Unauthorized'),
+        }
+    )
     def post(self, request, pk, *args, **kwargs):
         coupon, error = self._fetch_or_404(pk, request)
         if error:
@@ -121,6 +132,19 @@ class CouponSettleView(_CouponRetrieveMixin, generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = CouponSerializer
 
+    @swagger_auto_schema(
+        operation_summary='Settle coupon',
+        operation_description='Manually settle coupon with provided data',
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            description='Settlement data'
+        ),
+        responses={
+            200: openapi.Response('Updated coupon', CouponSerializer),
+            404: openapi.Response('Coupon not found'),
+            401: openapi.Response('Unauthorized'),
+        }
+    )
     def post(self, request, pk, *args, **kwargs):
         coupon, error = self._fetch_or_404(pk, request)
         if error:
@@ -134,6 +158,15 @@ class CouponForceWinView(_CouponRetrieveMixin, generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = CouponSerializer
 
+    @swagger_auto_schema(
+        operation_summary='Force coupon as won',
+        operation_description='Manually mark coupon as won',
+        responses={
+            200: openapi.Response('Updated coupon', CouponSerializer),
+            404: openapi.Response('Coupon not found'),
+            401: openapi.Response('Unauthorized'),
+        }
+    )
     def post(self, request, pk, *args, **kwargs):
         coupon, error = self._fetch_or_404(pk, request)
         if error:
@@ -146,6 +179,15 @@ class CouponForceWinView(_CouponRetrieveMixin, generics.GenericAPIView):
 class CouponCopyView(_CouponRetrieveMixin, generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_summary='Copy coupon',
+        operation_description='Get coupon data for copying',
+        responses={
+            200: openapi.Response('Coupon data ready for copy'),
+            404: openapi.Response('Coupon not found'),
+            401: openapi.Response('Unauthorized'),
+        }
+    )
     def get(self, request, pk, *args, **kwargs):
         coupon, error = self._fetch_or_404(pk, request)
         if error:

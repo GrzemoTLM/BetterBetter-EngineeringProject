@@ -1,6 +1,8 @@
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.exceptions import NotFound
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 from ..models import Bet, Coupon
 from ..serializers.bet_serializer import BetSerializer, BetCreateSerializer, BetUpdateSerializer
 from ..services.bet_service import create_bet, update_bet, delete_bet, list_bets
@@ -27,6 +29,29 @@ class BetListCreateView(generics.ListCreateAPIView):
     def get_serializer_class(self):
         return BetCreateSerializer if self.request.method == 'POST' else BetSerializer
 
+    @swagger_auto_schema(
+        operation_summary='List bets',
+        operation_description='Get all bets for a specific coupon',
+        responses={
+            200: openapi.Response('List of bets', BetSerializer(many=True)),
+            401: openapi.Response('Unauthorized'),
+            404: openapi.Response('Coupon not found'),
+        }
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+    @swagger_auto_schema(
+        operation_summary='Create bet',
+        operation_description='Create one or multiple bets for a coupon',
+        request_body=BetCreateSerializer,
+        responses={
+            201: openapi.Response('Bet(s) created', BetSerializer),
+            400: openapi.Response('Invalid data'),
+            401: openapi.Response('Unauthorized'),
+            404: openapi.Response('Coupon not found'),
+        }
+    )
     def create(self, request, *args, **kwargs):
         coupon_id = self.kwargs.get('coupon_id')
         payload = request.data
@@ -78,7 +103,30 @@ class BetDetailsView(generics.RetrieveUpdateAPIView):
             return BetUpdateSerializer
         return BetSerializer
 
-    def update(self, request, *args, **kwargs):
+    @swagger_auto_schema(
+        operation_summary='Retrieve bet',
+        operation_description='Get a specific bet details',
+        responses={
+            200: openapi.Response('Bet details', BetSerializer),
+            401: openapi.Response('Unauthorized'),
+            404: openapi.Response('Bet not found'),
+        }
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+    @swagger_auto_schema(
+        operation_summary='Update bet',
+        operation_description='Update a bet (PUT)',
+        request_body=BetUpdateSerializer,
+        responses={
+            200: openapi.Response('Bet updated', BetSerializer),
+            400: openapi.Response('Invalid data'),
+            401: openapi.Response('Unauthorized'),
+            404: openapi.Response('Bet not found'),
+        }
+    )
+    def put(self, request, *args, **kwargs):
         updated = update_bet(
             user=request.user,
             bet_id=self.kwargs.get('pk'),
@@ -87,6 +135,36 @@ class BetDetailsView(generics.RetrieveUpdateAPIView):
         serializer = self.get_serializer(instance=updated)
         return Response(serializer.data)
 
-    def perform_destroy(self, instance):
-        delete_bet(user=self.request.user, bet_id=instance.id)
+    @swagger_auto_schema(
+        operation_summary='Partial update bet',
+        operation_description='Update a bet (PATCH)',
+        request_body=BetUpdateSerializer,
+        responses={
+            200: openapi.Response('Bet updated', BetSerializer),
+            400: openapi.Response('Invalid data'),
+            401: openapi.Response('Unauthorized'),
+            404: openapi.Response('Bet not found'),
+        }
+    )
+    def patch(self, request, *args, **kwargs):
+        updated = update_bet(
+            user=request.user,
+            bet_id=self.kwargs.get('pk'),
+            data=request.data
+        )
+        serializer = self.get_serializer(instance=updated)
+        return Response(serializer.data)
+
+    @swagger_auto_schema(
+        operation_summary='Delete bet',
+        operation_description='Delete a bet',
+        responses={
+            204: openapi.Response('Bet deleted'),
+            401: openapi.Response('Unauthorized'),
+            404: openapi.Response('Bet not found'),
+        }
+    )
+    def delete(self, request, *args, **kwargs):
+        delete_bet(user=request.user, bet_id=self.kwargs.get('pk'))
+        return Response(status=status.HTTP_204_NO_CONTENT)
 

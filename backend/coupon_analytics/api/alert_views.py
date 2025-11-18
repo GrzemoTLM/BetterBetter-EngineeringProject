@@ -1,6 +1,8 @@
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 from coupon_analytics.models import AlertRule, AlertEvent
 from coupon_analytics.serializers.alert_serializers import AlertRuleSerializer, AlertEventSerializer
@@ -17,7 +19,6 @@ class AlertRuleListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         metric = serializer.validated_data.get('metric', '').lower()
 
-        # If creating a streak_loss alert rule, deactivate all old ones
         if metric == 'streak_loss':
             AlertRule.objects.filter(
                 user=self.request.user,
@@ -26,6 +27,30 @@ class AlertRuleListCreateView(generics.ListCreateAPIView):
             ).update(is_active=False)
 
         serializer.save(user=self.request.user, metric=metric)
+
+    @swagger_auto_schema(
+        operation_summary='List alert rules',
+        operation_description='Get all alert rules for authenticated user',
+        responses={
+            200: openapi.Response('List of alert rules', AlertRuleSerializer(many=True)),
+            401: openapi.Response('Unauthorized'),
+        }
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+    @swagger_auto_schema(
+        operation_summary='Create alert rule',
+        operation_description='Create a new alert rule',
+        request_body=AlertRuleSerializer,
+        responses={
+            201: openapi.Response('Alert rule created', AlertRuleSerializer),
+            400: openapi.Response('Invalid data'),
+            401: openapi.Response('Unauthorized'),
+        }
+    )
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
 
 
 class AlertRuleDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -41,10 +66,70 @@ class AlertRuleDetailView(generics.RetrieveUpdateDestroyAPIView):
             serializer.validated_data['metric'] = metric.lower()
         serializer.save()
 
+    @swagger_auto_schema(
+        operation_summary='Retrieve alert rule',
+        operation_description='Get alert rule details by ID',
+        responses={
+            200: openapi.Response('Alert rule details', AlertRuleSerializer),
+            401: openapi.Response('Unauthorized'),
+            404: openapi.Response('Alert rule not found'),
+        }
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+    @swagger_auto_schema(
+        operation_summary='Update alert rule',
+        operation_description='Update an alert rule (PUT)',
+        request_body=AlertRuleSerializer,
+        responses={
+            200: openapi.Response('Alert rule updated', AlertRuleSerializer),
+            400: openapi.Response('Invalid data'),
+            401: openapi.Response('Unauthorized'),
+            404: openapi.Response('Alert rule not found'),
+        }
+    )
+    def put(self, request, *args, **kwargs):
+        return super().put(request, *args, **kwargs)
+
+    @swagger_auto_schema(
+        operation_summary='Partial update alert rule',
+        operation_description='Partially update an alert rule (PATCH)',
+        request_body=AlertRuleSerializer,
+        responses={
+            200: openapi.Response('Alert rule updated', AlertRuleSerializer),
+            400: openapi.Response('Invalid data'),
+            401: openapi.Response('Unauthorized'),
+            404: openapi.Response('Alert rule not found'),
+        }
+    )
+    def patch(self, request, *args, **kwargs):
+        return super().patch(request, *args, **kwargs)
+
+    @swagger_auto_schema(
+        operation_summary='Delete alert rule',
+        operation_description='Delete an alert rule',
+        responses={
+            204: openapi.Response('Alert rule deleted'),
+            401: openapi.Response('Unauthorized'),
+            404: openapi.Response('Alert rule not found'),
+        }
+    )
+    def delete(self, request, *args, **kwargs):
+        return super().delete(request, *args, **kwargs)
+
 
 class AlertRuleEvaluateView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_summary='Evaluate alert rule',
+        operation_description='Evaluate and trigger alert rule for user',
+        responses={
+            200: openapi.Response('Rule evaluated'),
+            404: openapi.Response('Alert rule not found'),
+        }
+    )
     def post(self, request, pk):
         rule = AlertRule.objects.filter(pk=pk, user=request.user).first()
         if not rule:
@@ -68,57 +153,19 @@ class AlertEventListView(generics.ListAPIView):
         if unsent in {'1', 'true', 'True'}:
             qs = qs.filter(sent_at__isnull=True)
         return qs
-from django.utils.dateparse import parse_datetime, parse_date
-from django.utils import timezone as dj_tz
-from datetime import datetime, time
-from rest_framework import permissions, status
-from rest_framework.response import Response
-from rest_framework.views import APIView
-
-from coupon_analytics.services.analytics_service import get_coupon_analytics_summary
-
-try:
-    from drf_yasg.utils import swagger_auto_schema
-    from drf_yasg import openapi
-except Exception:
-    def swagger_auto_schema(*args, **kwargs):
-        def _decorator(fn):
-            return fn
-        return _decorator
-    class _Dummy: pass
-    openapi = _Dummy()
-
-
-class CouponAnalyticsSummaryView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
-    def _parse_dt(self, raw: str, end_of_day: bool = False):
-        if not raw:
-            return None
-        dt = parse_datetime(raw)
-        if dt is not None:
-            if dj_tz.is_naive(dt):
-                dt = dj_tz.make_aware(dt, dj_tz.get_current_timezone())
-            return dt
-        d = parse_date(raw)
-        if d is not None:
-            dt = datetime.combine(d, time.max if end_of_day else time.min)
-            return dj_tz.make_aware(dt, dj_tz.get_current_timezone())
-        return None
 
     @swagger_auto_schema(
-        operation_description="Return ROI, Yield i statystyki kuponów gracza w zadanym zakresie dat (opcjonalnym).",
+        operation_summary='List alert events',
+        operation_description='Get all alert events for authenticated user with optional filtering',
         manual_parameters=[
-            openapi.Parameter('date_from', openapi.IN_QUERY, description='Data / datetime od (YYYY-MM-DD lub ISO8601)', type=openapi.TYPE_STRING) if hasattr(openapi, 'Parameter') else None,
-            openapi.Parameter('date_to', openapi.IN_QUERY, description='Data / datetime do (YYYY-MM-DD lub ISO8601)', type=openapi.TYPE_STRING) if hasattr(openapi, 'Parameter') else None,
-        ] if hasattr(openapi, 'Parameter') else None,
-        responses={200: 'Analytics summary'}
+            openapi.Parameter('rule_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, required=False, description='Filter by alert rule ID'),
+            openapi.Parameter('unsent', openapi.IN_QUERY, type=openapi.TYPE_STRING, required=False, description='Filter unsent events (1, true, True)'),
+        ],
+        responses={
+            200: openapi.Response('List of alert events', AlertEventSerializer(many=True)),
+            401: openapi.Response('Unauthorized'),
+        }
     )
-    def get(self, request):
-        date_from_raw = request.query_params.get('date_from')
-        date_to_raw = request.query_params.get('date_to')
-        date_from = self._parse_dt(date_from_raw, end_of_day=False)
-        date_to = self._parse_dt(date_to_raw, end_of_day=True)
-        summary = get_coupon_analytics_summary(request.user, date_from=date_from, date_to=date_to)
-        return Response(summary, status=status.HTTP_200_OK)
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
 

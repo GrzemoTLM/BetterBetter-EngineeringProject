@@ -2,6 +2,8 @@ from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 from ..serializers import UserSerializer
 from ..services.two_factor_service import TwoFactorService
@@ -11,6 +13,22 @@ from ..services.auth_service import AuthService
 class TwoFactorLoginView(APIView):
     permission_classes = [AllowAny]
 
+    @swagger_auto_schema(
+        operation_summary='Verify 2FA login',
+        operation_description='Verify 2FA code during login process',
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'challenge_id': openapi.Schema(type=openapi.TYPE_STRING, description='2FA challenge ID'),
+                'code': openapi.Schema(type=openapi.TYPE_STRING, description='Verification code'),
+            },
+            required=['challenge_id', 'code']
+        ),
+        responses={
+            200: openapi.Response('Login verified, tokens issued'),
+            400: openapi.Response('Invalid challenge or code'),
+        }
+    )
     def post(self, request):
         challenge_id = str(request.data.get('challenge_id') or "").strip()
         code = str(request.data.get('code') or "").strip()
