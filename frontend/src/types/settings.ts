@@ -36,5 +36,10 @@ export interface TwoFactorVerifyRequest {
 }
 
 export interface TelegramAuthResponse {
-  auth_code: string;
+  message: string;
+  data: {
+    code: string;
+    created_at: string;
+    expires_at: string;
+  };
 }

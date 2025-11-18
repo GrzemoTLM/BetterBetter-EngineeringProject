@@ -13,10 +13,11 @@ export const SettingsPage: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const [show2FASetup, setShow2FASetup] = useState(false);
-  const [twoFactorMethod, setTwoFactorMethod] = useState<'totp' | 'email' | ''>('');
+  const [twoFactorMethod, setTwoFactorMethod] = useState<string>('');
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [verificationCode, setVerificationCode] = useState('');
   const [is2FAVerifying, setIs2FAVerifying] = useState(false);
+  const [telegramAuthCode, setTelegramAuthCode] = useState<string | null>(null);
 
   useEffect(() => {
     loadSettings();
@@ -76,7 +77,7 @@ export const SettingsPage: React.FC = () => {
   const handleStart2FA = async () => {
     try {
       setError(null);
-      const response = await apiService.startTwoFactor({ method: twoFactorMethod });
+      const response = await apiService.startTwoFactor({ method: twoFactorMethod as 'totp' | 'email' });
 
       const { otp_uri } = response;
       if (!otp_uri) {
@@ -115,6 +116,18 @@ export const SettingsPage: React.FC = () => {
     }
     finally {
       setIs2FAVerifying(false);
+    }
+  };
+
+  const handleConfigureTelegram = async () => {
+    try {
+      setError(null);
+      const response = await apiService.generateTelegramAuthCode();
+      setTelegramAuthCode(response.data.code);
+    }
+    catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error generating Telegram auth code';
+      setError(errorMessage);
     }
   };
 
@@ -208,7 +221,7 @@ export const SettingsPage: React.FC = () => {
               onChange={(e) => handleUpdateSettings({ auto_coupon_payoff: e.target.checked })}
               disabled={isSaving}
             />
-            Automatic Coupon Payout
+            Automatic Coupon Payoff
           </label>
         </div>
       </section>
@@ -246,7 +259,13 @@ export const SettingsPage: React.FC = () => {
 
         {settings.notification_gate === 'telegram' && (
           <div style={{ marginTop: '10px' }}>
-            <button>Configure Telegram</button>
+            <button onClick={handleConfigureTelegram}>Configure Telegram</button>
+            {telegramAuthCode && (
+              <div style={{ marginTop: '10px' }}>
+                <p>Telegram Auth Code: <strong>{telegramAuthCode}</strong></p>
+                <p>Send /login to BettetBetterBot on telegram</p>
+              </div>
+            )}
           </div>
         )}
       </section>
