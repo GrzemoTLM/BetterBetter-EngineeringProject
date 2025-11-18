@@ -74,7 +74,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
 
         {displayError && (
           <div role="alert" style={{ color: 'red', marginBottom: '10px' }}>
-            {displayError}
+            {String(displayError)}
           </div>
         )}
 

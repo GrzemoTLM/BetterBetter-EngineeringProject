@@ -1,9 +1,11 @@
 
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
 export const DashboardPage: React.FC = () => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   const handleLogout = () => {
     logout();
@@ -14,16 +16,21 @@ export const DashboardPage: React.FC = () => {
     <div className="dashboard-container">
       <header className="dashboard-header">
         <h1>Dashboard</h1>
-        <button onClick={handleLogout} className="logout-button">
-          Wyloguj się
-        </button>
+        <div>
+          <button onClick={() => navigate('/settings')} style={{ marginRight: '10px' }}>
+            Ustawienia
+          </button>
+          <button onClick={handleLogout} className="logout-button">
+            Wyloguj się
+          </button>
+        </div>
       </header>
 
       <main className="dashboard-main">
         <div className="welcome-card">
-          <h2>Witaj, {user?.username}!</h2>
-          <p>Email: {user?.email}</p>
-          <p>Zarejestrowany: {new Date(user?.registered_at || '').toLocaleDateString('pl-PL')}</p>
+          <h2>Witaj, {user?.username || 'Guest'}!</h2>
+          <p>Email: {user?.email || 'N/A'}</p>
+          <p>Zarejestrowany: {user?.registered_at ? new Date(user.registered_at).toLocaleDateString('pl-PL') : 'N/A'}</p>
         </div>
 
         <div className="features-grid">

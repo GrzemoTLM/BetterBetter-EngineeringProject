@@ -2,6 +2,7 @@
 import axios, { AxiosError } from 'axios';
 import type { AxiosInstance } from 'axios';
 import type { LoginRequest, RegisterRequest, AuthResponse, UserProfile, TwoFactorRequest } from '../types/auth';
+import type { UserSettings, UpdateSettingsRequest, TwoFactorStartRequest, TwoFactorStartResponse, TwoFactorVerifyRequest, TelegramAuthResponse } from '../types/settings';
 import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
 
 class ApiService {
@@ -64,16 +65,26 @@ class ApiService {
       if (error.response?.data) {
         const data = error.response.data as Record<string, unknown>;
 
-        if (typeof data === 'object') {
+        if (typeof data === 'object' && data !== null) {
           const firstKey = Object.keys(data)[0];
 
           if (firstKey && Array.isArray(data[firstKey])) {
-            return data[firstKey][0];
+            return String(data[firstKey][0]);
           }
 
           if (firstKey && typeof data[firstKey] === 'string') {
             return data[firstKey];
           }
+
+          if (data.message && typeof data.message === 'string') {
+            return data.message;
+          }
+
+          if (data.detail && typeof data.detail === 'string') {
+            return data.detail;
+          }
+
+          return JSON.stringify(data);
         }
 
         if (typeof data === 'string') {
@@ -169,8 +180,62 @@ class ApiService {
 
 
   async getCurrentUser(): Promise<UserProfile> {
-    const response = await this.axiosInstance.get<UserProfile>(API_ENDPOINTS.AUTH.ME);
-    return response.data;
+    try {
+      const response = await this.axiosInstance.get<UserProfile>(API_ENDPOINTS.AUTH.ME);
+      return response.data;
+    }
+    catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async getSettings(): Promise<UserSettings> {
+    try {
+      const response = await this.axiosInstance.get<UserSettings>(API_ENDPOINTS.SETTINGS.GET);
+      return response.data;
+    }
+    catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async updateSettings(data: UpdateSettingsRequest): Promise<UserSettings> {
+    try {
+      const response = await this.axiosInstance.patch<UserSettings>(API_ENDPOINTS.SETTINGS.UPDATE, data);
+      return response.data;
+    }
+    catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async startTwoFactor(data: TwoFactorStartRequest): Promise<TwoFactorStartResponse> {
+    try {
+      const response = await this.axiosInstance.post<TwoFactorStartResponse>(API_ENDPOINTS.SETTINGS.TWO_FACTOR_START, data);
+      return response.data;
+    }
+    catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async verifyTwoFactor(data: TwoFactorVerifyRequest): Promise<void> {
+    try {
+      await this.axiosInstance.post(API_ENDPOINTS.SETTINGS.TWO_FACTOR_VERIFY, data);
+    }
+    catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async generateTelegramAuthCode(): Promise<TelegramAuthResponse> {
+    try {
+      const response = await this.axiosInstance.post<TelegramAuthResponse>(API_ENDPOINTS.SETTINGS.TELEGRAM_AUTH_CODE);
+      return response.data;
+    }
+    catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
   }
 }
 

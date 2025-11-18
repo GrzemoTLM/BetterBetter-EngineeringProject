@@ -35,7 +35,7 @@ export const TwoFactorForm: React.FC<TwoFactorFormProps> = ({ challengeId, onSuc
 
         {displayError && (
           <div role="alert" style={{ color: 'red', marginBottom: '10px' }}>
-            {displayError}
+            {String(displayError)}
           </div>
         )}
 
