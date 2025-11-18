@@ -15,15 +15,27 @@ class LogoutView(generics.GenericAPIView):
         operation_summary='User logout',
         operation_description='Logout user and blacklist refresh token',
         manual_parameters=[
-            openapi.Parameter('Refresh', openapi.IN_HEADER, type=openapi.TYPE_STRING, required=True, description='Refresh token'),
+            openapi.Parameter('Refresh', openapi.IN_HEADER, type=openapi.TYPE_STRING, required=False, description='Refresh token (optional if provided in body)'),
         ],
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'refresh': openapi.Schema(type=openapi.TYPE_STRING, description='Refresh token')
+            },
+            required=['refresh']
+        ),
         responses={
             200: openapi.Response('Successfully logged out'),
             400: openapi.Response('Refresh token is required or invalid'),
         }
     )
     def post(self, request):
-        refresh_token = request.headers.get('Refresh')
+        refresh_token = (
+            request.data.get('refresh') or
+            request.headers.get('Refresh') or
+            request.COOKIES.get('refresh')
+        )
+
         if not refresh_token:
             return Response({'error': 'Refresh token is required'}, status=status.HTTP_400_BAD_REQUEST)
 
