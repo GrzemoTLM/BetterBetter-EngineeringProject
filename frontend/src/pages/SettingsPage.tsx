@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiService } from '../services/api';
 import type { UserSettings } from '../types/settings';
+import QRCode from 'qrcode';
 
 export const SettingsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -77,9 +78,17 @@ export const SettingsPage: React.FC = () => {
       setError(null);
       const response = await apiService.startTwoFactor({ method: twoFactorMethod });
 
-      if (response.qr_code) {
-        setQrCode(response.qr_code);
+      const { otp_uri } = response;
+      if (!otp_uri) {
+        throw new Error('No otp_uri received from server');
       }
+
+      const url = new URL(otp_uri);
+      url.pathname = '/betterbetter:' + url.pathname.slice(1);
+      const modifiedUri = url.toString();
+
+      const qrUrl = await QRCode.toDataURL(modifiedUri);
+      setQrCode(qrUrl);
 
       setShow2FASetup(true);
     }
@@ -267,7 +276,7 @@ export const SettingsPage: React.FC = () => {
                 <option value="email">Email</option>
               </select>
               {twoFactorMethod && (
-                <button style={{ marginLeft: '10px' }}>Configure 2FA</button>
+                <button style={{ marginLeft: '10px' }} onClick={handleStart2FA}>Configure 2FA</button>
               )}
             </div>
           )}

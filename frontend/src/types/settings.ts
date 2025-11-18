@@ -26,7 +26,7 @@ export interface TwoFactorStartRequest {
 }
 
 export interface TwoFactorStartResponse {
-  qr_code?: string;
+  otp_uri?: string;
   secret?: string;
   message?: string;
 }
@@ -38,4 +38,3 @@ export interface TwoFactorVerifyRequest {
 export interface TelegramAuthResponse {
   auth_code: string;
 }
-
