@@ -5,4 +5,5 @@
 export { LoginForm } from './LoginForm';
 export { RegisterForm } from './RegisterForm';
 export { PrivateRoute } from './PrivateRoute';
+export { TwoFactorForm } from './TwoFactorForm';
 

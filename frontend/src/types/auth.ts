@@ -16,6 +16,12 @@ export interface RegisterRequest {
 export interface AuthResponse {
   access: string;
   refresh?: string;
+  challenge_id?: string;
+}
+
+export interface TwoFactorRequest {
+  challenge_id: string;
+  code: string;
 }
 
 export interface UserProfile {
@@ -30,7 +36,8 @@ export interface AuthContextType {
   token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<AuthResponse>;
+  verify2FA: (challengeId: string, code: string) => Promise<void>;
   register: (username: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   error: string | null;

@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { TwoFactorForm } from './TwoFactorForm';
 
 interface LoginFormProps {
   onSuccess?: () => void;
@@ -13,6 +14,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
     password: '',
   });
   const [localError, setLocalError] = useState<string | null>(null);
+  const [challengeId, setChallengeId] = useState<string | null>(null);
 
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -28,13 +30,40 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
     setLocalError(null);
 
     try {
-      await login(formData.email, formData.password);
-      onSuccess?.();
+      const response = await login(formData.email, formData.password);
+
+      // Check if 2FA is required
+      if (response?.challenge_id) {
+        setChallengeId(response.challenge_id);
+      } else {
+        onSuccess?.();
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Błąd podczas logowania';
       setLocalError(errorMessage);
     }
   };
+
+  const handle2FASuccess = () => {
+    setChallengeId(null);
+    onSuccess?.();
+  };
+
+  const handle2FACancel = () => {
+    setChallengeId(null);
+    setFormData({ email: '', password: '' });
+  };
+
+  // Show 2FA form if challenge_id is present
+  if (challengeId) {
+    return (
+      <TwoFactorForm
+        challengeId={challengeId}
+        onSuccess={handle2FASuccess}
+        onCancel={handle2FACancel}
+      />
+    );
+  }
 
   const displayError = localError || error;
 

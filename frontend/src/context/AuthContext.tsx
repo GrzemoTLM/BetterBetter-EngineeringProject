@@ -44,11 +44,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setError(null);
     try {
       const response = await apiService.login({ email, password });
-      setToken(response.access);
-      const currentUser = await apiService.getCurrentUser();
-      setUser(currentUser);
+
+      // Only set user and token if there's no 2FA challenge
+      if (!response.challenge_id && response.access) {
+        setToken(response.access);
+        const currentUser = await apiService.getCurrentUser();
+        setUser(currentUser);
+      }
+
+      return response;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Login error';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const verify2FA = useCallback(async (challengeId: string, code: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await apiService.verify2FA({ challenge_id: challengeId, code });
+      if (response.access) {
+        setToken(response.access);
+        const currentUser = await apiService.getCurrentUser();
+        setUser(currentUser);
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '2FA verification error';
       setError(errorMessage);
       throw err;
     } finally {
@@ -86,6 +111,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading,
     isAuthenticated: !!token && !!user,
     login,
+    verify2FA,
     register,
     logout,
     error,

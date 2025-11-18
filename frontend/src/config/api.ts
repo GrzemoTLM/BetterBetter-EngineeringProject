@@ -8,6 +8,7 @@ export const API_ENDPOINTS = {
     REGISTER: '/api/users/register/',
     LOGOUT: '/api/users/logout/',
     ME: '/api/users/me/',
+    VERIFY_2FA: '/api/users/auth/login/verify-2fa/',
   },
 };
 
