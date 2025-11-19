@@ -8,6 +8,7 @@ from finances.views.bookmaker_account_view import (
     BookmakerAccountSummaryView,
     BookmakerAccountsSummaryView,
 )
+from finances.views import BookmakerListView
 
 urlpatterns = [
     path('transactions/', TransactionListView.as_view(), name='transaction-list'),
@@ -15,6 +16,7 @@ urlpatterns = [
     path('transactions/create/', TransactionCreateView.as_view(), name='transaction-create'),
     path('transactions/<int:pk>/', TransactionDetailView.as_view(), name='transaction-detail'),
 
+    path('bookmakers/', BookmakerListView.as_view(), name='bookmaker-list'),
     path('bookmakers/accounts/', BookmakerAccountListView.as_view(), name='bookmaker-account-list'),
     path('bookmakers/accounts/create/', BookmakerAccountCreateView.as_view(), name='bookmaker-account-create'),
     path('bookmakers/accounts/<int:pk>/', BookmakerAccountDetailView.as_view(), name='bookmaker-account-detail'),

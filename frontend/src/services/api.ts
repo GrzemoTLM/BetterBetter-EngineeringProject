@@ -1,8 +1,8 @@
-
 import axios, { AxiosError } from 'axios';
 import type { AxiosInstance } from 'axios';
 import type { LoginRequest, RegisterRequest, AuthResponse, UserProfile, TwoFactorRequest } from '../types/auth';
 import type { UserSettings, UpdateSettingsRequest, TwoFactorStartRequest, TwoFactorStartResponse, TwoFactorVerifyRequest, TelegramAuthResponse } from '../types/settings';
+import type { TransactionCreateRequest, TransactionCreateResponse, BookmakerAccountCreateRequest, BookmakerAccountCreateResponse, AvailableBookmaker, BookmakerUserAccount } from '../types/finances';
 import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
 
 class ApiService {
@@ -234,6 +234,56 @@ class ApiService {
       return response.data;
     }
     catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async createTransaction(data: TransactionCreateRequest): Promise<TransactionCreateResponse> {
+    try {
+      const response = await this.axiosInstance.post<TransactionCreateResponse>(API_ENDPOINTS.FINANCES.TRANSACTION_CREATE, data);
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async createBookmakerAccount(data: BookmakerAccountCreateRequest): Promise<BookmakerAccountCreateResponse> {
+    try {
+      const response = await this.axiosInstance.post<BookmakerAccountCreateResponse>(API_ENDPOINTS.FINANCES.BOOKMAKER_ACCOUNT_CREATE, data);
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async fetchBookmakers(): Promise<AvailableBookmaker[]> {
+    try {
+      const response = await this.axiosInstance.get<AvailableBookmaker[]>(API_ENDPOINTS.FINANCES.BOOKMAKERS_LIST, {
+        headers: { Accept: 'application/json' },
+      });
+      return response.data;
+    } catch (error) {
+      try {
+        const res = await fetch(`${API_BASE_URL}${API_ENDPOINTS.FINANCES.BOOKMAKERS_LIST}`, {
+          method: 'GET',
+          credentials: 'include',
+          headers: { Accept: 'application/json' },
+        });
+        if (!res.ok) throw new Error('Error: ' + res.status);
+        return await res.json() as AvailableBookmaker[];
+      } catch {
+        throw new Error(this.getErrorMessage(error));
+      }
+    }
+  }
+
+  async fetchBookmakerAccounts(): Promise<BookmakerUserAccount[]> {
+    try {
+      const response = await this.axiosInstance.get<BookmakerUserAccount[]>(API_ENDPOINTS.FINANCES.BOOKMAKER_ACCOUNTS_LIST, {
+        headers: { Accept: 'application/json' },
+      });
+      return response.data;
+    } catch (error) {
       throw new Error(this.getErrorMessage(error));
     }
   }
