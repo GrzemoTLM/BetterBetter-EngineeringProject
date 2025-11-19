@@ -8,9 +8,17 @@ interface PrivateRouteProps {
 }
 
 export const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user, token } = useAuth();
+
+  console.log('PrivateRoute check:', {
+    isAuthenticated,
+    isLoading,
+    hasUser: !!user,
+    hasToken: !!token,
+  });
 
   if (isLoading) {
+    console.log('PrivateRoute: Still loading...');
     return (
       <div
         style={{
@@ -21,15 +29,17 @@ export const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         }}
       >
-        <div style={{ color: 'white', fontSize: '18px' }}>Ładowanie...</div>
+        <div style={{ color: 'white', fontSize: '18px' }}>Loading...</div>
       </div>
     );
   }
 
   if (!isAuthenticated) {
+    console.log('PrivateRoute: Not authenticated, redirecting to /login');
     return <Navigate to="/login" replace />;
   }
 
+  console.log('PrivateRoute: Authenticated, rendering children');
   return <>{children}</>;
 };
 
