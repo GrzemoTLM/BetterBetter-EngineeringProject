@@ -1,12 +1,13 @@
 import random
-import requests
 import logging
+from datetime import timedelta
+
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from datetime import timedelta
 from django.conf import settings
 
 from users.models import PasswordResetToken
+from users.services.mailersend_service import MailerSendClient
 
 logger = logging.getLogger(__name__)
 
@@ -20,12 +21,13 @@ class PasswordResetService:
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
-            return False
+            return None
 
         token = f"{random.randint(100000, 999999)}"
         expires_at = timezone.now() + timedelta(minutes=cls.CODE_TTL_MINUTES)
         PasswordResetToken.objects.create(user=user, token=token, expires_at=expires_at)
-        cls._send_reset_email(user.email, token)
+        sent = cls._send_reset_email(user.email, token)
+        return True if sent else False
 
     @classmethod
     def confirm_reset(cls, email: str, code: str, new_password: str) -> bool:
@@ -50,33 +52,31 @@ class PasswordResetService:
 
     @classmethod
     def _send_reset_email(cls, to_email: str, code: str):
-        if settings.DEBUG:
-            logger.info(f"[DEV MODE] Password reset email for {to_email}: code={code}")
-            logger.info(f"[DEV MODE] Body: Your password reset code is: {code}. Valid for {cls.CODE_TTL_MINUTES} minutes.")
-            return True
+        try:
+            client = MailerSendClient()
+        except ValueError as e:
+            logger.error(f"MailerSendClient initialization error: {e}")
+            return False
 
-        url = "https://api.mailersend.com/v1/email"
-        data = {
-            "from": {"email": settings.DEFAULT_FROM_EMAIL, "name": "BetBetter"},
-            "to": [{"email": to_email}],
-            "subject": "BetBetter - password reset code",
-            "text": f"Your password reset code is: {code}. It is valid for {cls.CODE_TTL_MINUTES} minutes.",
-        }
-        headers = {
-            "Authorization": f"Bearer {settings.MAILERSEND_API_TOKEN}",
-            "Content-Type": "application/json",
-        }
+        subject = "BetBetter - password reset code"
+        text = f"Your password reset code is: {code}. It is valid for {cls.CODE_TTL_MINUTES} minutes."
+        html = f"<p>{text}</p>"
+
         try:
             logger.info(f"Sending password reset email to {to_email}")
-            resp = requests.post(url, json=data, headers=headers, timeout=10)
-            resp.raise_for_status()
-            logger.info(f"Password reset email sent to {to_email}. Status: {resp.status_code}")
+            result = client.send_email(
+                to_email=to_email,
+                subject=subject,
+                html=html,
+                text=text,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                from_name="BetBetter",
+            )
+            if not result.get("ok"):
+                logger.error(f"Password reset email not accepted by MailerSend: {result}")
+                return False
+            logger.info(f"Password reset email sent to {to_email}. Status: {result.get('status_code')}")
             return True
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Failed to send email to {to_email}: {e}")
-            if hasattr(e, 'response') and e.response is not None:
-                logger.error(f"Response content: {e.response.text}")
-            return False
         except Exception as e:
-            logger.error(f"Unexpected error while sending email: {e}")
+            logger.error(f"Unexpected error while sending email via MailerSend: {e}")
             return False

@@ -20,6 +20,7 @@ class RequestPasswordResetView(APIView):
         responses={
             200: openapi.Response('Reset code sent if email exists'),
             400: openapi.Response('Invalid email'),
+            500: openapi.Response('Internal error sending email'),
         }
     )
     def post(self, request):
@@ -27,7 +28,9 @@ class RequestPasswordResetView(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         email = serializer.validated_data['email']
-        PasswordResetService.reset_request(email)
+        result = PasswordResetService.reset_request(email)
+        if result is False:  # istnieje user ale wysyłka padła
+            return Response({"detail": "Failed to send reset email."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         return Response(
             {"detail": "If the email exists, a reset code has been sent."},
              status=status.HTTP_200_OK
@@ -76,6 +79,7 @@ class ResendPasswordResetView(APIView):
         responses={
             200: openapi.Response('New reset code sent if email exists'),
             400: openapi.Response('Invalid email'),
+            500: openapi.Response('Internal error sending email'),
         }
     )
     def post(self, request):
@@ -83,7 +87,9 @@ class ResendPasswordResetView(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         email = serializer.validated_data['email']
-        PasswordResetService.reset_request(email)
+        result = PasswordResetService.reset_request(email)
+        if result is False:
+            return Response({"detail": "Failed to send reset email."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         return Response(
             {"detail": "If the email exists, a new reset code has been sent."},
              status=status.HTTP_200_OK
