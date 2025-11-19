@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -17,6 +16,9 @@ export const DashboardPage: React.FC = () => {
       <header className="dashboard-header">
         <h1>Dashboard</h1>
         <div>
+          <button onClick={() => navigate('/money-flow')} style={{ marginRight: '10px' }}>
+            Money Flow
+          </button>
           <button onClick={() => navigate('/settings')} style={{ marginRight: '10px' }}>
             Ustawienia
           </button>
@@ -55,4 +57,3 @@ export const DashboardPage: React.FC = () => {
     </div>
   );
 };
-

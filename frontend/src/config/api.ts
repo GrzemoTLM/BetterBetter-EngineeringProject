@@ -1,6 +1,4 @@
-
-export const API_BASE_URL = '';
-export const API_VERSION = 'v1';
+export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://localhost:8000';
 
 export const API_ENDPOINTS = {
   AUTH: {
@@ -18,5 +16,13 @@ export const API_ENDPOINTS = {
     TELEGRAM_AUTH_CODE: '/api/users/telegram/auth-code/generate/',
     TELEGRAM_CONNECT: '/api/users/telegram/connect/',
   },
+  FINANCES: {
+    TRANSACTION_CREATE: '/api/finances/transactions/create/',
+    BOOKMAKERS_LIST: '/api/finances/bookmakers/',
+    BOOKMAKER_ACCOUNT_CREATE: '/api/finances/bookmakers/accounts/create/',
+    BOOKMAKER_ACCOUNTS_LIST: '/api/finances/bookmakers/accounts/',
+  },
+  COUPONS: {
+    BOOKMAKER_ACCOUNT_CREATE_OLD: '/api/coupons/bookmaker-accounts/', // pozostawione tymczasowo jeśli gdzieś użyte (do usunięcia po weryfikacji)
+  },
 };
-

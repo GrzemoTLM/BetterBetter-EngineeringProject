@@ -1,10 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import { PrivateRoute } from './components/PrivateRoute';
-import { LoginPage } from './pages/LoginPage';
-import { RegisterPage } from './pages/RegisterPage';
-import { DashboardPage } from './pages/DashboardPage';
-import { SettingsPage } from './pages/SettingsPage';
+import { PrivateRoute } from './components';
+import { LoginPage, RegisterPage, DashboardPage, SettingsPage, MoneyFlowView } from './pages';
 import './App.css';
 
 function App() {
@@ -29,6 +26,15 @@ function App() {
             element={
               <PrivateRoute>
                 <SettingsPage />
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/money-flow"
+            element={
+              <PrivateRoute>
+                <MoneyFlowView />
               </PrivateRoute>
             }
           />
