@@ -41,14 +41,14 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
     try {
       await register(formData.username, formData.email, formData.password);
       onSuccess?.();
-    } catch (err) {
+    }
+    catch (err) {
       let errorMessage = 'Registration error';
 
       if (err instanceof Error) {
         errorMessage = err.message;
       }
 
-      console.error('Registration error details:', err);
       setLocalError(errorMessage);
     }
   };
@@ -62,7 +62,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
 
         {displayError && (
           <div role="alert" style={{ color: 'red', marginBottom: '10px' }}>
-            {displayError}
+            {String(displayError)}
           </div>
         )}
 
