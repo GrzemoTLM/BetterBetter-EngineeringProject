@@ -2,7 +2,7 @@ import axios, { AxiosError } from 'axios';
 import type { AxiosInstance } from 'axios';
 import type { LoginRequest, RegisterRequest, AuthResponse, UserProfile, TwoFactorRequest, PasswordResetRequestRequest, PasswordResetConfirmRequest, PasswordResetResponse } from '../types/auth';
 import type { UserSettings, UpdateSettingsRequest, TwoFactorStartRequest, TwoFactorStartResponse, TwoFactorVerifyRequest, TelegramAuthResponse } from '../types/settings';
-import type { TransactionCreateRequest, TransactionCreateResponse, BookmakerAccountCreateRequest, BookmakerAccountCreateResponse, AvailableBookmaker, BookmakerUserAccount, Transaction } from '../types/finances';
+import type { TransactionCreateRequest, TransactionCreateResponse, BookmakerAccountCreateRequest, BookmakerAccountCreateResponse, AvailableBookmaker, BookmakerUserAccount, Transaction, TransactionSummary } from '../types/finances';
 import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
 
 class ApiService {
@@ -325,6 +325,44 @@ class ApiService {
       return response.data;
     } catch (error) {
       console.error('fetchTransactions error:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async fetchTransactionsSummary(filters?: {
+    date_from?: string;
+    date_to?: string;
+    bookmaker?: string;
+    transaction_type?: string;
+  }): Promise<TransactionSummary> {
+    try {
+      console.log('fetchTransactionsSummary called with filters:', filters);
+
+      const params: Record<string, string> = {};
+      if (filters?.date_from) {
+        params['date_from'] = filters.date_from.split('T')[0];
+      }
+
+      if (filters?.date_to) {
+        params['date_to'] = filters.date_to.split('T')[0];
+      }
+
+      if (filters?.bookmaker) {
+        params['bookmaker'] = filters.bookmaker;
+      }
+
+      if (filters?.transaction_type) {
+        params['transaction_type'] = filters.transaction_type;
+      }
+
+      const response = await this.axiosInstance.get<TransactionSummary>(API_ENDPOINTS.FINANCES.TRANSACTIONS_SUMMARY, {
+        headers: { Accept: 'application/json' },
+        params: Object.keys(params).length > 0 ? params : undefined,
+      });
+      console.log('fetchTransactionsSummary response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('fetchTransactionsSummary error:', error);
       throw new Error(this.getErrorMessage(error));
     }
   }

@@ -58,3 +58,25 @@ export type Transaction = {
   currency: string | null;
   display_name?: string;
 };
+
+export interface TransactionSummaryByBookmaker {
+  bookmaker_id: number;
+  bookmaker: string;
+  count: number;
+  amount: string;
+}
+
+export interface TransactionSummaryByDate {
+  date: string;
+  count: number;
+  amount: string;
+}
+
+export interface TransactionSummary {
+  total_deposited: number;
+  total_withdrawn: number;
+  net_deposits: number;
+  by_bookmaker?: TransactionSummaryByBookmaker[];
+  by_date?: TransactionSummaryByDate[];
+}
+

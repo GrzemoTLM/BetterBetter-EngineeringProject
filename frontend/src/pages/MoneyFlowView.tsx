@@ -1,12 +1,13 @@
 import React from "react";
 import { AddTransactionModal, AddBookmakerAccountModal } from '../components';
-import type { Transaction } from '../types/finances';
+import type { Transaction, TransactionSummary } from '../types/finances';
 import { apiService } from '../services/api';
 
 const MoneyFlowView: React.FC = () => {
   const [isAddOpen, setIsAddOpen] = React.useState(false);
   const [isAddAccountOpen, setIsAddAccountOpen] = React.useState(false);
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
+  const [summary, setSummary] = React.useState<TransactionSummary | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -52,6 +53,21 @@ const MoneyFlowView: React.FC = () => {
     }
   };
 
+  const fetchSummary = async (filters?: {
+    date_from?: string;
+    date_to?: string;
+    bookmaker?: string;
+    transaction_type?: string;
+  }) => {
+    try {
+      const data = await apiService.fetchTransactionsSummary(filters);
+      console.log('Fetched summary:', data);
+      setSummary(data);
+    } catch (err) {
+      console.error('Error fetching summary:', err);
+    }
+  };
+
   // Pagination logic
   const totalPages = Math.ceil(transactions.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -60,11 +76,13 @@ const MoneyFlowView: React.FC = () => {
 
   React.useEffect(() => {
     fetchTransactions();
+    fetchSummary();
   }, []);
 
   const handleTransactionSuccess = () => {
     console.log('Transaction created - refreshing table');
     fetchTransactions();
+    fetchSummary();
   };
 
   const handleAccountSuccess = () => {
@@ -99,6 +117,7 @@ const MoneyFlowView: React.FC = () => {
 
     console.log('Applying filters:', filters);
     fetchTransactions(filters);
+    fetchSummary(filters);
   };
 
   const handleClearFilters = () => {
@@ -107,6 +126,7 @@ const MoneyFlowView: React.FC = () => {
     setSelectedBookmaker('');
     setSelectedTransactionType('');
     fetchTransactions();
+    fetchSummary();
   };
 
   return (
@@ -126,20 +146,20 @@ const MoneyFlowView: React.FC = () => {
       <section>
         <div>
           <div>
-            <h2>Total</h2>
-            <p></p>
+            <h2>Total Deposited</h2>
+            <p>{summary?.total_deposited ?? 0} PLN</p>
           </div>
           <div>
             <h2>Total Withdrawn</h2>
-            <p></p>
+            <p>{summary?.total_withdrawn ?? 0} PLN</p>
           </div>
           <div>
-            <h2>Net Cashflow</h2>
-            <p></p>
+            <h2>Net Deposits</h2>
+            <p>{summary?.net_deposits ?? 0} PLN</p>
           </div>
           <div>
-            <h2>Current Balance</h2>
-            <p></p>
+            <h2>Balance</h2>
+            <p>{summary?.net_deposits ?? 0} PLN</p>
           </div>
         </div>
 
@@ -190,12 +210,59 @@ const MoneyFlowView: React.FC = () => {
         <div>
           <h2>Deposited vs Withdrawn</h2>
           <div>
-            <p>Deposited</p>
-            <p>Withdrawn</p>
-            <p>Balance</p>
-            <p>Net</p>
+            <p>Deposited: {summary?.total_deposited ?? 0} PLN</p>
+            <p>Withdrawn: {summary?.total_withdrawn ?? 0} PLN</p>
+            <p>Net: {summary?.net_deposits ?? 0} PLN</p>
           </div>
         </div>
+
+        {summary?.by_bookmaker && summary.by_bookmaker.length > 0 && (
+          <div>
+            <h2>Summary by Bookmaker</h2>
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '8px' }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left', padding: '8px', borderBottom: '2px solid #ddd' }}>Bookmaker</th>
+                  <th style={{ textAlign: 'right', padding: '8px', borderBottom: '2px solid #ddd' }}>Count</th>
+                  <th style={{ textAlign: 'right', padding: '8px', borderBottom: '2px solid #ddd' }}>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summary.by_bookmaker.map((item) => (
+                  <tr key={item.bookmaker_id} style={{ borderBottom: '1px solid #eee' }}>
+                    <td style={{ padding: '8px' }}>{item.bookmaker}</td>
+                    <td style={{ padding: '8px', textAlign: 'right' }}>{item.count}</td>
+                    <td style={{ padding: '8px', textAlign: 'right' }}>{item.amount} PLN</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {summary?.by_date && summary.by_date.length > 0 && (
+          <div>
+            <h2>Summary by Date</h2>
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '8px' }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left', padding: '8px', borderBottom: '2px solid #ddd' }}>Date</th>
+                  <th style={{ textAlign: 'right', padding: '8px', borderBottom: '2px solid #ddd' }}>Count</th>
+                  <th style={{ textAlign: 'right', padding: '8px', borderBottom: '2px solid #ddd' }}>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summary.by_date.map((item) => (
+                  <tr key={item.date} style={{ borderBottom: '1px solid #eee' }}>
+                    <td style={{ padding: '8px' }}>{item.date}</td>
+                    <td style={{ padding: '8px', textAlign: 'right' }}>{item.count}</td>
+                    <td style={{ padding: '8px', textAlign: 'right' }}>{item.amount} PLN</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         <div>
           <header>

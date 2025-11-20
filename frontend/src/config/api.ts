@@ -23,6 +23,7 @@ export const API_ENDPOINTS = {
   FINANCES: {
     TRANSACTIONS_LIST: '/api/finances/transactions/',
     TRANSACTION_CREATE: '/api/finances/transactions/create/',
+    TRANSACTIONS_SUMMARY: '/api/finances/transactions/summary/',
     BOOKMAKERS_LIST: '/api/finances/bookmakers/',
     BOOKMAKER_ACCOUNT_CREATE: '/api/finances/bookmakers/accounts/create/',
     BOOKMAKER_ACCOUNTS_LIST: '/api/finances/bookmakers/accounts/',
