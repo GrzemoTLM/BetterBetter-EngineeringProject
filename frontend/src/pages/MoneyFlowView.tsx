@@ -9,19 +9,54 @@ const MoneyFlowView: React.FC = () => {
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const itemsPerPage = 20;
 
-  const fetchTransactions = async () => {
+  // Filter states
+  const [dateFrom, setDateFrom] = React.useState<string>('');
+  const [dateTo, setDateTo] = React.useState<string>('');
+  const [selectedBookmaker, setSelectedBookmaker] = React.useState<string>('');
+  const [selectedTransactionType, setSelectedTransactionType] = React.useState<string>('');
+  const [uniqueBookmakers, setUniqueBookmakers] = React.useState<string[]>([]);
+
+  const fetchTransactions = async (filters?: {
+    date_from?: string;
+    date_to?: string;
+    bookmaker?: string;
+    transaction_type?: string;
+  }) => {
     try {
       setLoading(true);
       setError(null);
-      const data = await apiService.fetchTransactions();
-      setTransactions(data.slice(0, 10));
+      const data = await apiService.fetchTransactions(filters);
+      console.log('Fetched transactions:', data);
+
+      // Log dates for debugging
+      if (data.length > 0) {
+        console.log('Transaction dates in response:');
+        data.forEach(t => {
+          console.log(`  ID: ${t.id}, Created: ${t.created_at}, Bookmaker: ${t.bookmaker}`);
+        });
+      }
+
+      setTransactions(data);
+      setCurrentPage(1);
+
+      // Extract unique bookmakers from data
+      const bookmakers = [...new Set(data.map(t => t.bookmaker).filter(Boolean))];
+      setUniqueBookmakers(bookmakers as string[]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);
     }
   };
+
+  // Pagination logic
+  const totalPages = Math.ceil(transactions.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedTransactions = transactions.slice(startIndex, endIndex);
 
   React.useEffect(() => {
     fetchTransactions();
@@ -53,6 +88,25 @@ const MoneyFlowView: React.FC = () => {
 
   const getBookmakerName = (transaction: Transaction): string => {
     return transaction.bookmaker || 'N/A';
+  };
+
+  const handleApplyFilters = () => {
+    const filters: Record<string, string> = {};
+    if (dateFrom) filters.date_from = dateFrom;
+    if (dateTo) filters.date_to = dateTo;
+    if (selectedBookmaker) filters.bookmaker = selectedBookmaker;
+    if (selectedTransactionType) filters.transaction_type = selectedTransactionType;
+
+    console.log('Applying filters:', filters);
+    fetchTransactions(filters);
+  };
+
+  const handleClearFilters = () => {
+    setDateFrom('');
+    setDateTo('');
+    setSelectedBookmaker('');
+    setSelectedTransactionType('');
+    fetchTransactions();
   };
 
   return (
@@ -91,34 +145,44 @@ const MoneyFlowView: React.FC = () => {
 
         <div>
           <label>
-            Date range
-            <select>
-              <option value="">Select…</option>
-            </select>
+            Date from
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+            />
+          </label>
+
+          <label>
+            Date to
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+            />
           </label>
 
           <label>
             Bookmaker
-            <select>
+            <select value={selectedBookmaker} onChange={(e) => setSelectedBookmaker(e.target.value)}>
               <option value="">All</option>
+              {uniqueBookmakers.map((bm) => (
+                <option key={bm} value={bm}>{bm}</option>
+              ))}
             </select>
           </label>
 
           <label>
             Transaction type
-            <select>
+            <select value={selectedTransactionType} onChange={(e) => setSelectedTransactionType(e.target.value)}>
               <option value="">All</option>
+              <option value="DEPOSIT">Deposit</option>
+              <option value="WITHDRAWAL">Withdrawal</option>
             </select>
           </label>
 
-          <label>
-            Status
-            <select>
-              <option value="">All</option>
-            </select>
-          </label>
-
-          <button type="button">Apply filters</button>
+          <button type="button" onClick={handleApplyFilters}>Apply filters</button>
+          <button type="button" onClick={handleClearFilters}>Clear filters</button>
         </div>
       </section>
 
@@ -182,34 +246,65 @@ const MoneyFlowView: React.FC = () => {
           {loading && <p>Loading transactions...</p>}
           {error && <p style={{ color: 'red' }}>Error: {error}</p>}
           {!loading && !error && (
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Bookmaker</th>
-                  <th>Type</th>
-                  <th>Amount</th>
-                  <th>Currency</th>
-                </tr>
-              </thead>
-              <tbody>
-                {transactions.length === 0 ? (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
+                <thead>
                   <tr>
-                    <td colSpan={5}>No transactions</td>
+                    <th style={{ textAlign: 'left', padding: '12px', borderBottom: '2px solid #ddd' }}>Date</th>
+                    <th style={{ textAlign: 'left', padding: '12px', borderBottom: '2px solid #ddd' }}>Bookmaker</th>
+                    <th style={{ textAlign: 'left', padding: '12px', borderBottom: '2px solid #ddd' }}>Type</th>
+                    <th style={{ textAlign: 'right', padding: '12px', borderBottom: '2px solid #ddd' }}>Amount</th>
+                    <th style={{ textAlign: 'left', padding: '12px', borderBottom: '2px solid #ddd' }}>Currency</th>
                   </tr>
-                ) : (
-                  transactions.map((transaction) => (
-                    <tr key={transaction.id}>
-                      <td>{formatDate(transaction.created_at)}</td>
-                      <td>{getBookmakerName(transaction)}</td>
-                      <td>{formatTransactionType(transaction.transaction_type)}</td>
-                      <td>{transaction.amount}</td>
-                      <td>{transaction.currency || 'N/A'}</td>
+                </thead>
+                <tbody>
+                  {paginatedTransactions.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} style={{ padding: '12px', textAlign: 'center', color: '#999' }}>No transactions</td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    paginatedTransactions.map((transaction) => (
+                      <tr key={transaction.id} style={{ borderBottom: '1px solid #eee' }}>
+                        <td style={{ padding: '12px' }}>{formatDate(transaction.created_at)}</td>
+                        <td style={{ padding: '12px' }}>{getBookmakerName(transaction)}</td>
+                        <td style={{ padding: '12px' }}>{formatTransactionType(transaction.transaction_type)}</td>
+                        <td style={{ padding: '12px', textAlign: 'right' }}>{transaction.amount}</td>
+                        <td style={{ padding: '12px' }}>{transaction.currency || 'N/A'}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+
+              {transactions.length > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', backgroundColor: '#f9f9f9', marginTop: '8px' }}>
+                  <div style={{ fontSize: '14px', color: '#666' }}>
+                    Showing {startIndex + 1}-{Math.min(endIndex, transactions.length)} of {transactions.length} transactions
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      style={{ padding: '8px 12px', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', opacity: currentPage === 1 ? 0.5 : 1 }}
+                    >
+                      Previous
+                    </button>
+                    <span style={{ padding: '8px 12px', backgroundColor: '#fff', border: '1px solid #ddd', borderRadius: '4px' }}>
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      style={{ padding: '8px 12px', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', opacity: currentPage === totalPages ? 0.5 : 1 }}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         </div>
 

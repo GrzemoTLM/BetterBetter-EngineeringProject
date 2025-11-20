@@ -49,8 +49,19 @@ def get_transaction(transaction_id):
         raise ValueError("Transaction not found.")
 
 
-def list_transactions(user):
-    return Transaction.objects.filter(user=user).order_by('-created_at')
+def list_transactions(user, *, date_from=None, date_to=None, bookmaker=None, bookmaker_id=None, transaction_type=None):
+    qs = Transaction.objects.filter(user=user)
+    if date_from:
+        qs = qs.filter(created_at__gte=date_from)
+    if date_to:
+        qs = qs.filter(created_at__lte=date_to)
+    if bookmaker_id:
+        qs = qs.filter(bookmaker_account__bookmaker_id=bookmaker_id)
+    if bookmaker:
+        qs = qs.filter(bookmaker_account__bookmaker__name__iexact=bookmaker)
+    if transaction_type:
+        qs = qs.filter(transaction_type=transaction_type)
+    return qs.order_by('-created_at')
 
 
 def delete_transaction(transaction_id):

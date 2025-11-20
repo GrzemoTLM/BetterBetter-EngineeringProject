@@ -7,6 +7,7 @@ from finances.serializers.transaction_serializer import TransactionSerializer
 from finances.services.transaction_service import create_transaction, update_transaction, get_transaction, list_transactions, delete_transaction
 from finances.services.transaction_service import user_transactions_summary
 from decimal import Decimal
+from datetime import datetime, timedelta
 
 
 def handle_get_transaction(request, pk):
@@ -52,7 +53,14 @@ def handle_delete_transaction(request, pk):
 class TransactionListView(APIView):
     @swagger_auto_schema(
         operation_summary='List user transactions',
-        operation_description='Get all transactions for authenticated user',
+        operation_description='Get all transactions for authenticated user. Optional filters: date_from (YYYY-MM-DD), date_to (YYYY-MM-DD), bookmaker (name), bookmaker_id (numeric), transaction_type (DEPOSIT/WITHDRAWAL).',
+        manual_parameters=[
+            openapi.Parameter('date_from', openapi.IN_QUERY, description='Data od (YYYY-MM-DD)', type=openapi.TYPE_STRING),
+            openapi.Parameter('date_to', openapi.IN_QUERY, description='Data do (YYYY-MM-DD)', type=openapi.TYPE_STRING),
+            openapi.Parameter('bookmaker', openapi.IN_QUERY, description='Nazwa bukmachera (case-insensitive)', type=openapi.TYPE_STRING),
+            openapi.Parameter('bookmaker_id', openapi.IN_QUERY, description='ID bukmachera', type=openapi.TYPE_INTEGER),
+            openapi.Parameter('transaction_type', openapi.IN_QUERY, description='Typ transakcji: DEPOSIT lub WITHDRAWAL', type=openapi.TYPE_STRING),
+        ],
         responses={
             200: openapi.Response('List of transactions', TransactionSerializer(many=True)),
             400: openapi.Response('Error retrieving transactions'),
@@ -60,7 +68,44 @@ class TransactionListView(APIView):
     )
     def get(self, request):
         try:
-            transactions = list_transactions(request.user)
+            qp = request.query_params
+            date_from_raw = qp.get('date_from')
+            date_to_raw = qp.get('date_to')
+            bookmaker = qp.get('bookmaker')
+            bookmaker_id_raw = qp.get('bookmaker_id')
+            transaction_type_raw = qp.get('transaction_type')
+            date_from = None
+            date_to = None
+            bookmaker_id = None
+            transaction_type = None
+            if date_from_raw:
+                try:
+                    date_from = datetime.strptime(date_from_raw, '%Y-%m-%d')
+                except ValueError:
+                    return Response({'error': 'Invalid date_from format. Use YYYY-MM-DD.'}, status=status.HTTP_400_BAD_REQUEST)
+            if date_to_raw:
+                try:
+                    date_to = datetime.strptime(date_to_raw, '%Y-%m-%d') + timedelta(hours=23, minutes=59, seconds=59)
+                except ValueError:
+                    return Response({'error': 'Invalid date_to format. Use YYYY-MM-DD.'}, status=status.HTTP_400_BAD_REQUEST)
+            if bookmaker_id_raw:
+                try:
+                    bookmaker_id = int(bookmaker_id_raw)
+                except ValueError:
+                    return Response({'error': 'Invalid bookmaker_id. Must be integer.'}, status=status.HTTP_400_BAD_REQUEST)
+            if transaction_type_raw:
+                upper = transaction_type_raw.upper()
+                if upper not in ('DEPOSIT', 'WITHDRAWAL'):
+                    return Response({'error': 'Invalid transaction_type. Use DEPOSIT or WITHDRAWAL.'}, status=status.HTTP_400_BAD_REQUEST)
+                transaction_type = upper
+            transactions = list_transactions(
+                request.user,
+                date_from=date_from,
+                date_to=date_to,
+                bookmaker=bookmaker,
+                bookmaker_id=bookmaker_id,
+                transaction_type=transaction_type,
+            )
             serializer = TransactionSerializer(transactions, many=True)
             return Response(serializer.data)
         except Exception as e:

@@ -288,13 +288,43 @@ class ApiService {
     }
   }
 
-  async fetchTransactions(): Promise<Transaction[]> {
+  async fetchTransactions(filters?: {
+    date_from?: string;
+    date_to?: string;
+    bookmaker?: string;
+    transaction_type?: string;
+  }): Promise<Transaction[]> {
     try {
+      console.log('fetchTransactions called with filters:', filters);
+
+      // Send filters in the format backend expects (YYYY-MM-DD)
+      const params: Record<string, string> = {};
+      if (filters?.date_from) {
+        // Extract just the date part if it has time
+        params['date_from'] = filters.date_from.split('T')[0];
+      }
+
+      if (filters?.date_to) {
+        // Extract just the date part if it has time
+        params['date_to'] = filters.date_to.split('T')[0];
+      }
+
+      if (filters?.bookmaker) {
+        params['bookmaker'] = filters.bookmaker;
+      }
+
+      if (filters?.transaction_type) {
+        params['transaction_type'] = filters.transaction_type;
+      }
+
       const response = await this.axiosInstance.get<Transaction[]>(API_ENDPOINTS.FINANCES.TRANSACTIONS_LIST, {
         headers: { Accept: 'application/json' },
+        params: Object.keys(params).length > 0 ? params : undefined,
       });
+      console.log('fetchTransactions response:', response.data);
       return response.data;
     } catch (error) {
+      console.error('fetchTransactions error:', error);
       throw new Error(this.getErrorMessage(error));
     }
   }
