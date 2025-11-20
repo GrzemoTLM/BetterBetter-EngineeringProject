@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 import { TwoFactorForm } from './TwoFactorForm';
 import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
 import { apiService } from '../services/api';
@@ -10,6 +11,7 @@ interface LoginFormProps {
 
 export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
   const { login, isLoading, error } = useAuth();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -169,6 +171,22 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
         <button type="submit" disabled={isLoading}>
           {isLoading ? 'Logowanie...' : 'Zaloguj się'}
         </button>
+
+        <div style={{ marginTop: '12px', textAlign: 'center', fontSize: '14px' }}>
+          <button
+            type="button"
+            onClick={() => navigate('/reset-password')}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#667eea',
+              cursor: 'pointer',
+              textDecoration: 'underline',
+            }}
+          >
+            Forgot password?
+          </button>
+        </div>
       </form>
 
       <div style={{ marginTop: '12px', textAlign: 'center' }}>

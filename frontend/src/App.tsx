@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { PrivateRoute } from './components';
-import { LoginPage, RegisterPage, DashboardPage, SettingsPage, MoneyFlowView } from './pages';
+import { LoginPage, RegisterPage, DashboardPage, SettingsPage, MoneyFlowView, ResetPasswordPage } from './pages';
 import './App.css';
 
 function App() {
@@ -11,7 +11,7 @@ function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route
             path="/dashboard"
             element={
@@ -20,7 +20,6 @@ function App() {
               </PrivateRoute>
             }
           />
-
           <Route
             path="/settings"
             element={
@@ -29,7 +28,6 @@ function App() {
               </PrivateRoute>
             }
           />
-
           <Route
             path="/money-flow"
             element={
@@ -38,9 +36,7 @@ function App() {
               </PrivateRoute>
             }
           />
-
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </AuthProvider>

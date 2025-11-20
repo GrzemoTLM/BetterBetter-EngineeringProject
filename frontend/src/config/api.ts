@@ -8,6 +8,9 @@ export const API_ENDPOINTS = {
     ME: '/api/users/me/',
     VERIFY_2FA: '/api/users/auth/login/verify-2fa/',
     GOOGLE_LOGIN: '/api/users/auth/google/',
+    PASSWORD_RESET_REQUEST: '/api/users/password/reset/',
+    PASSWORD_RESET_CONFIRM: '/api/users/password/reset/confirm/',
+    PASSWORD_RESET_RESEND: '/api/users/password/reset/resend/',
   },
   SETTINGS: {
     GET: '/api/users/settings/',

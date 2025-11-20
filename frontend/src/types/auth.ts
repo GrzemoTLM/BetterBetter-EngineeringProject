@@ -24,6 +24,20 @@ export interface TwoFactorRequest {
   code: string;
 }
 
+export interface PasswordResetRequestRequest {
+  email: string;
+}
+
+export interface PasswordResetConfirmRequest {
+  email: string;
+  code: string;
+  new_password: string;
+}
+
+export interface PasswordResetResponse {
+  detail: string;
+}
+
 export interface UserProfile {
   id: number;
   username: string;
