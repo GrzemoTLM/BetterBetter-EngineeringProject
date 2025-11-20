@@ -81,8 +81,16 @@ def delete_transaction(transaction_id):
         transaction.delete()
 
 
-def user_transactions_summary(user):
+def user_transactions_summary(user, *, date_from=None, date_to=None, bookmaker=None, bookmaker_id=None):
     qs = Transaction.objects.filter(user=user)
+    if date_from:
+        qs = qs.filter(created_at__gte=date_from)
+    if date_to:
+        qs = qs.filter(created_at__lte=date_to)
+    if bookmaker_id:
+        qs = qs.filter(bookmaker_account__bookmaker_id=bookmaker_id)
+    if bookmaker:
+        qs = qs.filter(bookmaker_account__bookmaker__name__iexact=bookmaker)
     agg = qs.aggregate(
         deposited=Sum('amount', filter=Q(transaction_type=TransactionType.DEPOSIT)),
         withdrawn=Sum('amount', filter=Q(transaction_type=TransactionType.WITHDRAWAL)),

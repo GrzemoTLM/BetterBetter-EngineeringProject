@@ -8,12 +8,12 @@ const MoneyFlowView: React.FC = () => {
   const [isAddAccountOpen, setIsAddAccountOpen] = React.useState(false);
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
   const [summary, setSummary] = React.useState<TransactionSummary | null>(null);
+  const [filteredSummary, setFilteredSummary] = React.useState<TransactionSummary | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [currentPage, setCurrentPage] = React.useState(1);
   const itemsPerPage = 20;
 
-  // Filter states
   const [dateFrom, setDateFrom] = React.useState<string>('');
   const [dateTo, setDateTo] = React.useState<string>('');
   const [selectedBookmaker, setSelectedBookmaker] = React.useState<string>('');
@@ -30,20 +30,10 @@ const MoneyFlowView: React.FC = () => {
       setLoading(true);
       setError(null);
       const data = await apiService.fetchTransactions(filters);
-      console.log('Fetched transactions:', data);
-
-      // Log dates for debugging
-      if (data.length > 0) {
-        console.log('Transaction dates in response:');
-        data.forEach(t => {
-          console.log(`  ID: ${t.id}, Created: ${t.created_at}, Bookmaker: ${t.bookmaker}`);
-        });
-      }
 
       setTransactions(data);
       setCurrentPage(1);
 
-      // Extract unique bookmakers from data
       const bookmakers = [...new Set(data.map(t => t.bookmaker).filter(Boolean))];
       setUniqueBookmakers(bookmakers as string[]);
     } catch (err) {
@@ -61,14 +51,17 @@ const MoneyFlowView: React.FC = () => {
   }) => {
     try {
       const data = await apiService.fetchTransactionsSummary(filters);
-      console.log('Fetched summary:', data);
-      setSummary(data);
+
+      if (filters && Object.keys(filters).length > 0) {
+        setFilteredSummary(data);
+      } else {
+        setSummary(data);
+      }
     } catch (err) {
       console.error('Error fetching summary:', err);
     }
   };
 
-  // Pagination logic
   const totalPages = Math.ceil(transactions.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
@@ -126,7 +119,7 @@ const MoneyFlowView: React.FC = () => {
     setSelectedBookmaker('');
     setSelectedTransactionType('');
     fetchTransactions();
-    fetchSummary();
+    setFilteredSummary(null);
   };
 
   return (
@@ -216,54 +209,6 @@ const MoneyFlowView: React.FC = () => {
           </div>
         </div>
 
-        {summary?.by_bookmaker && summary.by_bookmaker.length > 0 && (
-          <div>
-            <h2>Summary by Bookmaker</h2>
-            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '8px' }}>
-              <thead>
-                <tr>
-                  <th style={{ textAlign: 'left', padding: '8px', borderBottom: '2px solid #ddd' }}>Bookmaker</th>
-                  <th style={{ textAlign: 'right', padding: '8px', borderBottom: '2px solid #ddd' }}>Count</th>
-                  <th style={{ textAlign: 'right', padding: '8px', borderBottom: '2px solid #ddd' }}>Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {summary.by_bookmaker.map((item) => (
-                  <tr key={item.bookmaker_id} style={{ borderBottom: '1px solid #eee' }}>
-                    <td style={{ padding: '8px' }}>{item.bookmaker}</td>
-                    <td style={{ padding: '8px', textAlign: 'right' }}>{item.count}</td>
-                    <td style={{ padding: '8px', textAlign: 'right' }}>{item.amount} PLN</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {summary?.by_date && summary.by_date.length > 0 && (
-          <div>
-            <h2>Summary by Date</h2>
-            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '8px' }}>
-              <thead>
-                <tr>
-                  <th style={{ textAlign: 'left', padding: '8px', borderBottom: '2px solid #ddd' }}>Date</th>
-                  <th style={{ textAlign: 'right', padding: '8px', borderBottom: '2px solid #ddd' }}>Count</th>
-                  <th style={{ textAlign: 'right', padding: '8px', borderBottom: '2px solid #ddd' }}>Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {summary.by_date.map((item) => (
-                  <tr key={item.date} style={{ borderBottom: '1px solid #eee' }}>
-                    <td style={{ padding: '8px' }}>{item.date}</td>
-                    <td style={{ padding: '8px', textAlign: 'right' }}>{item.count}</td>
-                    <td style={{ padding: '8px', textAlign: 'right' }}>{item.amount} PLN</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
         <div>
           <header>
             <h2>Balance over time (by bookmaker)</h2>
@@ -278,16 +223,39 @@ const MoneyFlowView: React.FC = () => {
           </header>
 
           <div>
-            <p>Balance</p>
-            <p>Deposited</p>
-            <p>Withdrawn</p>
-            <p>Balance</p>
-            <p>Net</p>
-          </div>
-
-          <div>
             <p>Chart placeholder</p>
           </div>
+
+          {filteredSummary && (
+            <div>
+              <h3>Filtered Summary Results</h3>
+              <p>Total Deposited: {filteredSummary.total_deposited} PLN</p>
+              <p>Total Withdrawn: {filteredSummary.total_withdrawn} PLN</p>
+              <p>Net: {filteredSummary.net_deposits} PLN</p>
+
+              {filteredSummary.by_bookmaker && filteredSummary.by_bookmaker.length > 0 && (
+                <div>
+                  <h4>By Bookmaker</h4>
+                  {filteredSummary.by_bookmaker.map((item) => (
+                    <p key={item.bookmaker_id}>
+                      {item.bookmaker}: {item.count} transactions, {item.amount} PLN
+                    </p>
+                  ))}
+                </div>
+              )}
+
+              {filteredSummary.by_date && filteredSummary.by_date.length > 0 && (
+                <div>
+                  <h4>By Date</h4>
+                  {filteredSummary.by_date.map((item) => (
+                    <p key={item.date}>
+                      {item.date}: {item.count} transactions, {item.amount} PLN
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <footer>
             <button type="button">Deposit</button>
