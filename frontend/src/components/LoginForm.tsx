@@ -1,7 +1,9 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 import { TwoFactorForm } from './TwoFactorForm';
+import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
+import { apiService } from '../services/api';
 
 interface LoginFormProps {
   onSuccess?: () => void;
@@ -9,6 +11,7 @@ interface LoginFormProps {
 
 export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
   const { login, isLoading, error } = useAuth();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -32,7 +35,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
     try {
       const response = await login(formData.email, formData.password);
 
-      // Check if 2FA is required
       if (response?.challenge_id) {
         setChallengeId(response.challenge_id);
       } else {
@@ -54,7 +56,69 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
     setFormData({ email: '', password: '' });
   };
 
-  // Show 2FA form if challenge_id is present
+  const handleGoogleLogin = () => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+    if (!clientId) {
+      setLocalError('Google Client ID is not configured');
+      return;
+    }
+
+    if (typeof google === 'undefined') {
+      setLocalError('Google Identity Services not loaded');
+      return;
+    }
+
+    google.accounts.id.initialize({
+      client_id: clientId,
+      callback: async (response: CredentialResponse) => {
+        try {
+          setLocalError(null);
+          console.log('Google login - received credential from Google');
+
+          const res = await fetch(`${API_BASE_URL}${API_ENDPOINTS.AUTH.GOOGLE_LOGIN}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({ token: response.credential }),
+          });
+
+          console.log('Backend response status:', res.status);
+
+          if (!res.ok) {
+            const errorData = await res.json().catch(() => ({ detail: 'Login failed' }));
+            throw new Error(errorData.detail || 'Google login failed');
+          }
+
+          const data = await res.json();
+          console.log('Backend response data:', data);
+
+          if (data.access) {
+            console.log('Saving access token...');
+            apiService.setToken(data.access);
+            console.log('Token saved. Checking:', apiService.getToken() ? 'Token found ✅' : 'Token NOT found ❌');
+          }
+
+          if (data.refresh) {
+            console.log('Saving refresh token...');
+            apiService.setRefreshToken(data.refresh);
+          }
+
+          console.log('Redirecting to dashboard...');
+          window.location.href = '/dashboard';
+        } catch (err) {
+          console.error('Google login error:', err);
+          const errorMessage = err instanceof Error ? err.message : 'Google login error';
+          setLocalError(errorMessage);
+        }
+      },
+    });
+
+    google.accounts.id.prompt();
+  };
+
   if (challengeId) {
     return (
       <TwoFactorForm
@@ -107,8 +171,29 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
         <button type="submit" disabled={isLoading}>
           {isLoading ? 'Logowanie...' : 'Zaloguj się'}
         </button>
+
+        <div style={{ marginTop: '12px', textAlign: 'center', fontSize: '14px' }}>
+          <button
+            type="button"
+            onClick={() => navigate('/reset-password')}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#667eea',
+              cursor: 'pointer',
+              textDecoration: 'underline',
+            }}
+          >
+            Forgot password?
+          </button>
+        </div>
       </form>
+
+      <div style={{ marginTop: '12px', textAlign: 'center' }}>
+        <button type="button" onClick={handleGoogleLogin} style={{ padding: '8px 12px' }}>
+          Zaloguj przez Google
+        </button>
+      </div>
     </div>
   );
 };
-

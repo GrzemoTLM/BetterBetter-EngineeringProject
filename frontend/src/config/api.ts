@@ -7,6 +7,10 @@ export const API_ENDPOINTS = {
     LOGOUT: '/api/users/logout/',
     ME: '/api/users/me/',
     VERIFY_2FA: '/api/users/auth/login/verify-2fa/',
+    GOOGLE_LOGIN: '/api/users/auth/google/',
+    PASSWORD_RESET_REQUEST: '/api/users/password/reset/',
+    PASSWORD_RESET_CONFIRM: '/api/users/password/reset/confirm/',
+    PASSWORD_RESET_RESEND: '/api/users/password/reset/resend/',
   },
   SETTINGS: {
     GET: '/api/users/settings/',
@@ -21,8 +25,5 @@ export const API_ENDPOINTS = {
     BOOKMAKERS_LIST: '/api/finances/bookmakers/',
     BOOKMAKER_ACCOUNT_CREATE: '/api/finances/bookmakers/accounts/create/',
     BOOKMAKER_ACCOUNTS_LIST: '/api/finances/bookmakers/accounts/',
-  },
-  COUPONS: {
-    BOOKMAKER_ACCOUNT_CREATE_OLD: '/api/coupons/bookmaker-accounts/', // pozostawione tymczasowo jeśli gdzieś użyte (do usunięcia po weryfikacji)
   },
 };

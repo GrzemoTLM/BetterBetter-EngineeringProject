@@ -18,22 +18,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const initAuth = async () => {
       try {
+        console.log('AuthContext: Initializing...');
         const savedToken = apiService.getToken();
+        console.log('AuthContext: Token from localStorage:', savedToken ? 'Found ✅' : 'Not found ❌');
+
         if (savedToken) {
           setToken(savedToken);
           try {
+            console.log('AuthContext: Fetching current user...');
             const currentUser = await apiService.getCurrentUser();
+            console.log('AuthContext: User fetched successfully:', currentUser);
             setUser(currentUser);
           } catch (err) {
-            console.error('Failed to fetch current user:', err);
+            console.error('AuthContext: Failed to fetch current user:', err);
             apiService.removeToken();
             setToken(null);
           }
         }
       } catch (err) {
-        console.error('Auth initialization error:', err);
+        console.error('AuthContext: Auth initialization error:', err);
       } finally {
         setIsLoading(false);
+        console.log('AuthContext: Initialization complete');
       }
     };
 

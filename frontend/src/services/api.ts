@@ -1,6 +1,6 @@
 import axios, { AxiosError } from 'axios';
 import type { AxiosInstance } from 'axios';
-import type { LoginRequest, RegisterRequest, AuthResponse, UserProfile, TwoFactorRequest } from '../types/auth';
+import type { LoginRequest, RegisterRequest, AuthResponse, UserProfile, TwoFactorRequest, PasswordResetRequestRequest, PasswordResetConfirmRequest, PasswordResetResponse } from '../types/auth';
 import type { UserSettings, UpdateSettingsRequest, TwoFactorStartRequest, TwoFactorStartResponse, TwoFactorVerifyRequest, TelegramAuthResponse } from '../types/settings';
 import type { TransactionCreateRequest, TransactionCreateResponse, BookmakerAccountCreateRequest, BookmakerAccountCreateResponse, AvailableBookmaker, BookmakerUserAccount } from '../types/finances';
 import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
@@ -284,6 +284,54 @@ class ApiService {
       });
       return response.data;
     } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async requestPasswordReset(data: PasswordResetRequestRequest): Promise<PasswordResetResponse> {
+    try {
+      console.log('Sending password reset request to:', API_ENDPOINTS.AUTH.PASSWORD_RESET_REQUEST);
+      console.log('Request data:', data);
+      const response = await this.axiosInstance.post<PasswordResetResponse>(
+        API_ENDPOINTS.AUTH.PASSWORD_RESET_REQUEST,
+        data
+      );
+      console.log('Password reset response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Password reset request failed:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async confirmPasswordReset(data: PasswordResetConfirmRequest): Promise<PasswordResetResponse> {
+    try {
+      console.log('Sending password reset confirmation to:', API_ENDPOINTS.AUTH.PASSWORD_RESET_CONFIRM);
+      console.log('Request data:', { ...data, new_password: '***' }); // hide password in logs
+      const response = await this.axiosInstance.post<PasswordResetResponse>(
+        API_ENDPOINTS.AUTH.PASSWORD_RESET_CONFIRM,
+        data
+      );
+      console.log('Password reset confirmation response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Password reset confirmation failed:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async resendPasswordReset(data: PasswordResetRequestRequest): Promise<PasswordResetResponse> {
+    try {
+      console.log('Resending password reset code to:', API_ENDPOINTS.AUTH.PASSWORD_RESET_RESEND);
+      console.log('Request data:', data);
+      const response = await this.axiosInstance.post<PasswordResetResponse>(
+        API_ENDPOINTS.AUTH.PASSWORD_RESET_RESEND,
+        data
+      );
+      console.log('Resend response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Resend password reset failed:', error);
       throw new Error(this.getErrorMessage(error));
     }
   }
