@@ -2,7 +2,7 @@ import axios, { AxiosError } from 'axios';
 import type { AxiosInstance } from 'axios';
 import type { LoginRequest, RegisterRequest, AuthResponse, UserProfile, TwoFactorRequest, PasswordResetRequestRequest, PasswordResetConfirmRequest, PasswordResetResponse } from '../types/auth';
 import type { UserSettings, UpdateSettingsRequest, TwoFactorStartRequest, TwoFactorStartResponse, TwoFactorVerifyRequest, TelegramAuthResponse } from '../types/settings';
-import type { TransactionCreateRequest, TransactionCreateResponse, BookmakerAccountCreateRequest, BookmakerAccountCreateResponse, AvailableBookmaker, BookmakerUserAccount } from '../types/finances';
+import type { TransactionCreateRequest, TransactionCreateResponse, BookmakerAccountCreateRequest, BookmakerAccountCreateResponse, AvailableBookmaker, BookmakerUserAccount, Transaction } from '../types/finances';
 import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
 
 class ApiService {
@@ -280,6 +280,17 @@ class ApiService {
   async fetchBookmakerAccounts(): Promise<BookmakerUserAccount[]> {
     try {
       const response = await this.axiosInstance.get<BookmakerUserAccount[]>(API_ENDPOINTS.FINANCES.BOOKMAKER_ACCOUNTS_LIST, {
+        headers: { Accept: 'application/json' },
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async fetchTransactions(): Promise<Transaction[]> {
+    try {
+      const response = await this.axiosInstance.get<Transaction[]>(API_ENDPOINTS.FINANCES.TRANSACTIONS_LIST, {
         headers: { Accept: 'application/json' },
       });
       return response.data;

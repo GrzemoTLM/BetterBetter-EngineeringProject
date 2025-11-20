@@ -1,9 +1,59 @@
 import React from "react";
 import { AddTransactionModal, AddBookmakerAccountModal } from '../components';
+import type { Transaction } from '../types/finances';
+import { apiService } from '../services/api';
 
 const MoneyFlowView: React.FC = () => {
   const [isAddOpen, setIsAddOpen] = React.useState(false);
   const [isAddAccountOpen, setIsAddAccountOpen] = React.useState(false);
+  const [transactions, setTransactions] = React.useState<Transaction[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const fetchTransactions = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await apiService.fetchTransactions();
+      setTransactions(data.slice(0, 10));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchTransactions();
+  }, []);
+
+  const handleTransactionSuccess = () => {
+    console.log('Transaction created - refreshing table');
+    fetchTransactions();
+  };
+
+  const handleAccountSuccess = () => {
+    console.log('Account added');
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pl-PL', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const formatTransactionType = (type: string) => {
+    return type === 'DEPOSIT' ? 'Deposit' : 'Withdrawal';
+  };
+
+  const getBookmakerName = (transaction: Transaction): string => {
+    return transaction.bookmaker || 'N/A';
+  };
 
   return (
     <div>
@@ -13,10 +63,10 @@ const MoneyFlowView: React.FC = () => {
         <button type="button" onClick={() => setIsAddAccountOpen(true)}>Add Bookmaker Account</button>
       </div>
       {isAddOpen && (
-        <AddTransactionModal onClose={() => setIsAddOpen(false)} onSuccess={() => console.log('Transaction created - refresh table here later')} />
+        <AddTransactionModal onClose={() => setIsAddOpen(false)} onSuccess={handleTransactionSuccess} />
       )}
       {isAddAccountOpen && (
-        <AddBookmakerAccountModal onClose={() => setIsAddAccountOpen(false)} onSuccess={() => console.log('Account added - refresh accounts list later')} />
+        <AddBookmakerAccountModal onClose={() => setIsAddAccountOpen(false)} onSuccess={handleAccountSuccess} />
       )}
 
       <section>
@@ -128,25 +178,39 @@ const MoneyFlowView: React.FC = () => {
 
       <section>
         <div>
-          <table>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Bookmaker</th>
-                <th>Type</th>
-                <th>Amount</th>
-                <th>Currency</th>
-                <th>Status</th>
-                <th>Fee</th>
-                <th>Note</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td colSpan={8}>No data</td>
-              </tr>
-            </tbody>
-          </table>
+          <h2>Recent Transactions (Last 10)</h2>
+          {loading && <p>Loading transactions...</p>}
+          {error && <p style={{ color: 'red' }}>Error: {error}</p>}
+          {!loading && !error && (
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Bookmaker</th>
+                  <th>Type</th>
+                  <th>Amount</th>
+                  <th>Currency</th>
+                </tr>
+              </thead>
+              <tbody>
+                {transactions.length === 0 ? (
+                  <tr>
+                    <td colSpan={5}>No transactions</td>
+                  </tr>
+                ) : (
+                  transactions.map((transaction) => (
+                    <tr key={transaction.id}>
+                      <td>{formatDate(transaction.created_at)}</td>
+                      <td>{getBookmakerName(transaction)}</td>
+                      <td>{formatTransactionType(transaction.transaction_type)}</td>
+                      <td>{transaction.amount}</td>
+                      <td>{transaction.currency || 'N/A'}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
 
         <aside>

@@ -21,6 +21,7 @@ export const API_ENDPOINTS = {
     TELEGRAM_CONNECT: '/api/users/telegram/connect/',
   },
   FINANCES: {
+    TRANSACTIONS_LIST: '/api/finances/transactions/',
     TRANSACTION_CREATE: '/api/finances/transactions/create/',
     BOOKMAKERS_LIST: '/api/finances/bookmakers/',
     BOOKMAKER_ACCOUNT_CREATE: '/api/finances/bookmakers/accounts/create/',

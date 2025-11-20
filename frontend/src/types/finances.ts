@@ -45,3 +45,16 @@ export interface BookmakerUserAccount {
   external_username: string;
   currency: string;
 }
+
+export type Transaction = {
+  id: number;
+  user: number;
+  transaction_type: TransactionType;
+  amount: string;
+  created_at: string;
+  updated_at: string;
+  bookmaker_account: number;
+  bookmaker: string;
+  currency: string | null;
+  display_name?: string;
+};
