@@ -4,6 +4,7 @@ import { DatePickerInput } from '../components/DatePickerInput.tsx';
 import type { Transaction, TransactionSummary } from '../types/finances';
 import { apiService } from '../services/api';
 import { useDateFormatter } from '../hooks/useDateFormatter';
+import { exportTransactionsToPDF } from '../utils/pdfExport';
 
 const MoneyFlowView: React.FC = () => {
   const { formatDate, formatDateWithoutTime } = useDateFormatter();
@@ -76,13 +77,11 @@ const MoneyFlowView: React.FC = () => {
   }, []);
 
   const handleTransactionSuccess = () => {
-    console.log('Transaction created - refreshing table');
     fetchTransactions();
     fetchSummary();
   };
 
   const handleAccountSuccess = () => {
-    console.log('Account added');
   };
 
 
@@ -101,7 +100,6 @@ const MoneyFlowView: React.FC = () => {
     if (selectedBookmaker) filters.bookmaker = selectedBookmaker;
     if (selectedTransactionType) filters.transaction_type = selectedTransactionType;
 
-    console.log('Applying filters:', filters);
     fetchTransactions(filters);
     fetchSummary(filters);
   };
@@ -113,6 +111,21 @@ const MoneyFlowView: React.FC = () => {
     setSelectedTransactionType('');
     fetchTransactions();
     setFilteredSummary(null);
+  };
+
+  const handleExport = () => {
+    const filters: Record<string, string> = {};
+    if (dateFrom) filters.dateFrom = dateFrom;
+    if (dateTo) filters.dateTo = dateTo;
+    if (selectedBookmaker) filters.bookmaker = selectedBookmaker;
+    if (selectedTransactionType) filters.transactionType = selectedTransactionType;
+
+    exportTransactionsToPDF({
+      filteredSummary,
+      transactions,
+      filters,
+      formatDate
+    });
   };
 
   return (
@@ -145,7 +158,7 @@ const MoneyFlowView: React.FC = () => {
           </div>
           <div>
             <h2>Balance</h2>
-            <p>{summary?.net_deposits ?? 0} PLN</p>
+            <p>{((summary?.total_withdrawn ?? 0) - (summary?.total_deposited ?? 0)).toFixed(2)} PLN</p>
           </div>
         </div>
 
@@ -340,7 +353,7 @@ const MoneyFlowView: React.FC = () => {
           </section>
 
           <div>
-            <button type="button">Export</button>
+            <button type="button" onClick={handleExport} style={{ padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', backgroundColor: '#28a745', color: 'white', border: 'none', fontSize: '14px' }}>Export to PDF</button>
           </div>
         </aside>
       </section>

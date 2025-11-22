@@ -336,8 +336,6 @@ class ApiService {
     transaction_type?: string;
   }): Promise<TransactionSummary> {
     try {
-      console.log('fetchTransactionsSummary called with filters:', filters);
-
       const params: Record<string, string> = {};
       if (filters?.date_from) {
         params['date_from'] = filters.date_from.split('T')[0];
@@ -355,14 +353,21 @@ class ApiService {
         params['transaction_type'] = filters.transaction_type;
       }
 
-      const response = await this.axiosInstance.get<TransactionSummary>(API_ENDPOINTS.FINANCES.TRANSACTIONS_SUMMARY, {
+      const config: any = {
         headers: { Accept: 'application/json' },
-        params: Object.keys(params).length > 0 ? params : undefined,
-      });
-      console.log('fetchTransactionsSummary response:', response.data);
+      };
+
+      if (Object.keys(params).length > 0) {
+        config.params = params;
+      }
+
+      const response = await this.axiosInstance.get<TransactionSummary>(API_ENDPOINTS.FINANCES.TRANSACTIONS_SUMMARY, config);
       return response.data;
     } catch (error) {
       console.error('fetchTransactionsSummary error:', error);
+      if (error instanceof AxiosError && error.response?.data) {
+        console.error('Backend error response:', error.response.data);
+      }
       throw new Error(this.getErrorMessage(error));
     }
   }
