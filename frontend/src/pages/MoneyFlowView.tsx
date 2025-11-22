@@ -1,9 +1,12 @@
 import React from "react";
 import { AddTransactionModal, AddBookmakerAccountModal } from '../components';
+import { DatePickerInput } from '../components/DatePickerInput.tsx';
 import type { Transaction, TransactionSummary } from '../types/finances';
 import { apiService } from '../services/api';
+import { useDateFormatter } from '../hooks/useDateFormatter';
 
 const MoneyFlowView: React.FC = () => {
+  const { formatDate, formatDateWithoutTime } = useDateFormatter();
   const [isAddOpen, setIsAddOpen] = React.useState(false);
   const [isAddAccountOpen, setIsAddAccountOpen] = React.useState(false);
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
@@ -82,16 +85,6 @@ const MoneyFlowView: React.FC = () => {
     console.log('Account added');
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pl-PL', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
 
   const formatTransactionType = (type: string) => {
     return type === 'DEPOSIT' ? 'Deposit' : 'Withdrawal';
@@ -156,28 +149,28 @@ const MoneyFlowView: React.FC = () => {
           </div>
         </div>
 
-        <div>
-          <label>
-            Date from
-            <input
-              type="date"
+        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <span>Date from</span>
+            <DatePickerInput
               value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
+              onChange={setDateFrom}
+              placeholder="Select start date"
             />
           </label>
 
-          <label>
-            Date to
-            <input
-              type="date"
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <span>Date to</span>
+            <DatePickerInput
               value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
+              onChange={setDateTo}
+              placeholder="Select end date"
             />
           </label>
 
-          <label>
-            Bookmaker
-            <select value={selectedBookmaker} onChange={(e) => setSelectedBookmaker(e.target.value)}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <span>Bookmaker</span>
+            <select value={selectedBookmaker} onChange={(e) => setSelectedBookmaker(e.target.value)} style={{ padding: '6px 8px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '14px', minWidth: '150px' }}>
               <option value="">All</option>
               {uniqueBookmakers.map((bm) => (
                 <option key={bm} value={bm}>{bm}</option>
@@ -185,29 +178,21 @@ const MoneyFlowView: React.FC = () => {
             </select>
           </label>
 
-          <label>
-            Transaction type
-            <select value={selectedTransactionType} onChange={(e) => setSelectedTransactionType(e.target.value)}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <span>Transaction type</span>
+            <select value={selectedTransactionType} onChange={(e) => setSelectedTransactionType(e.target.value)} style={{ padding: '6px 8px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '14px', minWidth: '150px' }}>
               <option value="">All</option>
               <option value="DEPOSIT">Deposit</option>
               <option value="WITHDRAWAL">Withdrawal</option>
             </select>
           </label>
 
-          <button type="button" onClick={handleApplyFilters}>Apply filters</button>
-          <button type="button" onClick={handleClearFilters}>Clear filters</button>
+          <button type="button" onClick={handleApplyFilters} style={{ padding: '6px 16px', borderRadius: '4px', border: '1px solid #ccc', cursor: 'pointer', fontSize: '14px', backgroundColor: '#007bff', color: 'white' }}>Apply filters</button>
+          <button type="button" onClick={handleClearFilters} style={{ padding: '6px 16px', borderRadius: '4px', border: '1px solid #ccc', cursor: 'pointer', fontSize: '14px', backgroundColor: '#6c757d', color: 'white' }}>Clear filters</button>
         </div>
       </section>
 
       <section>
-        <div>
-          <h2>Deposited vs Withdrawn</h2>
-          <div>
-            <p>Deposited: {summary?.total_deposited ?? 0} PLN</p>
-            <p>Withdrawn: {summary?.total_withdrawn ?? 0} PLN</p>
-            <p>Net: {summary?.net_deposits ?? 0} PLN</p>
-          </div>
-        </div>
 
         <div>
           <header>
@@ -249,7 +234,7 @@ const MoneyFlowView: React.FC = () => {
                   <h4>By Date</h4>
                   {filteredSummary.by_date.map((item) => (
                     <p key={item.date}>
-                      {item.date}: {item.count} transactions, {item.amount} PLN
+                      {formatDateWithoutTime(item.date)}: {item.count} transactions, {item.amount} PLN
                     </p>
                   ))}
                 </div>
