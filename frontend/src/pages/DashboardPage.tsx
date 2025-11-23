@@ -1,10 +1,12 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useDateFormatter } from '../hooks/useDateFormatter';
 
 export const DashboardPage: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { formatDate } = useDateFormatter();
 
   const handleLogout = () => {
     logout();
@@ -32,7 +34,7 @@ export const DashboardPage: React.FC = () => {
         <div className="welcome-card">
           <h2>Witaj, {user?.username || 'Guest'}!</h2>
           <p>Email: {user?.email || 'N/A'}</p>
-          <p>Zarejestrowany: {user?.registered_at ? new Date(user.registered_at).toLocaleDateString('pl-PL') : 'N/A'}</p>
+          <p>Zarejestrowany: {user?.registered_at ? formatDate(user.registered_at, false) : 'N/A'}</p>
         </div>
 
         <div className="features-grid">

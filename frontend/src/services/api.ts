@@ -2,7 +2,7 @@ import axios, { AxiosError } from 'axios';
 import type { AxiosInstance } from 'axios';
 import type { LoginRequest, RegisterRequest, AuthResponse, UserProfile, TwoFactorRequest, PasswordResetRequestRequest, PasswordResetConfirmRequest, PasswordResetResponse } from '../types/auth';
 import type { UserSettings, UpdateSettingsRequest, TwoFactorStartRequest, TwoFactorStartResponse, TwoFactorVerifyRequest, TelegramAuthResponse } from '../types/settings';
-import type { TransactionCreateRequest, TransactionCreateResponse, BookmakerAccountCreateRequest, BookmakerAccountCreateResponse, AvailableBookmaker, BookmakerUserAccount } from '../types/finances';
+import type { TransactionCreateRequest, TransactionCreateResponse, BookmakerAccountCreateRequest, BookmakerAccountCreateResponse, AvailableBookmaker, BookmakerUserAccount, Transaction, TransactionSummary } from '../types/finances';
 import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
 
 class ApiService {
@@ -284,6 +284,90 @@ class ApiService {
       });
       return response.data;
     } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async fetchTransactions(filters?: {
+    date_from?: string;
+    date_to?: string;
+    bookmaker?: string;
+    transaction_type?: string;
+  }): Promise<Transaction[]> {
+    try {
+      console.log('fetchTransactions called with filters:', filters);
+
+      // Send filters in the format backend expects (YYYY-MM-DD)
+      const params: Record<string, string> = {};
+      if (filters?.date_from) {
+        // Extract just the date part if it has time
+        params['date_from'] = filters.date_from.split('T')[0];
+      }
+
+      if (filters?.date_to) {
+        // Extract just the date part if it has time
+        params['date_to'] = filters.date_to.split('T')[0];
+      }
+
+      if (filters?.bookmaker) {
+        params['bookmaker'] = filters.bookmaker;
+      }
+
+      if (filters?.transaction_type) {
+        params['transaction_type'] = filters.transaction_type;
+      }
+
+      const response = await this.axiosInstance.get<Transaction[]>(API_ENDPOINTS.FINANCES.TRANSACTIONS_LIST, {
+        headers: { Accept: 'application/json' },
+        params: Object.keys(params).length > 0 ? params : undefined,
+      });
+      console.log('fetchTransactions response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('fetchTransactions error:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async fetchTransactionsSummary(filters?: {
+    date_from?: string;
+    date_to?: string;
+    bookmaker?: string;
+    transaction_type?: string;
+  }): Promise<TransactionSummary> {
+    try {
+      const params: Record<string, string> = {};
+      if (filters?.date_from) {
+        params['date_from'] = filters.date_from.split('T')[0];
+      }
+
+      if (filters?.date_to) {
+        params['date_to'] = filters.date_to.split('T')[0];
+      }
+
+      if (filters?.bookmaker) {
+        params['bookmaker'] = filters.bookmaker;
+      }
+
+      if (filters?.transaction_type) {
+        params['transaction_type'] = filters.transaction_type;
+      }
+
+      const config: any = {
+        headers: { Accept: 'application/json' },
+      };
+
+      if (Object.keys(params).length > 0) {
+        config.params = params;
+      }
+
+      const response = await this.axiosInstance.get<TransactionSummary>(API_ENDPOINTS.FINANCES.TRANSACTIONS_SUMMARY, config);
+      return response.data;
+    } catch (error) {
+      console.error('fetchTransactionsSummary error:', error);
+      if (error instanceof AxiosError && error.response?.data) {
+        console.error('Backend error response:', error.response.data);
+      }
       throw new Error(this.getErrorMessage(error));
     }
   }

@@ -45,3 +45,38 @@ export interface BookmakerUserAccount {
   external_username: string;
   currency: string;
 }
+
+export type Transaction = {
+  id: number;
+  user: number;
+  transaction_type: TransactionType;
+  amount: string;
+  created_at: string;
+  updated_at: string;
+  bookmaker_account: number;
+  bookmaker: string;
+  currency: string | null;
+  display_name?: string;
+};
+
+export interface TransactionSummaryByBookmaker {
+  bookmaker_id: number;
+  bookmaker: string;
+  count: number;
+  amount: string;
+}
+
+export interface TransactionSummaryByDate {
+  date: string;
+  count: number;
+  amount: string;
+}
+
+export interface TransactionSummary {
+  total_deposited: number;
+  total_withdrawn: number;
+  net_deposits: number;
+  by_bookmaker?: TransactionSummaryByBookmaker[];
+  by_date?: TransactionSummaryByDate[];
+}
+
