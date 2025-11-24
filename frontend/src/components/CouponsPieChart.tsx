@@ -8,6 +8,15 @@ const CouponsPieChart = () => {
     { name: 'Cashed out', value: 20, color: '#2A4B8D' },
   ];
 
+  interface LabelProps {
+    cx: number;
+    cy: number;
+    midAngle: number;
+    innerRadius: number;
+    outerRadius: number;
+    percent: number;
+  }
+
   const renderCustomLabel = ({
     cx,
     cy,
@@ -15,7 +24,7 @@ const CouponsPieChart = () => {
     innerRadius,
     outerRadius,
     percent,
-  }: any) => {
+  }: LabelProps) => {
     const RADIAN = Math.PI / 180;
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
     const x = cx + radius * Math.cos(-midAngle * RADIAN);

@@ -98,6 +98,7 @@ const CouponsTable = () => {
     } else if (balance.startsWith('-')) {
       return 'text-status-error';
     }
+
     return 'text-text-secondary';
   };
 
