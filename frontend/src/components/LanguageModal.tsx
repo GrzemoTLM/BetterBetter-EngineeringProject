@@ -19,7 +19,6 @@ const LanguageModal: React.FC<LanguageModalProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Map locale to language code
   const localeToLanguage = (locale: string): Language => {
     if (locale && locale.startsWith('pl')) return 'pl';
     return 'en';

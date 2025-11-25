@@ -25,13 +25,14 @@ const TelegramConnectionModal: React.FC<TelegramConnectionModalProps> = ({
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [pollingTimer, setPollingTimer] = useState<NodeJS.Timeout | null>(null);
 
-  const botUsername = (import.meta as any).env?.VITE_TELEGRAM_BOT_USERNAME || 'BetterBetter_bot';
+  const botUsername = (import.meta as never).env?.VITE_TELEGRAM_BOT_USERNAME || 'BetterBetter_bot';
 
   const handleCloseModal = () => {
     if (pollingTimer) {
       clearInterval(pollingTimer);
       setPollingTimer(null);
     }
+
     setIsPolling(false);
     setIsLoading(false);
     setAuthCode(null);
