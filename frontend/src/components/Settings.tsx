@@ -4,6 +4,7 @@ import SettingsRow from './SettingsRow';
 import ToggleSwitch from './ToggleSwitch';
 import DateFormatModal from './DateFormatModal';
 import CurrencyModal from './CurrencyModal';
+import MonthlyBudgetLimitModal from './MonthlyBudgetLimitModal';
 import PredefinedBetValuesModal from './PredefinedBetValuesModal';
 import TwoFactorModal from './TwoFactorModal';
 import TelegramConnectionModal from './TelegramConnectionModal';
@@ -26,6 +27,7 @@ const Settings = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isDateFormatModalOpen, setIsDateFormatModalOpen] = useState(false);
   const [isCurrencyModalOpen, setIsCurrencyModalOpen] = useState(false);
+  const [isMonthlyBudgetLimitModalOpen, setIsMonthlyBudgetLimitModalOpen] = useState(false);
   const [isPredefinedBetsModalOpen, setIsPredefinedBetsModalOpen] = useState(false);
   const [is2FAModalOpen, setIs2FAModalOpen] = useState(false);
   const [is2FAEnabling, setIs2FAEnabling] = useState(false);
@@ -144,6 +146,10 @@ const Settings = () => {
     setIsCurrencyModalOpen(true);
   };
 
+  const handleMonthlyBudgetLimitClick = () => {
+    setIsMonthlyBudgetLimitModalOpen(true);
+  };
+
   const handlePredefinedBetsClick = () => {
     setIsPredefinedBetsModalOpen(true);
   };
@@ -214,7 +220,7 @@ const Settings = () => {
       label: 'Monthly budget limit',
       value: settings.monthly_budget_limit ? `$${settings.monthly_budget_limit}` : 'Not set',
       action: 'Update',
-      onClick: undefined,
+      onClick: handleMonthlyBudgetLimitClick,
     },
     {
       label: 'Language',
@@ -298,6 +304,16 @@ const Settings = () => {
         onSave={async (currency) => {
           await handleUpdateSettings({ basic_currency: currency });
           setCurrency(currency);
+        }}
+      />
+
+      {/* Monthly Budget Limit Modal */}
+      <MonthlyBudgetLimitModal
+        isOpen={isMonthlyBudgetLimitModalOpen}
+        onClose={() => setIsMonthlyBudgetLimitModalOpen(false)}
+        currentLimit={settings.monthly_budget_limit || undefined}
+        onSave={async (limit) => {
+          await handleUpdateSettings({ monthly_budget_limit: limit });
         }}
       />
 
