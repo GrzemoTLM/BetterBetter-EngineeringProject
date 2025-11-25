@@ -1,5 +1,7 @@
 import { Bell } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { useState, useEffect } from 'react';
+import apiService from '../services/api';
 import DashboardKPICard from './DashboardKPICard';
 import ResultsBarChart from './ResultsBarChart';
 import CouponsPieChart from './CouponsPieChart';
@@ -7,14 +9,31 @@ import RecentCouponsTable from './RecentCouponsTable';
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const username = user?.username || 'User';
+  const [nickname, setNickname] = useState<string>('');
+
+  useEffect(() => {
+    const loadNickname = async () => {
+      try {
+        const settings = await apiService.getSettings();
+        if (settings.nickname) {
+          setNickname(settings.nickname);
+        }
+      } catch (err) {
+        console.error('Failed to load nickname:', err);
+      }
+    };
+
+    loadNickname();
+  }, []);
+
+  const displayName = nickname || user?.username || 'User';
 
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <h1 className="text-4xl font-bold text-text-primary">
-          WELCOME BACK, {username.toUpperCase()}
+          WELCOME BACK, {displayName.toUpperCase()}
         </h1>
         <button className="p-2 hover:bg-background-table-header rounded-lg transition-colors">
           <Bell size={24} className="text-text-secondary" />

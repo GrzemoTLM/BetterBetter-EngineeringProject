@@ -5,6 +5,7 @@ import ToggleSwitch from './ToggleSwitch';
 import DateFormatModal from './DateFormatModal';
 import CurrencyModal from './CurrencyModal';
 import MonthlyBudgetLimitModal from './MonthlyBudgetLimitModal';
+import NicknameModal from './NicknameModal';
 import PredefinedBetValuesModal from './PredefinedBetValuesModal';
 import TwoFactorModal from './TwoFactorModal';
 import TelegramConnectionModal from './TelegramConnectionModal';
@@ -28,6 +29,7 @@ const Settings = () => {
   const [isDateFormatModalOpen, setIsDateFormatModalOpen] = useState(false);
   const [isCurrencyModalOpen, setIsCurrencyModalOpen] = useState(false);
   const [isMonthlyBudgetLimitModalOpen, setIsMonthlyBudgetLimitModalOpen] = useState(false);
+  const [isNicknameModalOpen, setIsNicknameModalOpen] = useState(false);
   const [isPredefinedBetsModalOpen, setIsPredefinedBetsModalOpen] = useState(false);
   const [is2FAModalOpen, setIs2FAModalOpen] = useState(false);
   const [is2FAEnabling, setIs2FAEnabling] = useState(false);
@@ -142,6 +144,10 @@ const Settings = () => {
     setIsDateFormatModalOpen(true);
   };
 
+  const handleNicknameClick = () => {
+    setIsNicknameModalOpen(true);
+  };
+
   const handleCurrencyClick = () => {
     setIsCurrencyModalOpen(true);
   };
@@ -179,7 +185,7 @@ const Settings = () => {
       label: 'Nickname',
       value: settings.nickname || 'Not set',
       action: 'Update',
-      onClick: undefined,
+      onClick: handleNicknameClick,
     },
     {
       label: 'Email address',
@@ -294,6 +300,16 @@ const Settings = () => {
         onClose={() => setIsDateFormatModalOpen(false)}
         currentFormat={dateFormat}
         onSave={handleDateFormatChange}
+      />
+
+      {/* Nickname Modal */}
+      <NicknameModal
+        isOpen={isNicknameModalOpen}
+        onClose={() => setIsNicknameModalOpen(false)}
+        currentNickname={settings.nickname || undefined}
+        onSave={async (nickname) => {
+          await handleUpdateSettings({ nickname });
+        }}
       />
 
       {/* Currency Modal */}
