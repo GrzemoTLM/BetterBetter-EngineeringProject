@@ -2,11 +2,12 @@ import { Bell } from 'lucide-react';
 import SettingsRow from './SettingsRow';
 import ToggleSwitch from './ToggleSwitch';
 import DateFormatModal from './DateFormatModal';
+import TwoFactorModal from './TwoFactorModal';
 import { useState, useEffect, useContext } from 'react';
-import { apiService } from '../services/api';
+import apiService from '../services/api';
 import { useDateFormatter } from '../hooks/useDateFormatter';
 import { DateFormatContext } from '../context/DateFormatContext';
-import type { UserSettings } from '../types/settings';
+import type { UserSettings, UpdateSettingsRequest } from '../types/settings';
 
 const Settings = () => {
   const { dateFormat } = useDateFormatter();
@@ -17,6 +18,8 @@ const Settings = () => {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isDateFormatModalOpen, setIsDateFormatModalOpen] = useState(false);
+  const [is2FAModalOpen, setIs2FAModalOpen] = useState(false);
+  const [is2FAEnabling, setIs2FAEnabling] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -36,14 +39,31 @@ const Settings = () => {
     }
   };
 
-  const handleUpdateSettings = async (updates: Partial<UserSettings>) => {
+  const handleUpdateSettings = async (updates: UpdateSettingsRequest) => {
     if (!settings) return;
 
     try {
       setIsSaving(true);
       setError(null);
       setSuccessMessage(null);
-      const updated = await apiService.updateSettings(updates);
+
+      const completePayload: UpdateSettingsRequest = {
+        nickname: settings.nickname,
+        auto_coupon_payoff: settings.auto_coupon_payoff,
+        automatic_payoff: settings.automatic_payoff,
+        monthly_budget_limit: settings.monthly_budget_limit,
+        locale: settings.locale,
+        language: settings.language,
+        date_format: settings.date_format,
+        basic_currency: settings.basic_currency,
+        notification_gate: settings.notification_gate,
+        notification_gate_ref: settings.notification_gate_ref,
+        two_factor_enabled: settings.two_factor_enabled,
+        two_factor_method: settings.two_factor_method,
+        ...updates, // Override with new updates
+      };
+
+      const updated = await apiService.updateSettings(completePayload);
       setSettings(updated);
       setSuccessMessage('Settings saved successfully');
     } catch (err) {
@@ -59,9 +79,28 @@ const Settings = () => {
   };
 
   const handleToggle2FA = async (checked: boolean) => {
-    // Note: 2FA setup requires additional steps (QR code, verification)
-    // This is a simplified version - full implementation would require modal
-    await handleUpdateSettings({ two_factor_enabled: checked });
+    if (checked) {
+      // Enable 2FA - open modal to show QR code
+      setIs2FAEnabling(true);
+      setIs2FAModalOpen(true);
+    } else {
+      // Disable 2FA - call API directly
+      await handleUpdateSettings({ two_factor_enabled: false });
+    }
+  };
+
+  const handle2FAVerificationSuccess = async () => {
+    // After successful verification, update settings to reflect 2FA is enabled
+    if (settings) {
+      setSettings({
+        ...settings,
+        two_factor_enabled: true,
+        two_factor_method: 'totp',
+      });
+    }
+
+    setIs2FAEnabling(false);
+    setSuccessMessage('Two-Factor Authentication enabled successfully');
   };
 
   const handleDateFormatChange = async (format: string) => {
@@ -126,6 +165,7 @@ const Settings = () => {
         <ToggleSwitch
           checked={settings.two_factor_enabled ?? false}
           onChange={handleToggle2FA}
+          disabled={isSaving}
         />
       ),
       onClick: undefined,
@@ -207,9 +247,19 @@ const Settings = () => {
         currentFormat={dateFormat}
         onSave={handleDateFormatChange}
       />
+
+      {/* Two-Factor Authentication Modal */}
+      <TwoFactorModal
+        isOpen={is2FAModalOpen}
+        onClose={() => {
+          setIs2FAModalOpen(false);
+          setIs2FAEnabling(false);
+        }}
+        isEnabling={is2FAEnabling}
+        onVerificationSuccess={handle2FAVerificationSuccess}
+      />
     </div>
   );
 };
 
 export default Settings;
-

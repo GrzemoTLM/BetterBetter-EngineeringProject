@@ -1,6 +1,9 @@
 from rest_framework import serializers
 from coupons.models import Currency
 from ..models import UserSettings, TelegramAuthCode
+from ..models.choices import TwoFactorMethod
+from django_otp.plugins.otp_totp.models import TOTPDevice
+from django_otp.plugins.otp_email.models import EmailDevice
 
 
 class UserSettingsSerializer(serializers.ModelSerializer):
@@ -11,6 +14,7 @@ class UserSettingsSerializer(serializers.ModelSerializer):
         required=False,
     )
     telegram_auth_code = serializers.SerializerMethodField(read_only=True)
+    two_factor_enabled = serializers.BooleanField(required=False)
 
     class Meta:
         model = UserSettings
@@ -27,7 +31,12 @@ class UserSettingsSerializer(serializers.ModelSerializer):
             'two_factor_method',
             'telegram_auth_code',
         ]
-        read_only_fields = ['two_factor_method', 'two_factor_enabled', 'telegram_auth_code']
+        read_only_fields = ['two_factor_method', 'telegram_auth_code']
+
+    def validate_two_factor_enabled(self, value):
+        if value:
+            raise serializers.ValidationError('Enable 2FA using dedicated setup flow.')
+        return value
 
     def get_telegram_auth_code(self, obj):
         if obj.notification_gate == 'telegram':
@@ -40,12 +49,19 @@ class UserSettingsSerializer(serializers.ModelSerializer):
         return None
 
     def update(self, instance, validated_data):
-        # proste przypisania dla wszystkich możliwych pól
         for field in [
             'notification_gate', 'notification_gate_ref', 'nickname', 'auto_coupon_payoff',
             'monthly_budget_limit', 'locale', 'date_format', 'preferred_currency',
         ]:
             if field in validated_data:
                 setattr(instance, field, validated_data.get(field))
+
+        if 'two_factor_enabled' in validated_data and validated_data['two_factor_enabled'] is False:
+            if instance.two_factor_enabled:
+                EmailDevice.objects.filter(user=instance.user).delete()
+                TOTPDevice.objects.filter(user=instance.user).delete()
+                instance.two_factor_enabled = False
+                instance.two_factor_method = TwoFactorMethod.NONE
+                instance.two_factor_secret = None
         instance.save()
         return instance

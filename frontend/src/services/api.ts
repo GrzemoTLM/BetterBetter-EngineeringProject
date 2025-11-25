@@ -171,7 +171,7 @@ class ApiService {
       }
     }
     catch (error) {
-      console.error('Logout error:', error);
+      // Silently handle logout errors
     }
     finally {
       this.removeToken();
@@ -228,6 +228,7 @@ class ApiService {
     }
   }
 
+
   async generateTelegramAuthCode(): Promise<TelegramAuthResponse> {
     try {
       const response = await this.axiosInstance.post<TelegramAuthResponse>(API_ENDPOINTS.SETTINGS.TELEGRAM_AUTH_CODE);
@@ -247,6 +248,26 @@ class ApiService {
     }
   }
 
+  async getTransaction(transactionId: string): Promise<Transaction> {
+    try {
+      const response = await this.axiosInstance.get<Transaction>(`${API_ENDPOINTS.FINANCES.TRANSACTION_DETAIL}/${transactionId}`);
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async getTransactions(queryParams?: Record<string, unknown>): Promise<TransactionSummary> {
+    try {
+      const response = await this.axiosInstance.get<TransactionSummary>(API_ENDPOINTS.FINANCES.TRANSACTION_LIST, {
+        params: queryParams,
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
   async createBookmakerAccount(data: BookmakerAccountCreateRequest): Promise<BookmakerAccountCreateResponse> {
     try {
       const response = await this.axiosInstance.post<BookmakerAccountCreateResponse>(API_ENDPOINTS.FINANCES.BOOKMAKER_ACCOUNT_CREATE, data);
@@ -256,169 +277,64 @@ class ApiService {
     }
   }
 
-  async fetchBookmakers(): Promise<AvailableBookmaker[]> {
+  async getBookmakerAccounts(): Promise<BookmakerAccountCreateResponse[]> {
     try {
-      const response = await this.axiosInstance.get<AvailableBookmaker[]>(API_ENDPOINTS.FINANCES.BOOKMAKERS_LIST, {
-        headers: { Accept: 'application/json' },
-      });
-      return response.data;
-    } catch (error) {
-      try {
-        const res = await fetch(`${API_BASE_URL}${API_ENDPOINTS.FINANCES.BOOKMAKERS_LIST}`, {
-          method: 'GET',
-          credentials: 'include',
-          headers: { Accept: 'application/json' },
-        });
-        if (!res.ok) throw new Error('Error: ' + res.status);
-        return await res.json() as AvailableBookmaker[];
-      } catch {
-        throw new Error(this.getErrorMessage(error));
-      }
-    }
-  }
-
-  async fetchBookmakerAccounts(): Promise<BookmakerUserAccount[]> {
-    try {
-      const response = await this.axiosInstance.get<BookmakerUserAccount[]>(API_ENDPOINTS.FINANCES.BOOKMAKER_ACCOUNTS_LIST, {
-        headers: { Accept: 'application/json' },
-      });
+      const response = await this.axiosInstance.get<BookmakerAccountCreateResponse[]>(API_ENDPOINTS.FINANCES.BOOKMAKER_ACCOUNT_LIST);
       return response.data;
     } catch (error) {
       throw new Error(this.getErrorMessage(error));
     }
   }
 
-  async fetchTransactions(filters?: {
-    date_from?: string;
-    date_to?: string;
-    bookmaker?: string;
-    transaction_type?: string;
-  }): Promise<Transaction[]> {
+  async getAvailableBookmakers(): Promise<AvailableBookmaker[]> {
     try {
-      console.log('fetchTransactions called with filters:', filters);
-
-      // Send filters in the format backend expects (YYYY-MM-DD)
-      const params: Record<string, string> = {};
-      if (filters?.date_from) {
-        // Extract just the date part if it has time
-        params['date_from'] = filters.date_from.split('T')[0];
-      }
-
-      if (filters?.date_to) {
-        // Extract just the date part if it has time
-        params['date_to'] = filters.date_to.split('T')[0];
-      }
-
-      if (filters?.bookmaker) {
-        params['bookmaker'] = filters.bookmaker;
-      }
-
-      if (filters?.transaction_type) {
-        params['transaction_type'] = filters.transaction_type;
-      }
-
-      const response = await this.axiosInstance.get<Transaction[]>(API_ENDPOINTS.FINANCES.TRANSACTIONS_LIST, {
-        headers: { Accept: 'application/json' },
-        params: Object.keys(params).length > 0 ? params : undefined,
-      });
-      console.log('fetchTransactions response:', response.data);
+      const response = await this.axiosInstance.get<AvailableBookmaker[]>(API_ENDPOINTS.FINANCES.AVAILABLE_BOOKMAKERS);
       return response.data;
     } catch (error) {
-      console.error('fetchTransactions error:', error);
       throw new Error(this.getErrorMessage(error));
     }
   }
 
-  async fetchTransactionsSummary(filters?: {
-    date_from?: string;
-    date_to?: string;
-    bookmaker?: string;
-    transaction_type?: string;
-  }): Promise<TransactionSummary> {
+  async linkBookmakerAccount(data: { bookmaker_id: string, username: string, password: string }): Promise<void> {
     try {
-      const params: Record<string, string> = {};
-      if (filters?.date_from) {
-        params['date_from'] = filters.date_from.split('T')[0];
-      }
-
-      if (filters?.date_to) {
-        params['date_to'] = filters.date_to.split('T')[0];
-      }
-
-      if (filters?.bookmaker) {
-        params['bookmaker'] = filters.bookmaker;
-      }
-
-      if (filters?.transaction_type) {
-        params['transaction_type'] = filters.transaction_type;
-      }
-
-      const config: any = {
-        headers: { Accept: 'application/json' },
-      };
-
-      if (Object.keys(params).length > 0) {
-        config.params = params;
-      }
-
-      const response = await this.axiosInstance.get<TransactionSummary>(API_ENDPOINTS.FINANCES.TRANSACTIONS_SUMMARY, config);
-      return response.data;
+      await this.axiosInstance.post(API_ENDPOINTS.FINANCES.LINK_BOOKMAKER_ACCOUNT, data);
     } catch (error) {
-      console.error('fetchTransactionsSummary error:', error);
-      if (error instanceof AxiosError && error.response?.data) {
-        console.error('Backend error response:', error.response.data);
-      }
       throw new Error(this.getErrorMessage(error));
     }
   }
 
-  async requestPasswordReset(data: PasswordResetRequestRequest): Promise<PasswordResetResponse> {
+  async unlinkBookmakerAccount(accountId: string): Promise<void> {
     try {
-      console.log('Sending password reset request to:', API_ENDPOINTS.AUTH.PASSWORD_RESET_REQUEST);
-      console.log('Request data:', data);
-      const response = await this.axiosInstance.post<PasswordResetResponse>(
-        API_ENDPOINTS.AUTH.PASSWORD_RESET_REQUEST,
-        data
-      );
-      console.log('Password reset response:', response.data);
-      return response.data;
+      await this.axiosInstance.delete(`${API_ENDPOINTS.FINANCES.UNLINK_BOOKMAKER_ACCOUNT}/${accountId}`);
     } catch (error) {
-      console.error('Password reset request failed:', error);
       throw new Error(this.getErrorMessage(error));
     }
   }
 
-  async confirmPasswordReset(data: PasswordResetConfirmRequest): Promise<PasswordResetResponse> {
+  async resetPasswordRequest(data: PasswordResetRequestRequest): Promise<PasswordResetResponse> {
     try {
-      console.log('Sending password reset confirmation to:', API_ENDPOINTS.AUTH.PASSWORD_RESET_CONFIRM);
-      console.log('Request data:', { ...data, new_password: '***' }); // hide password in logs
-      const response = await this.axiosInstance.post<PasswordResetResponse>(
-        API_ENDPOINTS.AUTH.PASSWORD_RESET_CONFIRM,
-        data
-      );
-      console.log('Password reset confirmation response:', response.data);
+      const response = await this.axiosInstance.post<PasswordResetResponse>(API_ENDPOINTS.AUTH.PASSWORD_RESET_REQUEST, data);
       return response.data;
     } catch (error) {
-      console.error('Password reset confirmation failed:', error);
       throw new Error(this.getErrorMessage(error));
     }
   }
 
-  async resendPasswordReset(data: PasswordResetRequestRequest): Promise<PasswordResetResponse> {
+  async resetPasswordConfirm(data: PasswordResetConfirmRequest): Promise<AuthResponse> {
     try {
-      console.log('Resending password reset code to:', API_ENDPOINTS.AUTH.PASSWORD_RESET_RESEND);
-      console.log('Request data:', data);
-      const response = await this.axiosInstance.post<PasswordResetResponse>(
-        API_ENDPOINTS.AUTH.PASSWORD_RESET_RESEND,
-        data
-      );
-      console.log('Resend response:', response.data);
+      const response = await this.axiosInstance.post<AuthResponse>(API_ENDPOINTS.AUTH.PASSWORD_RESET_CONFIRM, data);
+      if (response.data.access) {
+        this.setToken(response.data.access);
+        if (response.data.refresh) {
+          this.setRefreshToken(response.data.refresh);
+        }
+      }
+
       return response.data;
     } catch (error) {
-      console.error('Resend password reset failed:', error);
       throw new Error(this.getErrorMessage(error));
     }
   }
 }
 
-export const apiService = new ApiService();
+export default new ApiService();
