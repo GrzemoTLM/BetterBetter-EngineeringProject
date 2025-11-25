@@ -6,13 +6,15 @@ import DateFormatModal from './DateFormatModal';
 import CurrencyModal from './CurrencyModal';
 import MonthlyBudgetLimitModal from './MonthlyBudgetLimitModal';
 import NicknameModal from './NicknameModal';
+import LanguageModal from './LanguageModal';
 import PredefinedBetValuesModal from './PredefinedBetValuesModal';
 import TwoFactorModal from './TwoFactorModal';
 import TelegramConnectionModal from './TelegramConnectionModal';
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useCallback, useRef } from 'react';
 import apiService from '../services/api';
 import { useDateFormatter } from '../hooks/useDateFormatter';
 import { useCurrency } from '../hooks/useCurrency';
+import { useLanguage } from '../hooks/useLanguage';
 import { DateFormatContext } from '../context/DateFormatContext';
 import type { UserSettings, UpdateSettingsRequest } from '../types/settings';
 import type { Currency } from '../context/CurrencyContext';
@@ -20,6 +22,7 @@ import type { Currency } from '../context/CurrencyContext';
 const Settings = () => {
   const { dateFormat } = useDateFormatter();
   const { setCurrency } = useCurrency();
+  const { language, setLanguage } = useLanguage();
   const dateFormatContext = useContext(DateFormatContext);
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -30,35 +33,50 @@ const Settings = () => {
   const [isCurrencyModalOpen, setIsCurrencyModalOpen] = useState(false);
   const [isMonthlyBudgetLimitModalOpen, setIsMonthlyBudgetLimitModalOpen] = useState(false);
   const [isNicknameModalOpen, setIsNicknameModalOpen] = useState(false);
+  const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
   const [isPredefinedBetsModalOpen, setIsPredefinedBetsModalOpen] = useState(false);
   const [is2FAModalOpen, setIs2FAModalOpen] = useState(false);
   const [is2FAEnabling, setIs2FAEnabling] = useState(false);
   const [isTelegramModalOpen, setIsTelegramModalOpen] = useState(false);
+  const previousLanguageRef = useRef<string>(language);
 
-  useEffect(() => {
-    loadSettings();
-  }, []);
-
-  const loadSettings = async () => {
+  const loadSettings = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
       const data = await apiService.getSettings();
 
-      // Map preferred_currency to basic_currency if it exists
       const settingsWithCurrency = {
         ...data,
         basic_currency: (data as any).preferred_currency || data.basic_currency || 'USD'
       };
 
       setSettings(settingsWithCurrency);
+
+      // Synchronize language from backend locale
+      if (data.locale && data.locale.startsWith('pl')) {
+        setLanguage('pl');
+      } else if (data.locale && data.locale.startsWith('en')) {
+        setLanguage('en');
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error loading settings';
       setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [setLanguage]);
+
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
+
+  useEffect(() => {
+    if (previousLanguageRef.current !== language) {
+      previousLanguageRef.current = language;
+      loadSettings();
+    }
+  }, [language, loadSettings]);
 
   const handleUpdateSettings = async (updates: UpdateSettingsRequest) => {
     if (!settings) return;
@@ -74,7 +92,6 @@ const Settings = () => {
         automatic_payoff: settings.automatic_payoff,
         monthly_budget_limit: settings.monthly_budget_limit,
         locale: settings.locale,
-        language: settings.language,
         date_format: settings.date_format,
         basic_currency: settings.basic_currency,
         notification_gate: settings.notification_gate,
@@ -156,6 +173,10 @@ const Settings = () => {
     setIsMonthlyBudgetLimitModalOpen(true);
   };
 
+  const handleLanguageClick = () => {
+    setIsLanguageModalOpen(true);
+  };
+
   const handlePredefinedBetsClick = () => {
     setIsPredefinedBetsModalOpen(true);
   };
@@ -230,9 +251,9 @@ const Settings = () => {
     },
     {
       label: 'Language',
-      value: settings.language || 'English',
+      value: settings.locale && settings.locale.startsWith('pl') ? '🇵🇱 Polski' : '🇬🇧 English',
       action: 'Update',
-      onClick: undefined,
+      onClick: handleLanguageClick,
     },
     {
       label: 'Date format',
@@ -309,6 +330,16 @@ const Settings = () => {
         currentNickname={settings.nickname || undefined}
         onSave={async (nickname) => {
           await handleUpdateSettings({ nickname });
+        }}
+      />
+
+      {/* Language Modal */}
+      <LanguageModal
+        isOpen={isLanguageModalOpen}
+        onClose={() => setIsLanguageModalOpen(false)}
+        onSave={async (locale) => {
+          setLanguage(locale.startsWith('pl') ? 'pl' : 'en');
+          await handleUpdateSettings({ locale });
         }}
       />
 

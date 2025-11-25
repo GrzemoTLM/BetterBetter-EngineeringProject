@@ -6,7 +6,6 @@ export interface UserSettings {
   predefined_bet_values?: number[] | null;
   monthly_budget_limit: string | null;
   locale: string;
-  language?: string;
   date_format: string;
   basic_currency?: string;
   preferred_currency?: string;
@@ -24,7 +23,6 @@ export interface UpdateSettingsRequest {
   automatic_payoff?: boolean;
   monthly_budget_limit?: string | null;
   locale?: string;
-  language?: string;
   date_format?: string;
   basic_currency?: string;
   predefined_bet_values?: number[] | null;

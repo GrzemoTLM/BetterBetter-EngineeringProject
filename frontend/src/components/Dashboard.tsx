@@ -1,5 +1,6 @@
 import { Bell } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { useLanguage } from '../hooks/useLanguage';
 import { useState, useEffect } from 'react';
 import apiService from '../services/api';
 import DashboardKPICard from './DashboardKPICard';
@@ -9,6 +10,7 @@ import RecentCouponsTable from './RecentCouponsTable';
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [nickname, setNickname] = useState<string>('');
 
   useEffect(() => {
@@ -33,7 +35,7 @@ const Dashboard = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <h1 className="text-4xl font-bold text-text-primary">
-          WELCOME BACK, {displayName.toUpperCase()}
+          {t.dashboard.welcomeBack}, {displayName.toUpperCase()}
         </h1>
         <button className="p-2 hover:bg-background-table-header rounded-lg transition-colors">
           <Bell size={24} className="text-text-secondary" />
@@ -44,7 +46,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Monthly Balance Card */}
         <DashboardKPICard
-          label="Monthly balance"
+          label={t.dashboard.monthlyBalance}
           value="+ $128,100"
           valueColor="text-status-success"
         />
@@ -52,7 +54,7 @@ const Dashboard = () => {
         {/* Results for Last Week - Bar Chart */}
         <div className="bg-background-paper rounded-xl p-6 shadow-sm">
           <h3 className="text-lg font-semibold text-text-primary mb-4">
-            Results for Last Week
+            {t.dashboard.resultsLastWeek}
           </h3>
           <ResultsBarChart />
         </div>
@@ -60,7 +62,7 @@ const Dashboard = () => {
         {/* Coupons Progress - Pie Chart */}
         <div className="bg-background-paper rounded-xl p-6 shadow-sm">
           <h3 className="text-lg font-semibold text-text-primary mb-4">
-            Coupons Progress
+            {t.dashboard.couponsProgress}
           </h3>
           <CouponsPieChart />
         </div>
@@ -69,7 +71,7 @@ const Dashboard = () => {
       {/* Bottom Section - Recent Coupons Table */}
       <div className="bg-background-paper rounded-xl p-6 shadow-sm">
         <h3 className="text-lg font-semibold text-text-primary mb-4">
-          Recent coupons
+          {t.dashboard.recentCoupons}
         </h3>
         <RecentCouponsTable />
       </div>

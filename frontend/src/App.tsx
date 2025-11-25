@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { AuthProvider } from './context/AuthContext';
 import { DateFormatProvider } from './context/DateFormatContext';
 import { CurrencyProvider } from './context/CurrencyContext';
+import { LanguageProvider } from './context/LanguageContext';
 import { useAuth } from './hooks/useAuth';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -219,6 +220,16 @@ function AppContent() {
     fetchMoneyFlowData(moneyFlowFilters);
   };
 
+  const handleLanguageChange = async (locale: string) => {
+
+    try {
+      const settings = await apiService.getSettings();
+      console.log('Settings refreshed after language change:', settings);
+    } catch (err) {
+      console.error('Failed to refresh settings after language change:', err);
+    }
+  };
+
   // Show main app if authenticated
   return (
     <div className="min-h-screen">
@@ -226,6 +237,7 @@ function AppContent() {
         activeView={activeView}
         onViewChange={setActiveView}
         onLogout={handleLogout}
+        onLanguageChange={handleLanguageChange}
       />
       <main className="ml-[260px] bg-background-page min-h-screen p-6 flex flex-col gap-6">
         {activeView === 'dashboard' ? (
@@ -294,11 +306,13 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <DateFormatProvider>
-        <CurrencyProvider>
-          <AppContent />
-        </CurrencyProvider>
-      </DateFormatProvider>
+      <LanguageProvider>
+        <DateFormatProvider>
+          <CurrencyProvider>
+            <AppContent />
+          </CurrencyProvider>
+        </DateFormatProvider>
+      </LanguageProvider>
     </AuthProvider>
   );
 }
