@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { AuthProvider } from './context/AuthContext';
 import { DateFormatProvider } from './context/DateFormatContext';
+import { CurrencyProvider } from './context/CurrencyContext';
+import { LanguageProvider } from './context/LanguageContext';
 import { useAuth } from './hooks/useAuth';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -19,7 +21,7 @@ import SummaryStats from './components/SummaryStats';
 import BalanceChart from './components/BalanceChart';
 import QuickActions from './components/QuickActions';
 import TransactionTable from './components/TransactionTable';
-import { apiService } from './services/api';
+import apiService from './services/api';
 import type { Transaction, TransactionSummary } from './types/finances';
 import './App.css';
 
@@ -160,22 +162,37 @@ function AppContent() {
     try {
       const [transactionsData, summaryData] = await Promise.all([
         apiService.fetchTransactions(filters),
-        apiService.fetchTransactionsSummary(filters),
+        apiService.fetchTransactionsSummary(), // Get unfiltered summary for baseline
       ]);
 
       setTransactions(transactionsData);
 
-      // Add total_transactions count to summary
-      const enhancedSummary = {
-        ...summaryData,
-        total_transactions: transactionsData.length
-      };
-
+      // Calculate filtered summary from transaction data
+      let filteredSummary = summaryData;
 
       if (filters && Object.keys(filters).length > 0) {
-        setFilteredSummary(enhancedSummary);
+        // Calculate totals from filtered transactions
+        const totalDeposited = transactionsData
+          .filter((t) => t.transaction_type === 'DEPOSIT')
+          .reduce((sum, t) => sum + parseFloat(t.amount || '0'), 0);
+
+        const totalWithdrawn = transactionsData
+          .filter((t) => t.transaction_type === 'WITHDRAWAL')
+          .reduce((sum, t) => sum + parseFloat(t.amount || '0'), 0);
+
+        filteredSummary = {
+          total_deposited: totalDeposited,
+          total_withdrawn: totalWithdrawn,
+          net_deposits: totalDeposited - totalWithdrawn,
+          total_transactions: transactionsData.length,
+        };
+
+        setFilteredSummary(filteredSummary);
       } else {
-        setSummary(enhancedSummary);
+        setSummary({
+          ...summaryData,
+          total_transactions: transactionsData.length,
+        });
         setFilteredSummary(null);
       }
     } catch (err) {
@@ -203,6 +220,16 @@ function AppContent() {
     fetchMoneyFlowData(moneyFlowFilters);
   };
 
+  const handleLanguageChange = async (locale: string) => {
+
+    try {
+      const settings = await apiService.getSettings();
+      console.log('Settings refreshed after language change:', settings);
+    } catch (err) {
+      console.error('Failed to refresh settings after language change:', err);
+    }
+  };
+
   // Show main app if authenticated
   return (
     <div className="min-h-screen">
@@ -210,6 +237,7 @@ function AppContent() {
         activeView={activeView}
         onViewChange={setActiveView}
         onLogout={handleLogout}
+        onLanguageChange={handleLanguageChange}
       />
       <main className="ml-[260px] bg-background-page min-h-screen p-6 flex flex-col gap-6">
         {activeView === 'dashboard' ? (
@@ -231,7 +259,7 @@ function AppContent() {
               <h1 className="text-4xl font-bold text-text-primary mb-6">
                 Money Flow
               </h1>
-              {summary && <KPICards summary={filteredSummary || summary} />}
+              {summary && <KPICards summary={summary} />}
             </div>
 
             {/* Filter Bar */}
@@ -278,9 +306,13 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <DateFormatProvider>
-        <AppContent />
-      </DateFormatProvider>
+      <LanguageProvider>
+        <DateFormatProvider>
+          <CurrencyProvider>
+            <AppContent />
+          </CurrencyProvider>
+        </DateFormatProvider>
+      </LanguageProvider>
     </AuthProvider>
   );
 }

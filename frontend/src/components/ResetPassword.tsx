@@ -1,6 +1,6 @@
 import { Mail, ArrowLeft, Lock, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
-import { apiService } from '../services/api';
+import apiService from '../services/api';
 
 interface ResetPasswordProps {
   onBackToLogin: () => void;
@@ -27,7 +27,7 @@ const ResetPassword = ({ onBackToLogin, onResetSent }: ResetPasswordProps) => {
 
     setIsLoading(true);
     try {
-      await apiService.requestPasswordReset({ email });
+      await apiService.resetPasswordRequest({ email });
       setStep('code');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to send reset code';
@@ -48,7 +48,7 @@ const ResetPassword = ({ onBackToLogin, onResetSent }: ResetPasswordProps) => {
 
     setIsLoading(true);
     try {
-      await apiService.confirmPasswordReset({ email, code, new_password: '' });
+      await apiService.resetPasswordConfirm({ email, code, new_password: '' });
       setStep('password');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Invalid verification code';
@@ -74,7 +74,7 @@ const ResetPassword = ({ onBackToLogin, onResetSent }: ResetPasswordProps) => {
 
     setIsLoading(true);
     try {
-      await apiService.confirmPasswordReset({ email, code, new_password: newPassword });
+      await apiService.resetPasswordConfirm({ email, code, new_password: newPassword });
       onResetSent();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to reset password';
@@ -88,7 +88,7 @@ const ResetPassword = ({ onBackToLogin, onResetSent }: ResetPasswordProps) => {
     setError(null);
     setIsLoading(true);
     try {
-      await apiService.resendPasswordReset({ email });
+      await apiService.resetPasswordRequest({ email });
       setError(null);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to resend code';

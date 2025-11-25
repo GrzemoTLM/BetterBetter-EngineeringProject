@@ -1,6 +1,6 @@
 import { X } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { apiService } from '../services/api';
+import apiService from '../services/api';
 import type { BookmakerUserAccount } from '../types/finances';
 
 interface DepositModalProps {
@@ -20,7 +20,7 @@ const DepositModal = ({ onClose, onSuccess }: DepositModalProps) => {
     let mounted = true;
     const load = async () => {
       try {
-        const data = await apiService.fetchBookmakerAccounts();
+        const data = await apiService.getBookmakerAccounts();
         if (mounted) setAccounts(data);
       } catch {
         if (mounted) setError('Failed to fetch bookmaker accounts');

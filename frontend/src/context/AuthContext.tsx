@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useState, useCallback, useEffect } from 'react';
 import type { AuthContextType, UserProfile } from '../types/auth';
-import { apiService } from '../services/api';
+import apiService from '../services/api';
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 

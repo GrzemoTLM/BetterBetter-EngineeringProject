@@ -1,7 +1,7 @@
 import { Mail, Lock } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { apiService } from '../services/api';
+import apiService from '../services/api';
 import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
 
 interface LoginProps {

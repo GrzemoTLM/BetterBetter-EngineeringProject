@@ -1,6 +1,6 @@
 import { X } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { apiService } from '../services/api';
+import apiService from '../services/api';
 import type { AvailableBookmaker } from '../types/finances';
 
 interface AddBookmakerModalProps {
@@ -23,7 +23,7 @@ const AddBookmakerModal = ({ onClose, onSuccess }: AddBookmakerModalProps) => {
     let isMounted = true;
     const load = async () => {
       try {
-        const data = await apiService.fetchBookmakers();
+        const data = await apiService.getAvailableBookmakers();
         if (isMounted) setBookmakers(data);
       } catch {
         if (isMounted) setError('Failed to fetch bookmakers list');

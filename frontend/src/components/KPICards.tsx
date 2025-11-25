@@ -1,5 +1,6 @@
 import { Wallet, ArrowDownLeft, TrendingUp, Hash } from 'lucide-react';
 import type { TransactionSummary } from '../types/finances';
+import { useCurrency } from '../hooks/useCurrency';
 
 interface KPICardProps {
   icon: React.ElementType;
@@ -31,10 +32,7 @@ interface KPICardsProps {
 }
 
 const KPICards = ({ summary }: KPICardsProps) => {
-  const formatCurrency = (value: number | undefined) => {
-    if (value === undefined || value === null) return '$0';
-    return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
+  const { formatCurrency } = useCurrency();
 
   const totalDeposited = summary?.total_deposited ?? 0;
   const totalWithdrawn = summary?.total_withdrawn ?? 0;
