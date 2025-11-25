@@ -13,7 +13,7 @@ const SummaryStats = ({ summary }: SummaryStatsProps) => {
   const totalDeposited = summary?.total_deposited ?? 0;
   const totalWithdrawn = summary?.total_withdrawn ?? 0;
   const balance = (summary?.total_withdrawn ?? 0) - (summary?.total_deposited ?? 0);
-  const transactionCount = summary?.total_count ?? 0;
+  const transactionCount = summary?.total_transactions ?? 0;
 
   const stats = [
     { label: 'Deposited', value: formatCurrency(totalDeposited), color: 'text-status-success' },

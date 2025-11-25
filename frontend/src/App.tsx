@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { AuthProvider } from './context/AuthContext';
+import { DateFormatProvider } from './context/DateFormatContext';
 import { useAuth } from './hooks/useAuth';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -53,6 +54,14 @@ function AppContent() {
       setAuthState('login');
     }
   }, [isAuthenticated, authState]);
+
+  // Fetch money flow data when authenticated and on money-flow view
+  useEffect(() => {
+    if (isAuthenticated && activeView === 'money-flow') {
+      fetchMoneyFlowData(moneyFlowFilters);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, activeView]);
 
   // Show loading during auth initialization
   if (isLoading) {
@@ -156,10 +165,17 @@ function AppContent() {
 
       setTransactions(transactionsData);
 
+      // Add total_transactions count to summary
+      const enhancedSummary = {
+        ...summaryData,
+        total_transactions: transactionsData.length
+      };
+
+
       if (filters && Object.keys(filters).length > 0) {
-        setFilteredSummary(summaryData);
+        setFilteredSummary(enhancedSummary);
       } else {
-        setSummary(summaryData);
+        setSummary(enhancedSummary);
         setFilteredSummary(null);
       }
     } catch (err) {
@@ -170,13 +186,6 @@ function AppContent() {
     }
   };
 
-  // Fetch money flow data when authenticated and on money-flow view
-  useEffect(() => {
-    if (isAuthenticated && activeView === 'money-flow') {
-      fetchMoneyFlowData(moneyFlowFilters);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, activeView]);
 
   // Money Flow filter handlers
   const handleApplyFilters = (filters: typeof moneyFlowFilters) => {
@@ -222,7 +231,7 @@ function AppContent() {
               <h1 className="text-4xl font-bold text-text-primary mb-6">
                 Money Flow
               </h1>
-              <KPICards summary={summary} />
+              {summary && <KPICards summary={filteredSummary || summary} />}
             </div>
 
             {/* Filter Bar */}
@@ -232,6 +241,8 @@ function AppContent() {
                 onFiltersChange={handleApplyFilters}
                 onClearFilters={handleClearFilters}
                 uniqueBookmakers={[...new Set(transactions.map(t => t.bookmaker).filter(Boolean))] as string[]}
+                transactions={transactions}
+                filteredSummary={filteredSummary}
               />
             </div>
 
@@ -267,7 +278,9 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <DateFormatProvider>
+        <AppContent />
+      </DateFormatProvider>
     </AuthProvider>
   );
 }

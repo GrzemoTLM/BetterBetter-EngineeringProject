@@ -1,18 +1,22 @@
 import { Bell } from 'lucide-react';
 import SettingsRow from './SettingsRow';
 import ToggleSwitch from './ToggleSwitch';
-import { useState, useEffect } from 'react';
+import DateFormatModal from './DateFormatModal';
+import { useState, useEffect, useContext } from 'react';
 import { apiService } from '../services/api';
 import { useDateFormatter } from '../hooks/useDateFormatter';
+import { DateFormatContext } from '../context/DateFormatContext';
 import type { UserSettings } from '../types/settings';
 
 const Settings = () => {
-  const { formatDate } = useDateFormatter();
+  const { dateFormat } = useDateFormatter();
+  const dateFormatContext = useContext(DateFormatContext);
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isDateFormatModalOpen, setIsDateFormatModalOpen] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -60,6 +64,17 @@ const Settings = () => {
     await handleUpdateSettings({ two_factor_enabled: checked });
   };
 
+  const handleDateFormatChange = async (format: string) => {
+    await handleUpdateSettings({ date_format: format });
+    if (dateFormatContext) {
+      dateFormatContext.setDateFormat(format);
+    }
+  };
+
+  const handleDateFormatClick = () => {
+    setIsDateFormatModalOpen(true);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -81,16 +96,19 @@ const Settings = () => {
       label: 'Nickname',
       value: settings.nickname || 'Not set',
       action: 'Update',
+      onClick: undefined,
     },
     {
       label: 'Email address',
       value: settings.email || 'Not set',
       action: 'Update',
+      onClick: undefined,
     },
     {
       label: 'Set predefined bet values',
       value: settings.predefined_bet_values || 'Not set',
       action: 'Update',
+      onClick: undefined,
     },
     {
       label: 'Turn coupon automatic payoff',
@@ -98,9 +116,9 @@ const Settings = () => {
         <ToggleSwitch
           checked={settings.automatic_payoff ?? false}
           onChange={handleToggleAutomaticPayoff}
-          disabled={isSaving}
         />
       ),
+      onClick: undefined,
     },
     {
       label: 'Two factor authentication',
@@ -108,34 +126,39 @@ const Settings = () => {
         <ToggleSwitch
           checked={settings.two_factor_enabled ?? false}
           onChange={handleToggle2FA}
-          disabled={isSaving}
         />
       ),
+      onClick: undefined,
     },
     {
       label: 'Monthly budget limit',
       value: settings.monthly_budget_limit ? `$${settings.monthly_budget_limit}` : 'Not set',
       action: 'Update',
+      onClick: undefined,
     },
     {
       label: 'Language',
       value: settings.language || 'English',
       action: 'Update',
+      onClick: undefined,
     },
     {
       label: 'Date format',
-      value: settings.date_format || 'DD-MM-YYYY',
+      value: dateFormat || 'DD/MM/YYYY',
       action: 'Update',
+      onClick: handleDateFormatClick,
     },
     {
       label: 'Basic currency',
       value: settings.basic_currency || 'USD',
       action: 'Update',
+      onClick: undefined,
     },
     {
       label: 'Notifications gate',
       value: settings.telegram_chat_id ? `Telegram #${settings.telegram_chat_id}` : 'Not configured',
       action: 'Update',
+      onClick: undefined,
     },
   ];
 
@@ -171,10 +194,19 @@ const Settings = () => {
               value={setting.value}
               control={setting.control}
               action={setting.action}
+              onActionClick={setting.onClick}
             />
           ))}
         </div>
       </div>
+
+      {/* Date Format Modal */}
+      <DateFormatModal
+        isOpen={isDateFormatModalOpen}
+        onClose={() => setIsDateFormatModalOpen(false)}
+        currentFormat={dateFormat}
+        onSave={handleDateFormatChange}
+      />
     </div>
   );
 };

@@ -76,6 +76,7 @@ export interface TransactionSummary {
   total_deposited: number;
   total_withdrawn: number;
   net_deposits: number;
+  total_transactions?: number;
   by_bookmaker?: TransactionSummaryByBookmaker[];
   by_date?: TransactionSummaryByDate[];
 }

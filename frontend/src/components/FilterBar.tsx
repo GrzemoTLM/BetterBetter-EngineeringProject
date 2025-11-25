@@ -1,5 +1,8 @@
-import { ChevronDown, Calendar } from 'lucide-react';
+import { ChevronDown, Calendar, Download } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
+import { useDateFormatter } from '../hooks/useDateFormatter';
+import { exportTransactionsToPDF } from '../utils/pdfExport';
+import type { Transaction, TransactionSummary } from '../types/finances';
 
 interface DropdownProps {
   label: string;
@@ -68,6 +71,7 @@ interface DatePickerProps {
 const DatePicker = ({ label, value, onChange }: DatePickerProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const datePickerRef = useRef<HTMLDivElement>(null);
+  const { formatDateWithoutTime } = useDateFormatter();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -89,11 +93,7 @@ const DatePicker = ({ label, value, onChange }: DatePickerProps) => {
   }, [isOpen]);
 
   const displayValue = value
-    ? new Date(value).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      })
+    ? formatDateWithoutTime(value)
     : label;
 
   return (
@@ -141,9 +141,19 @@ interface FilterBarProps {
   }) => void;
   onClearFilters: () => void;
   uniqueBookmakers: string[];
+  transactions?: Transaction[];
+  filteredSummary?: TransactionSummary | null;
 }
 
-const FilterBar = ({ filters, onFiltersChange, onClearFilters, uniqueBookmakers }: FilterBarProps) => {
+const FilterBar = ({
+  filters,
+  onFiltersChange,
+  onClearFilters,
+  uniqueBookmakers,
+  transactions = [],
+  filteredSummary = null
+}: FilterBarProps) => {
+  const { formatDate } = useDateFormatter();
   const [startDate, setStartDate] = useState(filters.date_from || '');
   const [endDate, setEndDate] = useState(filters.date_to || '');
   const [selectedBookmaker, setSelectedBookmaker] = useState(filters.bookmaker || '');
@@ -172,6 +182,20 @@ const FilterBar = ({ filters, onFiltersChange, onClearFilters, uniqueBookmakers 
     setSelectedBookmaker('');
     setSelectedTransactionType('');
     onClearFilters();
+  };
+
+  const handleExport = () => {
+    exportTransactionsToPDF({
+      filteredSummary,
+      transactions,
+      filters: {
+        dateFrom: startDate,
+        dateTo: endDate,
+        bookmaker: selectedBookmaker,
+        transactionType: selectedTransactionType
+      },
+      formatDate
+    });
   };
 
   const bookmakerOptions = ['All', ...uniqueBookmakers];
@@ -233,6 +257,16 @@ const FilterBar = ({ filters, onFiltersChange, onClearFilters, uniqueBookmakers 
         className="bg-background-table-header text-text-primary px-5 py-2 rounded-md font-medium text-base cursor-pointer border border-border-light hover:bg-background-page transition-all duration-200"
       >
         Clear filters
+      </button>
+
+      {/* Export Button */}
+      <button
+        onClick={handleExport}
+        className="bg-background-paper text-text-primary px-5 py-2 rounded-md font-medium text-base cursor-pointer border border-border-light hover:bg-background-table-header transition-all duration-200 flex items-center gap-2"
+        disabled={transactions.length === 0}
+      >
+        <Download size={18} />
+        Export PDF
       </button>
     </div>
   );

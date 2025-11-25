@@ -1,4 +1,4 @@
-import { Wallet, ArrowDownLeft, ArrowUpRight, TrendingUp } from 'lucide-react';
+import { Wallet, ArrowDownLeft, TrendingUp, Hash } from 'lucide-react';
 import type { TransactionSummary } from '../types/finances';
 
 interface KPICardProps {
@@ -9,6 +9,7 @@ interface KPICardProps {
 }
 
 const KPICard = ({ icon: Icon, label, value, iconBgColor }: KPICardProps) => {
+
   return (
     <div className="bg-background-paper rounded-md p-4 shadow-card flex items-center gap-4 flex-1 min-w-[200px]">
       <div
@@ -37,10 +38,21 @@ const KPICards = ({ summary }: KPICardsProps) => {
 
   const totalDeposited = summary?.total_deposited ?? 0;
   const totalWithdrawn = summary?.total_withdrawn ?? 0;
-  const netCashflow = summary?.net_deposits ?? 0;
+  const totalTransactions = summary?.total_transactions ?? 0;
   const currentBalance = totalWithdrawn - totalDeposited;
 
+
+  const formatNumber = (value: number) => {
+    return value.toLocaleString('en-US');
+  };
+
   const kpis = [
+    {
+      icon: TrendingUp,
+      label: 'Current Balance',
+      value: formatCurrency(currentBalance),
+      iconBgColor: '#7E57C2',
+    },
     {
       icon: Wallet,
       label: 'Total Deposited',
@@ -54,16 +66,10 @@ const KPICards = ({ summary }: KPICardsProps) => {
       iconBgColor: '#F44336',
     },
     {
-      icon: ArrowUpRight,
-      label: 'Net Cashflow',
-      value: formatCurrency(netCashflow),
+      icon: Hash,
+      label: 'Total Transactions',
+      value: formatNumber(totalTransactions),
       iconBgColor: '#4CAF50',
-    },
-    {
-      icon: TrendingUp,
-      label: 'Current Balance',
-      value: formatCurrency(currentBalance),
-      iconBgColor: '#7E57C2',
     },
   ];
 
