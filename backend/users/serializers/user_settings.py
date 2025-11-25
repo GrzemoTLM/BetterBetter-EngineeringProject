@@ -13,13 +13,17 @@ class UserSettingsSerializer(serializers.ModelSerializer):
         allow_null=True,
         required=False,
     )
-    # alias przyjmowany z frontu; write_only aby nie duplikować w odpowiedzi
     basic_currency = serializers.SlugRelatedField(
         slug_field='code',
         queryset=Currency.objects.all(),
         allow_null=True,
         required=False,
         write_only=True,
+    )
+    predefined_bet_values = serializers.ListField(
+        child=serializers.DecimalField(max_digits=10, decimal_places=2),
+        required=False,
+        allow_empty=True,
     )
     telegram_auth_code = serializers.SerializerMethodField(read_only=True)
     two_factor_enabled = serializers.BooleanField(required=False)
@@ -29,6 +33,7 @@ class UserSettingsSerializer(serializers.ModelSerializer):
         fields = [
             'preferred_currency',
             'basic_currency',
+            'predefined_bet_values',
             'nickname',
             'auto_coupon_payoff',
             'monthly_budget_limit',
@@ -48,11 +53,9 @@ class UserSettingsSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
-        # jeśli front przesłał basic_currency to mapujemy na preferred_currency
         if 'basic_currency' in attrs and 'preferred_currency' not in attrs:
             attrs['preferred_currency'] = attrs['basic_currency']
         elif 'basic_currency' in attrs and 'preferred_currency' in attrs:
-            # gdy oba pola są przesłane i różne -> preferujemy basic_currency
             if attrs['basic_currency'] != attrs['preferred_currency']:
                 attrs['preferred_currency'] = attrs['basic_currency']
         return attrs
@@ -68,13 +71,18 @@ class UserSettingsSerializer(serializers.ModelSerializer):
         return None
 
     def update(self, instance, validated_data):
+        if 'predefined_bet_values' in validated_data and validated_data['predefined_bet_values'] is not None:
+            validated_data['predefined_bet_values'] = [
+                format(v, 'f') if hasattr(v, 'quantize') else str(v)
+                for v in validated_data['predefined_bet_values']
+            ]
+
         for field in [
             'notification_gate', 'notification_gate_ref', 'nickname', 'auto_coupon_payoff',
-            'monthly_budget_limit', 'locale', 'date_format', 'preferred_currency',
+            'monthly_budget_limit', 'locale', 'date_format', 'preferred_currency', 'predefined_bet_values'
         ]:
             if field in validated_data:
                 setattr(instance, field, validated_data.get(field))
-
         if 'two_factor_enabled' in validated_data and validated_data['two_factor_enabled'] is False:
             if instance.two_factor_enabled:
                 EmailDevice.objects.filter(user=instance.user).delete()

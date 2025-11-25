@@ -1,8 +1,8 @@
 import axios, { AxiosError } from 'axios';
 import type { AxiosInstance } from 'axios';
 import type { LoginRequest, RegisterRequest, AuthResponse, UserProfile, TwoFactorRequest, PasswordResetRequestRequest, PasswordResetConfirmRequest, PasswordResetResponse } from '../types/auth';
-import type { UserSettings, UpdateSettingsRequest, TwoFactorStartRequest, TwoFactorStartResponse, TwoFactorVerifyRequest, TelegramAuthResponse } from '../types/settings';
-import type { TransactionCreateRequest, TransactionCreateResponse, BookmakerAccountCreateRequest, BookmakerAccountCreateResponse, AvailableBookmaker, BookmakerUserAccount, Transaction, TransactionSummary } from '../types/finances';
+import type { UserSettings, UpdateSettingsRequest, TwoFactorStartRequest, TwoFactorStartResponse, TwoFactorVerifyRequest, TelegramAuthResponse, TelegramConnectionStatus } from '../types/settings';
+import type { TransactionCreateRequest, TransactionCreateResponse, BookmakerAccountCreateRequest, BookmakerAccountCreateResponse, AvailableBookmaker, Transaction, TransactionSummary } from '../types/finances';
 import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
 
 class ApiService {
@@ -62,33 +62,41 @@ class ApiService {
 
   private getErrorMessage(error: unknown): string {
     if (error instanceof AxiosError) {
-      if (error.response?.data) {
-        const data = error.response.data as Record<string, unknown>;
+      if (error.response?.data !== undefined) {
+        const raw = error.response.data as unknown;
 
-        if (typeof data === 'object' && data !== null) {
-          const firstKey = Object.keys(data)[0];
+        if (typeof raw === 'string') {
+          return raw;
+        }
 
-          if (firstKey && Array.isArray(data[firstKey])) {
-            return String(data[firstKey][0]);
-          }
+        if (raw && typeof raw === 'object') {
+          const data = raw as Record<string, unknown>;
 
-          if (firstKey && typeof data[firstKey] === 'string') {
-            return data[firstKey];
-          }
-
-          if (data.message && typeof data.message === 'string') {
+          if (typeof data.message === 'string') {
             return data.message;
           }
 
-          if (data.detail && typeof data.detail === 'string') {
+          if (typeof data.detail === 'string') {
             return data.detail;
           }
 
-          return JSON.stringify(data);
-        }
+          for (const key of Object.keys(data)) {
+            const v = data[key];
 
-        if (typeof data === 'string') {
-          return data;
+            if (Array.isArray(v) && v.length > 0) {
+              return String(v[0]);
+            }
+
+            if (typeof v === 'string') {
+              return v;
+            }
+          }
+
+          try {
+            return JSON.stringify(data);
+          } catch {
+            // ignore
+          }
         }
       }
 
@@ -170,7 +178,7 @@ class ApiService {
         });
       }
     }
-    catch (error) {
+    catch {
       // Silently handle logout errors
     }
     finally {
@@ -239,6 +247,21 @@ class ApiService {
     }
   }
 
+  async getTelegramConnectionStatus(): Promise<TelegramConnectionStatus | null> {
+    try {
+      const response = await this.axiosInstance.get<TelegramConnectionStatus>(API_ENDPOINTS.SETTINGS.TELEGRAM_CONNECT);
+
+      return response.data;
+    } catch (error) {
+      if (error instanceof AxiosError && error.response?.status === 404) {
+
+        return null; // not connected yet
+      }
+
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
   async createTransaction(data: TransactionCreateRequest): Promise<TransactionCreateResponse> {
     try {
       const response = await this.axiosInstance.post<TransactionCreateResponse>(API_ENDPOINTS.FINANCES.TRANSACTION_CREATE, data);
@@ -296,7 +319,6 @@ class ApiService {
       throw new Error(this.getErrorMessage(error));
     }
   }
-
 
   async resetPasswordRequest(data: PasswordResetRequestRequest): Promise<PasswordResetResponse> {
     try {

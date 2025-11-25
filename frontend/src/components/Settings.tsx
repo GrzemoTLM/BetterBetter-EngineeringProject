@@ -1,9 +1,12 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Bell } from 'lucide-react';
 import SettingsRow from './SettingsRow';
 import ToggleSwitch from './ToggleSwitch';
 import DateFormatModal from './DateFormatModal';
 import CurrencyModal from './CurrencyModal';
+import PredefinedBetValuesModal from './PredefinedBetValuesModal';
 import TwoFactorModal from './TwoFactorModal';
+import TelegramConnectionModal from './TelegramConnectionModal';
 import { useState, useEffect, useContext } from 'react';
 import apiService from '../services/api';
 import { useDateFormatter } from '../hooks/useDateFormatter';
@@ -23,8 +26,10 @@ const Settings = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isDateFormatModalOpen, setIsDateFormatModalOpen] = useState(false);
   const [isCurrencyModalOpen, setIsCurrencyModalOpen] = useState(false);
+  const [isPredefinedBetsModalOpen, setIsPredefinedBetsModalOpen] = useState(false);
   const [is2FAModalOpen, setIs2FAModalOpen] = useState(false);
   const [is2FAEnabling, setIs2FAEnabling] = useState(false);
+  const [isTelegramModalOpen, setIsTelegramModalOpen] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -59,7 +64,7 @@ const Settings = () => {
       setError(null);
       setSuccessMessage(null);
 
-      const completePayload: UpdateSettingsRequest = {
+      const completePayload: any = {
         nickname: settings.nickname,
         auto_coupon_payoff: settings.auto_coupon_payoff,
         automatic_payoff: settings.automatic_payoff,
@@ -75,20 +80,22 @@ const Settings = () => {
         ...updates, // Override with new updates
       };
 
-      console.log('Settings: Sending PATCH request with payload:', completePayload);
       const updated = await apiService.updateSettings(completePayload);
-      console.log('Settings: Received response:', updated);
 
+      const updatedWithPreferred = updated as any;
       const settingsWithCurrency = {
         ...updated,
-        basic_currency: (updated as any).preferred_currency || updated.basic_currency || 'USD'
+        basic_currency: updatedWithPreferred.preferred_currency || updated.basic_currency || 'USD',
+        // Ensure predefined_bet_values is always an array
+        predefined_bet_values: Array.isArray(updated.predefined_bet_values)
+          ? updated.predefined_bet_values
+          : []
       };
 
       setSettings(settingsWithCurrency);
       setSuccessMessage('Settings saved successfully');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error saving settings';
-      console.error('Settings: Error updating settings:', errorMessage);
       setError(errorMessage);
     } finally {
       setIsSaving(false);
@@ -137,6 +144,14 @@ const Settings = () => {
     setIsCurrencyModalOpen(true);
   };
 
+  const handlePredefinedBetsClick = () => {
+    setIsPredefinedBetsModalOpen(true);
+  };
+
+  const handleTelegramClick = () => {
+    setIsTelegramModalOpen(true);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -168,9 +183,11 @@ const Settings = () => {
     },
     {
       label: 'Set predefined bet values',
-      value: settings.predefined_bet_values || 'Not set',
+      value: settings.predefined_bet_values && settings.predefined_bet_values.length > 0
+        ? settings.predefined_bet_values.join(', ')
+        : 'Not set',
       action: 'Update',
-      onClick: undefined,
+      onClick: handlePredefinedBetsClick,
     },
     {
       label: 'Turn coupon automatic payoff',
@@ -219,9 +236,11 @@ const Settings = () => {
     },
     {
       label: 'Notifications gate',
-      value: settings.telegram_chat_id ? `Telegram #${settings.telegram_chat_id}` : 'Not configured',
+      value: settings.notification_gate === 'telegram' && settings.notification_gate_ref
+        ? `✓ Telegram Connected`
+        : 'None',
       action: 'Update',
-      onClick: undefined,
+      onClick: handleTelegramClick,
     },
   ];
 
@@ -282,6 +301,16 @@ const Settings = () => {
         }}
       />
 
+      {/* Predefined Bet Values Modal */}
+      <PredefinedBetValuesModal
+        isOpen={isPredefinedBetsModalOpen}
+        onClose={() => setIsPredefinedBetsModalOpen(false)}
+        currentValues={settings.predefined_bet_values}
+        onSave={async (values) => {
+          await handleUpdateSettings({ predefined_bet_values: values });
+        }}
+      />
+
       {/* Two-Factor Authentication Modal */}
       <TwoFactorModal
         isOpen={is2FAModalOpen}
@@ -291,6 +320,19 @@ const Settings = () => {
         }}
         isEnabling={is2FAEnabling}
         onVerificationSuccess={handle2FAVerificationSuccess}
+      />
+
+      {/* Telegram Connection Modal */}
+      <TelegramConnectionModal
+        isOpen={isTelegramModalOpen}
+        onClose={() => setIsTelegramModalOpen(false)}
+        isConnected={settings.notification_gate === 'telegram' && !!settings.notification_gate_ref}
+        onConnectionSuccess={() => {
+          loadSettings();
+        }}
+        onDisconnectSuccess={() => {
+          loadSettings();
+        }}
       />
     </div>
   );

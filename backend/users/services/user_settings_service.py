@@ -13,6 +13,13 @@ class UserSettingsService:
 
     def update_user_settings(self, user: User, data: dict) -> UserSettings:
         settings = self.get_user_settings(user)
+
+        if 'predefined_bet_values' in data and data['predefined_bet_values'] is not None:
+            data['predefined_bet_values'] = [
+                format(v, 'f') if hasattr(v, 'quantize') else str(v)
+                for v in data['predefined_bet_values']
+            ]
+
         updatable_fields = [
             'preferred_currency',
             'notification_gate',
@@ -24,6 +31,7 @@ class UserSettingsService:
             'auto_coupon_payoff',
             'two_factor_enabled',
             'two_factor_method',
+            'predefined_bet_values'
         ]
         for field in updatable_fields:
             if field in data:
