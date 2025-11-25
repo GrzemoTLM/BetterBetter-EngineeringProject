@@ -19,7 +19,7 @@ import SummaryStats from './components/SummaryStats';
 import BalanceChart from './components/BalanceChart';
 import QuickActions from './components/QuickActions';
 import TransactionTable from './components/TransactionTable';
-import { apiService } from './services/api';
+import apiService from './services/api';
 import type { Transaction, TransactionSummary } from './types/finances';
 import './App.css';
 

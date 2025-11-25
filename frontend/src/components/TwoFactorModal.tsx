@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Copy, CheckCircle, AlertCircle } from 'lucide-react';
 import QRCode from 'qrcode';
-import { apiService } from '../services/api';
+import apiService from '../services/api';
 
 interface TwoFactorModalProps {
   isOpen: boolean;

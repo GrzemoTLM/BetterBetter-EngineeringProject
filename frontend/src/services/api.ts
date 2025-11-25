@@ -248,18 +248,20 @@ class ApiService {
     }
   }
 
-  async getTransaction(transactionId: string): Promise<Transaction> {
+  async fetchTransactions(queryParams?: Record<string, unknown>): Promise<Transaction[]> {
     try {
-      const response = await this.axiosInstance.get<Transaction>(`${API_ENDPOINTS.FINANCES.TRANSACTION_DETAIL}/${transactionId}`);
+      const response = await this.axiosInstance.get<Transaction[]>(API_ENDPOINTS.FINANCES.TRANSACTIONS_LIST, {
+        params: queryParams,
+      });
       return response.data;
     } catch (error) {
       throw new Error(this.getErrorMessage(error));
     }
   }
 
-  async getTransactions(queryParams?: Record<string, unknown>): Promise<TransactionSummary> {
+  async fetchTransactionsSummary(queryParams?: Record<string, unknown>): Promise<TransactionSummary> {
     try {
-      const response = await this.axiosInstance.get<TransactionSummary>(API_ENDPOINTS.FINANCES.TRANSACTION_LIST, {
+      const response = await this.axiosInstance.get<TransactionSummary>(API_ENDPOINTS.FINANCES.TRANSACTIONS_SUMMARY, {
         params: queryParams,
       });
       return response.data;
@@ -279,7 +281,7 @@ class ApiService {
 
   async getBookmakerAccounts(): Promise<BookmakerAccountCreateResponse[]> {
     try {
-      const response = await this.axiosInstance.get<BookmakerAccountCreateResponse[]>(API_ENDPOINTS.FINANCES.BOOKMAKER_ACCOUNT_LIST);
+      const response = await this.axiosInstance.get<BookmakerAccountCreateResponse[]>(API_ENDPOINTS.FINANCES.BOOKMAKER_ACCOUNTS_LIST);
       return response.data;
     } catch (error) {
       throw new Error(this.getErrorMessage(error));
@@ -288,28 +290,13 @@ class ApiService {
 
   async getAvailableBookmakers(): Promise<AvailableBookmaker[]> {
     try {
-      const response = await this.axiosInstance.get<AvailableBookmaker[]>(API_ENDPOINTS.FINANCES.AVAILABLE_BOOKMAKERS);
+      const response = await this.axiosInstance.get<AvailableBookmaker[]>(API_ENDPOINTS.FINANCES.BOOKMAKERS_LIST);
       return response.data;
     } catch (error) {
       throw new Error(this.getErrorMessage(error));
     }
   }
 
-  async linkBookmakerAccount(data: { bookmaker_id: string, username: string, password: string }): Promise<void> {
-    try {
-      await this.axiosInstance.post(API_ENDPOINTS.FINANCES.LINK_BOOKMAKER_ACCOUNT, data);
-    } catch (error) {
-      throw new Error(this.getErrorMessage(error));
-    }
-  }
-
-  async unlinkBookmakerAccount(accountId: string): Promise<void> {
-    try {
-      await this.axiosInstance.delete(`${API_ENDPOINTS.FINANCES.UNLINK_BOOKMAKER_ACCOUNT}/${accountId}`);
-    } catch (error) {
-      throw new Error(this.getErrorMessage(error));
-    }
-  }
 
   async resetPasswordRequest(data: PasswordResetRequestRequest): Promise<PasswordResetResponse> {
     try {

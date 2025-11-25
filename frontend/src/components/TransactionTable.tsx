@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CheckCircle2, XCircle, Edit2, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CheckCircle2, Edit2, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Transaction } from '../types/finances';
 import { useDateFormatter } from '../hooks/useDateFormatter';
 
@@ -74,12 +74,6 @@ const TransactionTable = ({ transactions, loading, error }: TransactionTableProp
                 Status
               </th>
               <th className="px-4 py-4 text-left text-sm font-medium text-text-secondary">
-                Fee
-              </th>
-              <th className="px-4 py-4 text-left text-sm font-medium text-text-secondary">
-                Note
-              </th>
-              <th className="px-4 py-4 text-left text-sm font-medium text-text-secondary">
                 Actions
               </th>
             </tr>
@@ -87,7 +81,7 @@ const TransactionTable = ({ transactions, loading, error }: TransactionTableProp
           <tbody>
             {paginatedTransactions.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-text-secondary">
+                <td colSpan={7} className="px-4 py-8 text-center text-text-secondary">
                   No transactions found
                 </td>
               </tr>
@@ -109,7 +103,7 @@ const TransactionTable = ({ transactions, loading, error }: TransactionTableProp
                     {formatTransactionType(transaction.transaction_type)}
                   </td>
                   <td className="px-4 py-4 text-sm text-text-primary align-middle">
-                    {formatAmount(transaction.amount)}
+                    {formatAmount(parseFloat(transaction.amount))}
                   </td>
                   <td className="px-4 py-4 text-sm text-text-primary align-middle">
                     {transaction.currency || 'N/A'}
@@ -119,12 +113,6 @@ const TransactionTable = ({ transactions, loading, error }: TransactionTableProp
                       size={20}
                       className="text-status-success inline-block"
                     />
-                  </td>
-                  <td className="px-4 py-4 text-sm text-text-primary align-middle">
-                    ${transaction.fee || '0.00'}
-                  </td>
-                  <td className="px-4 py-4 text-sm text-text-primary align-middle">
-                    {transaction.note || '-'}
                   </td>
                   <td className="px-4 py-4 text-sm align-middle">
                     <div className="flex items-center gap-2">
