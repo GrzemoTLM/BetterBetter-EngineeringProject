@@ -9,6 +9,7 @@ export interface UserSettings {
   language?: string;
   date_format: string;
   basic_currency?: string;
+  preferred_currency?: string;
   notification_gate: 'email' | 'telegram' | 'none';
   notification_gate_ref: string | null;
   telegram_chat_id?: string | null;

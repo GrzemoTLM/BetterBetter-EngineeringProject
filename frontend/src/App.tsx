@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AuthProvider } from './context/AuthContext';
 import { DateFormatProvider } from './context/DateFormatContext';
+import { CurrencyProvider } from './context/CurrencyContext';
 import { useAuth } from './hooks/useAuth';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -294,7 +295,9 @@ function App() {
   return (
     <AuthProvider>
       <DateFormatProvider>
-        <AppContent />
+        <CurrencyProvider>
+          <AppContent />
+        </CurrencyProvider>
       </DateFormatProvider>
     </AuthProvider>
   );

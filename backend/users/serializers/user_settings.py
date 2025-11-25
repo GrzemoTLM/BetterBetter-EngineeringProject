@@ -13,6 +13,14 @@ class UserSettingsSerializer(serializers.ModelSerializer):
         allow_null=True,
         required=False,
     )
+    # alias przyjmowany z frontu; write_only aby nie duplikować w odpowiedzi
+    basic_currency = serializers.SlugRelatedField(
+        slug_field='code',
+        queryset=Currency.objects.all(),
+        allow_null=True,
+        required=False,
+        write_only=True,
+    )
     telegram_auth_code = serializers.SerializerMethodField(read_only=True)
     two_factor_enabled = serializers.BooleanField(required=False)
 
@@ -20,6 +28,7 @@ class UserSettingsSerializer(serializers.ModelSerializer):
         model = UserSettings
         fields = [
             'preferred_currency',
+            'basic_currency',
             'nickname',
             'auto_coupon_payoff',
             'monthly_budget_limit',
@@ -37,6 +46,16 @@ class UserSettingsSerializer(serializers.ModelSerializer):
         if value:
             raise serializers.ValidationError('Enable 2FA using dedicated setup flow.')
         return value
+
+    def validate(self, attrs):
+        # jeśli front przesłał basic_currency to mapujemy na preferred_currency
+        if 'basic_currency' in attrs and 'preferred_currency' not in attrs:
+            attrs['preferred_currency'] = attrs['basic_currency']
+        elif 'basic_currency' in attrs and 'preferred_currency' in attrs:
+            # gdy oba pola są przesłane i różne -> preferujemy basic_currency
+            if attrs['basic_currency'] != attrs['preferred_currency']:
+                attrs['preferred_currency'] = attrs['basic_currency']
+        return attrs
 
     def get_telegram_auth_code(self, obj):
         if obj.notification_gate == 'telegram':

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { CheckCircle2, Edit2, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Transaction } from '../types/finances';
 import { useDateFormatter } from '../hooks/useDateFormatter';
+import { useCurrency } from '../hooks/useCurrency';
 
 interface TransactionTableProps {
   transactions: Transaction[];
@@ -11,6 +12,7 @@ interface TransactionTableProps {
 
 const TransactionTable = ({ transactions, loading, error }: TransactionTableProps) => {
   const { formatDate } = useDateFormatter();
+  const { formatCurrency } = useCurrency();
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
@@ -23,9 +25,6 @@ const TransactionTable = ({ transactions, loading, error }: TransactionTableProp
     return type === 'DEPOSIT' ? 'Deposit' : type === 'WITHDRAWAL' ? 'Withdrawal' : type;
   };
 
-  const formatAmount = (amount: number) => {
-    return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
 
   // Calculate pagination
   const totalPages = Math.ceil(transactions.length / itemsPerPage);
@@ -103,7 +102,7 @@ const TransactionTable = ({ transactions, loading, error }: TransactionTableProp
                     {formatTransactionType(transaction.transaction_type)}
                   </td>
                   <td className="px-4 py-4 text-sm text-text-primary align-middle">
-                    {formatAmount(parseFloat(transaction.amount))}
+                    {formatCurrency(parseFloat(transaction.amount))}
                   </td>
                   <td className="px-4 py-4 text-sm text-text-primary align-middle">
                     {transaction.currency || 'N/A'}

@@ -2,15 +2,19 @@ import { Bell } from 'lucide-react';
 import SettingsRow from './SettingsRow';
 import ToggleSwitch from './ToggleSwitch';
 import DateFormatModal from './DateFormatModal';
+import CurrencyModal from './CurrencyModal';
 import TwoFactorModal from './TwoFactorModal';
 import { useState, useEffect, useContext } from 'react';
 import apiService from '../services/api';
 import { useDateFormatter } from '../hooks/useDateFormatter';
+import { useCurrency } from '../hooks/useCurrency';
 import { DateFormatContext } from '../context/DateFormatContext';
 import type { UserSettings, UpdateSettingsRequest } from '../types/settings';
+import type { Currency } from '../context/CurrencyContext';
 
 const Settings = () => {
   const { dateFormat } = useDateFormatter();
+  const { setCurrency } = useCurrency();
   const dateFormatContext = useContext(DateFormatContext);
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -18,6 +22,7 @@ const Settings = () => {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isDateFormatModalOpen, setIsDateFormatModalOpen] = useState(false);
+  const [isCurrencyModalOpen, setIsCurrencyModalOpen] = useState(false);
   const [is2FAModalOpen, setIs2FAModalOpen] = useState(false);
   const [is2FAEnabling, setIs2FAEnabling] = useState(false);
 
@@ -30,7 +35,14 @@ const Settings = () => {
       setIsLoading(true);
       setError(null);
       const data = await apiService.getSettings();
-      setSettings(data);
+
+      // Map preferred_currency to basic_currency if it exists
+      const settingsWithCurrency = {
+        ...data,
+        basic_currency: (data as any).preferred_currency || data.basic_currency || 'USD'
+      };
+
+      setSettings(settingsWithCurrency);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error loading settings';
       setError(errorMessage);
@@ -63,11 +75,20 @@ const Settings = () => {
         ...updates, // Override with new updates
       };
 
+      console.log('Settings: Sending PATCH request with payload:', completePayload);
       const updated = await apiService.updateSettings(completePayload);
-      setSettings(updated);
+      console.log('Settings: Received response:', updated);
+
+      const settingsWithCurrency = {
+        ...updated,
+        basic_currency: (updated as any).preferred_currency || updated.basic_currency || 'USD'
+      };
+
+      setSettings(settingsWithCurrency);
       setSuccessMessage('Settings saved successfully');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error saving settings';
+      console.error('Settings: Error updating settings:', errorMessage);
       setError(errorMessage);
     } finally {
       setIsSaving(false);
@@ -80,11 +101,9 @@ const Settings = () => {
 
   const handleToggle2FA = async (checked: boolean) => {
     if (checked) {
-      // Enable 2FA - open modal to show QR code
       setIs2FAEnabling(true);
       setIs2FAModalOpen(true);
     } else {
-      // Disable 2FA - call API directly
       await handleUpdateSettings({ two_factor_enabled: false });
     }
   };
@@ -112,6 +131,10 @@ const Settings = () => {
 
   const handleDateFormatClick = () => {
     setIsDateFormatModalOpen(true);
+  };
+
+  const handleCurrencyClick = () => {
+    setIsCurrencyModalOpen(true);
   };
 
   if (isLoading) {
@@ -192,7 +215,7 @@ const Settings = () => {
       label: 'Basic currency',
       value: settings.basic_currency || 'USD',
       action: 'Update',
-      onClick: undefined,
+      onClick: handleCurrencyClick,
     },
     {
       label: 'Notifications gate',
@@ -246,6 +269,17 @@ const Settings = () => {
         onClose={() => setIsDateFormatModalOpen(false)}
         currentFormat={dateFormat}
         onSave={handleDateFormatChange}
+      />
+
+      {/* Currency Modal */}
+      <CurrencyModal
+        isOpen={isCurrencyModalOpen}
+        onClose={() => setIsCurrencyModalOpen(false)}
+        currentCurrency={(settings.basic_currency as Currency) || 'USD'}
+        onSave={async (currency) => {
+          await handleUpdateSettings({ basic_currency: currency });
+          setCurrency(currency);
+        }}
       />
 
       {/* Two-Factor Authentication Modal */}
