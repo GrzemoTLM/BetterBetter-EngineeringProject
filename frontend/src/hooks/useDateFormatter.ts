@@ -1,22 +1,15 @@
-import { useCallback, useState, useEffect } from 'react';
-import { apiService } from '../services/api';
+import { useCallback, useContext } from 'react';
+import { DateFormatContext } from '../context/DateFormatContext';
 import { formatDateByUserSettings, formatDateOnly } from '../utils/dateFormatter';
 
 export const useDateFormatter = () => {
-  const [dateFormat, setDateFormat] = useState<string>('DD/MM/YYYY');
+  const context = useContext(DateFormatContext);
 
-  useEffect(() => {
-    const loadDateFormat = async () => {
-      try {
-        const settings = await apiService.getSettings();
-        setDateFormat(settings.date_format || 'DD/MM/YYYY');
-      } catch {
-        setDateFormat('DD/MM/YYYY');
-      }
-    };
+  if (context === undefined) {
+    throw new Error('useDateFormatter musi być używany wewnątrz DateFormatProvider');
+  }
 
-    loadDateFormat();
-  }, []);
+  const { dateFormat } = context;
 
   const formatDate = useCallback(
     (dateString: string, includeTime: boolean = true) => {
@@ -32,6 +25,6 @@ export const useDateFormatter = () => {
     [dateFormat]
   );
 
-  return { formatDate, formatDateWithoutTime };
+  return { formatDate, formatDateWithoutTime, dateFormat };
 };
 
