@@ -160,22 +160,37 @@ function AppContent() {
     try {
       const [transactionsData, summaryData] = await Promise.all([
         apiService.fetchTransactions(filters),
-        apiService.fetchTransactionsSummary(filters),
+        apiService.fetchTransactionsSummary(), // Get unfiltered summary for baseline
       ]);
 
       setTransactions(transactionsData);
 
-      // Add total_transactions count to summary
-      const enhancedSummary = {
-        ...summaryData,
-        total_transactions: transactionsData.length
-      };
-
+      // Calculate filtered summary from transaction data
+      let filteredSummary = summaryData;
 
       if (filters && Object.keys(filters).length > 0) {
-        setFilteredSummary(enhancedSummary);
+        // Calculate totals from filtered transactions
+        const totalDeposited = transactionsData
+          .filter((t) => t.transaction_type === 'DEPOSIT')
+          .reduce((sum, t) => sum + parseFloat(t.amount || '0'), 0);
+
+        const totalWithdrawn = transactionsData
+          .filter((t) => t.transaction_type === 'WITHDRAWAL')
+          .reduce((sum, t) => sum + parseFloat(t.amount || '0'), 0);
+
+        filteredSummary = {
+          total_deposited: totalDeposited,
+          total_withdrawn: totalWithdrawn,
+          net_deposits: totalDeposited - totalWithdrawn,
+          total_transactions: transactionsData.length,
+        };
+
+        setFilteredSummary(filteredSummary);
       } else {
-        setSummary(enhancedSummary);
+        setSummary({
+          ...summaryData,
+          total_transactions: transactionsData.length,
+        });
         setFilteredSummary(null);
       }
     } catch (err) {
@@ -231,7 +246,7 @@ function AppContent() {
               <h1 className="text-4xl font-bold text-text-primary mb-6">
                 Money Flow
               </h1>
-              {summary && <KPICards summary={filteredSummary || summary} />}
+              {summary && <KPICards summary={summary} />}
             </div>
 
             {/* Filter Bar */}
