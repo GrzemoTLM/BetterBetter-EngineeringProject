@@ -43,4 +43,9 @@ export const API_ENDPOINTS = {
     UPDATE: (id: number) => `/api/analytics/strategies/${id}/`,
     DELETE: (id: number) => `/api/analytics/strategies/${id}/`,
   },
+  COUPONS: {
+    LIST: '/api/coupons/coupons/',
+    CREATE: '/api/coupons/coupons/',
+    BET_TYPES: '/api/coupons/bet-types/',
+  },
 };

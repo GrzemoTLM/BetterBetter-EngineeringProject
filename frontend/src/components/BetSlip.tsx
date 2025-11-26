@@ -1,36 +1,57 @@
 import { Plus, Trash2, Search } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import SummaryBox from './SummaryBox';
+import api from '../services/api';
 import type { Strategy } from '../types/strategies';
+import type { Bet as BetData, CreateCouponRequest, BetType as BetTypeOption } from '../types/coupons';
+import type { BookmakerAccountCreateResponse } from '../types/finances';
 
-interface Bet {
+interface Bet extends BetData {
   id: string;
-  name: string;
-  bet: string;
-  multiplier: string;
 }
 
 interface BetSlipProps {
   strategies?: Strategy[];
   selectedStrategy?: string;
   onStrategyChange?: (strategy: string) => void;
+  onClose?: () => void;
 }
 
 const BetSlip = ({
   strategies = [],
   selectedStrategy = '',
   onStrategyChange,
+  onClose,
 }: BetSlipProps) => {
-  const [bookmaker, setBookmaker] = useState('STS');
+  const [bookmakerAccounts, setBookmakerAccounts] = useState<BookmakerAccountCreateResponse[]>([]);
+  const [betTypes, setBetTypes] = useState<BetTypeOption[]>([]);
+  const [selectedBookmaker, setSelectedBookmaker] = useState<string>('');
   const [strategy, setStrategy] = useState(selectedStrategy || (strategies[0]?.name ?? ''));
-  const [bets, setBets] = useState<Bet[]>([
-    { id: '1', name: 'Barcelona goals', bet: 'over 2.5', multiplier: '2.11' },
-    { id: '2', name: 'Real Madrid win', bet: '1X2', multiplier: '1.85' },
-    { id: '3', name: 'Total corners', bet: 'over 9.5', multiplier: '1.95' },
-  ]);
+  const [bets, setBets] = useState<Bet[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeStake, setActiveStake] = useState('50');
   const [customStake, setCustomStake] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  // Fetch bookmaker accounts and bet types on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const accounts = await api.getBookmakerAccounts();
+        setBookmakerAccounts(accounts);
+        if (accounts.length > 0) {
+          setSelectedBookmaker(accounts[0].id.toString());
+        }
+
+        const types = await api.getBetTypes();
+        setBetTypes(types);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   const handleStrategyChange = (value: string) => {
     setStrategy(value);
@@ -43,6 +64,92 @@ const BetSlip = ({
     setBets(bets.filter((bet) => bet.id !== id));
   };
 
+  const handleAddBet = () => {
+    const newBet: Bet = {
+      id: Date.now().toString(),
+      event_name: '',
+      bet_type: '',
+      line: '',
+      odds: '',
+      start_time: new Date().toISOString(),
+    };
+    setBets([...bets, newBet]);
+  };
+
+  const handleBetChange = (id: string, field: keyof Bet, value: string) => {
+    setBets(bets.map((bet) => (bet.id === id ? { ...bet, [field]: value } : bet)));
+  };
+
+  const handleSaveAndExit = async () => {
+    if (bets.length === 0) {
+      alert('Please add at least one bet');
+      return;
+    }
+
+    // Validate all bets have required fields
+    for (const bet of bets) {
+      if (!bet.event_name || !bet.bet_type || !bet.line || !bet.odds) {
+        alert('Please fill in all bet fields (Event, Type, Line, Odds)');
+        return;
+      }
+    }
+
+    if (!selectedBookmaker) {
+      alert('Please select a bookmaker account');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const stake = activeStake === 'Custom' ? customStake : activeStake;
+
+      if (!stake) {
+        alert('Please select or enter a stake amount');
+        return;
+      }
+
+      const couponData: CreateCouponRequest = {
+        bookmaker_account: parseInt(selectedBookmaker, 10),
+        coupon_type: 'SOLO',
+        bet_stake: stake,
+        placed_at: new Date().toISOString(),
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        bets: bets.map(({ id, ...bet }) => ({
+          event_name: bet.event_name,
+          bet_type: bet.bet_type,
+          line: bet.line,
+          odds: bet.odds,
+          start_time: bet.start_time || new Date().toISOString(),
+        })),
+      };
+      await api.createCoupon(couponData);
+      alert('Coupon saved successfully!');
+      if (onClose) {
+        onClose();
+      }
+    } catch (error) {
+      let errorMessage = 'Error saving coupon';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+
+      alert(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDiscard = () => {
+    setBets([]);
+    setActiveStake('50');
+    setCustomStake('');
+    if (onClose) {
+      onClose();
+    }
+  };
+
   return (
     <div className="bg-background-paper rounded-xl shadow-sm p-6 flex flex-col">
       {/* Top Controls */}
@@ -52,14 +159,19 @@ const BetSlip = ({
             Bookmaker
           </label>
           <select
-            value={bookmaker}
-            onChange={(e) => setBookmaker(e.target.value)}
+            value={selectedBookmaker}
+            onChange={(e) => setSelectedBookmaker(e.target.value)}
             className="w-full px-4 py-2 border border-default rounded-lg text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-main focus:border-transparent"
           >
-            <option>STS</option>
-            <option>Fortuna</option>
-            <option>Bet365</option>
-            <option>William Hill</option>
+            {bookmakerAccounts.length > 0 ? (
+              bookmakerAccounts.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.bookmaker} - {account.external_username}
+                </option>
+              ))
+            ) : (
+              <option value="">No bookmaker accounts</option>
+            )}
           </select>
         </div>
         <div>
@@ -84,7 +196,9 @@ const BetSlip = ({
         </div>
       </div>
       <div className="mb-6 flex justify-end">
-        <button className="border border-primary-main text-primary-main rounded-lg px-4 py-2 text-sm hover:bg-blue-50 transition-colors flex items-center gap-2">
+        <button
+          onClick={handleAddBet}
+          className="border border-primary-main text-primary-main rounded-lg px-4 py-2 text-sm hover:bg-blue-50 transition-colors flex items-center gap-2">
           <Plus size={16} />
           Add new bet
         </button>
@@ -100,13 +214,16 @@ const BetSlip = ({
             <thead>
               <tr className="bg-background-table-header border-b border-default">
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-table-header">
-                  Name
+                  Event
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-table-header">
-                  Bet
+                  Bet Type
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-table-header">
-                  Multiplier
+                  Line
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-table-header">
+                  Odds
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-table-header w-12">
                   {/* Actions column */}
@@ -119,14 +236,52 @@ const BetSlip = ({
                   key={bet.id}
                   className="hover:bg-gray-50 transition-colors group"
                 >
-                  <td className="px-4 py-3 text-sm text-text-primary">
-                    {bet.name}
+                  <td className="px-4 py-3 text-sm">
+                    <input
+                      type="text"
+                      value={bet.event_name}
+                      onChange={(e) => handleBetChange(bet.id, 'event_name', e.target.value)}
+                      className="w-full px-2 py-1 border border-default rounded text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-main"
+                      placeholder="Event name"
+                    />
                   </td>
-                  <td className="px-4 py-3 text-sm text-text-primary">
-                    {bet.bet}
+                  <td className="px-4 py-3 text-sm">
+                    <select
+                      value={bet.bet_type}
+                      onChange={(e) => handleBetChange(bet.id, 'bet_type', e.target.value)}
+                      className="w-full px-2 py-1 border border-default rounded text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-main"
+                    >
+                      <option value="">Select bet type</option>
+                      {betTypes && betTypes.length > 0 ? (
+                        betTypes.map((type) => (
+                          type && type.code ? (
+                            <option key={type.code} value={type.code}>
+                              {type.code}
+                            </option>
+                          ) : null
+                        ))
+                      ) : (
+                        <option disabled>Loading bet types...</option>
+                      )}
+                    </select>
                   </td>
-                  <td className="px-4 py-3 text-sm font-medium text-text-primary">
-                    {bet.multiplier}
+                  <td className="px-4 py-3 text-sm">
+                    <input
+                      type="text"
+                      value={bet.line}
+                      onChange={(e) => handleBetChange(bet.id, 'line', e.target.value)}
+                      className="w-full px-2 py-1 border border-default rounded text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-main"
+                      placeholder="Line"
+                    />
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    <input
+                      type="text"
+                      value={bet.odds}
+                      onChange={(e) => handleBetChange(bet.id, 'odds', e.target.value)}
+                      className="w-full px-2 py-1 border border-default rounded text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-main"
+                      placeholder="Odds"
+                    />
                   </td>
                   <td className="px-4 py-3">
                     <button
@@ -200,11 +355,19 @@ const BetSlip = ({
 
       {/* Footer Actions */}
       <div className="flex gap-3">
-        <button className="flex-1 bg-red-500 text-white rounded-lg px-6 py-3 hover:bg-red-600 transition-colors font-medium">
+        <button
+          onClick={handleDiscard}
+          className="flex-1 bg-red-500 text-white rounded-lg px-6 py-3 hover:bg-red-600 transition-colors font-medium disabled:opacity-50"
+          disabled={loading}
+        >
           Discard
         </button>
-        <button className="flex-1 bg-emerald-500 text-white rounded-lg px-6 py-3 hover:bg-emerald-600 transition-colors font-medium">
-          Save and exit
+        <button
+          onClick={handleSaveAndExit}
+          className="flex-1 bg-emerald-500 text-white rounded-lg px-6 py-3 hover:bg-emerald-600 transition-colors font-medium disabled:opacity-50"
+          disabled={loading}
+        >
+          {loading ? 'Saving...' : 'Save and exit'}
         </button>
       </div>
     </div>

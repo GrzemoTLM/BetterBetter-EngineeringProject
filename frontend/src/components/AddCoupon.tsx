@@ -1,6 +1,8 @@
 import { X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import UploadCoupon from './UploadCoupon';
 import BetSlip from './BetSlip';
+import api from '../services/api';
 import type { Strategy } from '../types/strategies';
 
 interface AddCouponProps {
@@ -9,6 +11,29 @@ interface AddCouponProps {
 }
 
 const AddCoupon = ({ onClose, strategies = [] }: AddCouponProps) => {
+  const [fetchedStrategies, setFetchedStrategies] = useState<Strategy[]>(strategies);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchStrategies = async () => {
+      try {
+        setLoading(true);
+        const data = await api.getStrategies();
+        setFetchedStrategies(data);
+      } catch {
+        setFetchedStrategies([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (strategies.length === 0) {
+      fetchStrategies();
+    } else {
+      setFetchedStrategies(strategies);
+    }
+  }, [strategies]);
+
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div className="bg-background-page w-full max-w-[1400px] h-[90vh] rounded-xl shadow-2xl flex flex-col mx-auto">
@@ -32,7 +57,7 @@ const AddCoupon = ({ onClose, strategies = [] }: AddCouponProps) => {
             <UploadCoupon />
 
             {/* Bet Slip Section */}
-            <BetSlip strategies={strategies} />
+            <BetSlip strategies={fetchedStrategies} />
           </div>
         </div>
       </div>

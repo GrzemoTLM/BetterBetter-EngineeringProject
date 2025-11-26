@@ -2,6 +2,9 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+import logging
+
+logger = logging.getLogger(__name__)
 
 from ..models import Coupon
 from ..serializers.coupon_serializer import (
@@ -37,6 +40,9 @@ class CouponListCreateView(generics.ListCreateAPIView):
 
     def create(self, request, *args, **kwargs):
         in_serializer = self.get_serializer(data=request.data)
+        if not in_serializer.is_valid():
+            logger.error(f"Coupon creation validation error: {in_serializer.errors}")
+            logger.error(f"Request data: {request.data}")
         in_serializer.is_valid(raise_exception=True)
         coupon = create_coupon(
             user=request.user,

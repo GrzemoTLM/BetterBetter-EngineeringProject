@@ -55,10 +55,15 @@ class CouponSerializer(serializers.ModelSerializer):
         )
 
 class CouponCreateSerializer(CouponBaseSerializer):
+    # Serializer for creating new coupons with flexible field requirements
+    # bet_stake is optional initially (can be provided via 'stake' alias)
+    # placed_at field was removed as Coupon model uses 'created_at' instead
 
     bookmaker_account = serializers.PrimaryKeyRelatedField(
         queryset=BookmakerAccountModel.objects.all(), required=True
     )
+    bet_stake = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
+    # 'stake' is an alias for 'bet_stake' - supports both field names from frontend
     stake = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, write_only=True)
     strategy = serializers.SlugRelatedField(
         slug_field='code', queryset=Strategy.objects.all(), allow_null=True, required=False
@@ -66,7 +71,6 @@ class CouponCreateSerializer(CouponBaseSerializer):
     coupon_type = serializers.ChoiceField(choices=CouponType.choices, required=False)
     multiplier = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True, required=False)
     bets = BetCreateSerializer(many=True, write_only=True, required=False)
-    placed_at = serializers.DateTimeField(required=False, allow_null=True, write_only=True)
 
     class Meta:
         model = Coupon
@@ -78,7 +82,6 @@ class CouponCreateSerializer(CouponBaseSerializer):
             'stake',
             'bets',
             'multiplier',
-            'placed_at',
         ]
 
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:

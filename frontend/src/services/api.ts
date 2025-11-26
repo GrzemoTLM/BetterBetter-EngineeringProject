@@ -5,6 +5,7 @@ import type { UserSettings, UpdateSettingsRequest, TwoFactorStartRequest, TwoFac
 import type { TransactionCreateRequest, TransactionCreateResponse, BookmakerAccountCreateRequest, BookmakerAccountCreateResponse, AvailableBookmaker, Transaction, TransactionSummary } from '../types/finances';
 import type { TicketCategory, CreateTicketRequest, Ticket, CreateCommentRequest, TicketComment } from '../types/tickets';
 import type { Strategy, CreateStrategyRequest } from '../types/strategies';
+import type { Coupon, CreateCouponRequest, BetType } from '../types/coupons';
 import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
 
 class ApiService {
@@ -66,6 +67,8 @@ class ApiService {
     if (error instanceof AxiosError) {
       if (error.response?.data !== undefined) {
         const raw = error.response.data as unknown;
+
+        console.log('Backend error response:', raw);
 
         if (typeof raw === 'string') {
           return raw;
@@ -461,6 +464,34 @@ class ApiService {
   async deleteStrategy(id: number): Promise<void> {
     try {
       await this.axiosInstance.delete(API_ENDPOINTS.STRATEGIES.DELETE(id));
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  // Coupons
+  async createCoupon(data: CreateCouponRequest): Promise<Coupon> {
+    try {
+      const response = await this.axiosInstance.post<Coupon>(API_ENDPOINTS.COUPONS.CREATE, data);
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async getCoupons(): Promise<Coupon[]> {
+    try {
+      const response = await this.axiosInstance.get<Coupon[]>(API_ENDPOINTS.COUPONS.LIST);
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async getBetTypes(): Promise<BetType[]> {
+    try {
+      const response = await this.axiosInstance.get<BetType[]>(API_ENDPOINTS.COUPONS.BET_TYPES);
+      return response.data;
     } catch (error) {
       throw new Error(this.getErrorMessage(error));
     }

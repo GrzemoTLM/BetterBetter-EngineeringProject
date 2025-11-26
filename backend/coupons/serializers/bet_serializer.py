@@ -13,9 +13,12 @@ class BetSerializer(serializers.ModelSerializer):
 
 
 class BetCreateSerializer(serializers.ModelSerializer):
+
     bet_type = serializers.SlugRelatedField(
         slug_field='code',
-        queryset=BetTypeDict.objects.all()
+        queryset=BetTypeDict.objects.all(),
+        required=False,
+        allow_null=True
     )
     discipline = serializers.SlugRelatedField(
         slug_field='code',
@@ -26,6 +29,9 @@ class BetCreateSerializer(serializers.ModelSerializer):
     event = serializers.PrimaryKeyRelatedField(
         queryset=Event.objects.all(), allow_null=True, required=False
     )
+    event_name = serializers.CharField(required=False, allow_blank=True)
+    line = serializers.CharField(required=False, allow_blank=True)
+    odds = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
     start_time = serializers.DateTimeField(required=False, allow_null=True)
 
     class Meta:
