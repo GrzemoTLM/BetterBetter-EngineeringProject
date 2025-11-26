@@ -45,13 +45,14 @@ class CouponSerializer(serializers.ModelSerializer):
             'strategy',
             'coupon_type',
             'bet_stake',
+            'status',
             'created_at',
             'updated_at',
             'bets',
             'potential_payout',
         ]
         read_only_fields = (
-            'id', 'created_at', 'updated_at', 'potential_payout', 'bookmaker', 'currency'
+            'id', 'created_at', 'updated_at', 'potential_payout', 'bookmaker', 'currency', 'status'
         )
 
 class CouponCreateSerializer(CouponBaseSerializer):

@@ -23,6 +23,11 @@ export interface Coupon extends CreateCouponRequest {
   id: number;
   created_at: string;
   updated_at: string;
-  status: string;
+  user: number;
+  bookmaker: string;
+  currency: string;
+  strategy: number | null;
+  potential_payout: number;
+  status?: string; // Optional - backend may not return it yet
 }
 
