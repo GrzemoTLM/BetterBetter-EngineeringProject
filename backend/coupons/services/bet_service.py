@@ -13,15 +13,24 @@ class BetService:
 
     @transaction.atomic
     def _create_bet(self, coupon: Coupon, bet_data: Dict[str, Any]) -> Bet:
+        from ..models import Discipline
         coupon = Coupon.objects.select_for_update().get(id=coupon.id, user=coupon.user)
         event = bet_data.get('event')
         event_name = bet_data.get('event_name')
         discipline = bet_data.get('discipline')
+        start_time = bet_data.pop('start_time', None)
+
         if event is None and event_name:
+            if discipline is None:
+                discipline, _ = Discipline.objects.get_or_create(
+                    code='OTHER',
+                    defaults={'name': 'Other', 'category': 'other'}
+                )
+
             event_obj, _created = Event.objects.get_or_create(
                 name=event_name,
                 discipline=discipline,
-                defaults={"start_time": timezone.now()},
+                defaults={"start_time": start_time or timezone.now()},
             )
             bet_data['event'] = event_obj
 
