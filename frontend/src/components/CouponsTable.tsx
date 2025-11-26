@@ -18,7 +18,12 @@ const CouponsTable = forwardRef<CouponsTableRef>((_, ref) => {
     try {
       setLoading(true);
       const data = await api.getCoupons();
-      setCoupons(data);
+      const sorted = [...data].sort((a, b) => {
+        const aTime = new Date(a.created_at).getTime();
+        const bTime = new Date(b.created_at).getTime();
+        return bTime - aTime;
+      });
+      setCoupons(sorted);
       setError(null);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch coupons';
@@ -176,4 +181,3 @@ const CouponsTable = forwardRef<CouponsTableRef>((_, ref) => {
 CouponsTable.displayName = 'CouponsTable';
 
 export default CouponsTable;
-

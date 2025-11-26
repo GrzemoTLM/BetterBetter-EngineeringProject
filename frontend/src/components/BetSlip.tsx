@@ -1,13 +1,13 @@
-import { Plus, Trash2, Search } from 'lucide-react';
+import { Plus, Trash2, Search, Check } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import SummaryBox from './SummaryBox';
 import api from '../services/api';
 import type { Strategy } from '../types/strategies';
-import type { Bet as BetData, CreateCouponRequest, BetType as BetTypeOption } from '../types/coupons';
+import type { Bet as BetData, BetType as BetTypeOption } from '../types/coupons';
 import type { BookmakerAccountCreateResponse } from '../types/finances';
 
 interface Bet extends BetData {
   id: string;
+  confirmed?: boolean;
 }
 
 interface BetSlipProps {
@@ -34,6 +34,9 @@ const BetSlip = ({
   const [activeStake, setActiveStake] = useState('50');
   const [customStake, setCustomStake] = useState('');
   const [loading, setLoading] = useState(false);
+  const [couponId, setCouponId] = useState<number | null>(null);
+  const [multiplier, setMultiplier] = useState<number>(1);
+  const [potentialPayout, setPotentialPayout] = useState<number>(0);
 
   // Fetch bookmaker accounts and bet types on component mount
   useEffect(() => {
@@ -43,6 +46,11 @@ const BetSlip = ({
         setBookmakerAccounts(accounts);
         if (accounts.length > 0) {
           setSelectedBookmaker(accounts[0].id.toString());
+
+          // Create empty coupon with first bookmaker and default stake
+          const newCoupon = await api.createEmptyCoupon(accounts[0].id, activeStake);
+          setCouponId(newCoupon.id);
+          applyCouponMetrics(newCoupon);
         }
 
         const types = await api.getBetTypes();
@@ -55,6 +63,24 @@ const BetSlip = ({
     fetchData();
   }, []);
 
+  const applyCouponMetrics = (coupon: { potential_payout?: number; multiplier?: number; bet_stake?: number | string }) => {
+    const stakeNumber = coupon.bet_stake !== undefined ? Number(coupon.bet_stake) : Number(activeStake);
+    const backendMultiplier = coupon.multiplier;
+    const backendPayout = coupon.potential_payout;
+
+    if (backendMultiplier !== undefined && backendMultiplier !== null) {
+      setMultiplier(backendMultiplier);
+    } else if (backendPayout !== undefined && stakeNumber > 0) {
+      setMultiplier(Number((backendPayout / stakeNumber).toFixed(2)));
+    } else {
+      setMultiplier(1);
+    }
+
+    if (backendPayout !== undefined && backendPayout !== null) {
+      setPotentialPayout(backendPayout);
+    }
+  };
+
   const handleStrategyChange = (value: string) => {
     setStrategy(value);
     if (onStrategyChange) {
@@ -62,8 +88,102 @@ const BetSlip = ({
     }
   };
 
-  const handleRemoveBet = (id: string) => {
-    setBets(bets.filter((bet) => bet.id !== id));
+  const handleStakeChange = async (stake: string) => {
+    setActiveStake(stake);
+    let finalStake = stake;
+
+    if (stake === 'Custom') {
+      return;
+    }
+
+    if (!couponId) {
+      return;
+    }
+
+    if (stake === 'Custom' && customStake) {
+      finalStake = customStake;
+    }
+
+    try {
+      setLoading(true);
+      // Update stake in database
+      await api.updateCouponStake(couponId, finalStake);
+      // Recalculate
+      const updatedCoupon = await api.recalculateCoupon(couponId);
+      applyCouponMetrics(updatedCoupon);
+    } catch (error) {
+      console.error('Error recalculating coupon:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRemoveBet = async (id: string) => {
+    const betToRemove = bets.find(bet => bet.id === id);
+
+    // Jeśli bet jest confirmed, trzeba go usunąć z serwera
+    if (betToRemove?.confirmed && couponId) {
+      try {
+        setLoading(true);
+        // TODO: Backend powinien obsługiwać DELETE /api/coupons/coupons/{id}/bets/{bet_id}/
+        // Na razie tylko usuwamy lokalnie i recalc
+        setBets(bets.filter((bet) => bet.id !== id));
+
+        // Recalculate
+        const updatedCoupon = await api.recalculateCoupon(couponId);
+        applyCouponMetrics(updatedCoupon);
+      } catch (error) {
+        console.error('Error removing bet:', error);
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      // Jeśli niezatwierdzony, tylko usuń lokalnie
+      setBets(bets.filter((bet) => bet.id !== id));
+    }
+  };
+
+  const handleConfirmBet = async (id: string) => {
+    if (!couponId) {
+      alert('Coupon not created');
+      return;
+    }
+
+    const betToConfirm = bets.find(bet => bet.id === id);
+    if (!betToConfirm) return;
+
+    // Validate bet fields
+    if (!betToConfirm.event_name || !betToConfirm.bet_type || !betToConfirm.line || !betToConfirm.odds) {
+      alert('Please fill in all bet fields (Event, Type, Line, Odds)');
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // Add single bet to API
+      const betData = {
+        event_name: betToConfirm.event_name,
+        bet_type: betToConfirm.bet_type,
+        line: betToConfirm.line,
+        odds: betToConfirm.odds,
+        start_time: betToConfirm.start_time || new Date().toISOString(),
+      };
+
+      await api.addSingleBetToCoupon(couponId, betData);
+
+      // Recalculate coupon
+      const updatedCoupon = await api.recalculateCoupon(couponId);
+      applyCouponMetrics(updatedCoupon);
+
+      // Mark bet as confirmed locally
+      setBets(bets.map((bet) => (bet.id === id ? { ...bet, confirmed: true } : bet)));
+    } catch (error) {
+      console.error('Error confirming bet:', error);
+      alert('Error confirming bet');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAddBet = () => {
@@ -83,48 +203,33 @@ const BetSlip = ({
   };
 
   const handleSaveAndExit = async () => {
+    if (!couponId) {
+      alert('Coupon not created');
+      return;
+    }
+
     if (bets.length === 0) {
       alert('Please add at least one bet');
       return;
     }
 
-    // Validate all bets have required fields
-    for (const bet of bets) {
-      if (!bet.event_name || !bet.bet_type || !bet.line || !bet.odds) {
-        alert('Please fill in all bet fields (Event, Type, Line, Odds)');
-        return;
-      }
-    }
-
-    if (!selectedBookmaker) {
-      alert('Please select a bookmaker account');
+    // Validate all bets are confirmed
+    const unconfirmedBets = bets.filter(bet => !bet.confirmed);
+    if (unconfirmedBets.length > 0) {
+      alert('Please confirm all bets before saving');
       return;
     }
 
     try {
       setLoading(true);
-      const stake = activeStake === 'Custom' ? customStake : activeStake;
 
-      if (!stake) {
-        alert('Please select or enter a stake amount');
+      // Verify coupon exists in database
+      const verifiedCoupon = await api.getCoupon(couponId);
+      if (!verifiedCoupon) {
+        alert('Coupon not found in database');
         return;
       }
 
-      const couponData: CreateCouponRequest = {
-        bookmaker_account: parseInt(selectedBookmaker, 10),
-        coupon_type: 'SOLO',
-        bet_stake: stake,
-        placed_at: new Date().toISOString(),
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        bets: bets.map(({ id, ...bet }) => ({
-          event_name: bet.event_name,
-          bet_type: bet.bet_type,
-          line: bet.line,
-          odds: bet.odds,
-          start_time: bet.start_time || new Date().toISOString(),
-        })),
-      };
-      await api.createCoupon(couponData);
       alert('Coupon saved successfully!');
       if (onCouponCreated) {
         onCouponCreated();
@@ -134,20 +239,22 @@ const BetSlip = ({
         onClose();
       }
     } catch (error) {
-      let errorMessage = 'Error saving coupon';
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if (typeof error === 'string') {
-        errorMessage = error;
-      }
-
-      alert(errorMessage);
+      console.error('Error saving coupon:', error);
+      alert('Error verifying coupon');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDiscard = () => {
+  const handleDiscard = async () => {
+    if (couponId) {
+      try {
+        await api.deleteCoupon(couponId);
+      } catch (error) {
+        console.error('Error deleting coupon:', error);
+      }
+    }
+
     setBets([]);
     setActiveStake('50');
     setCustomStake('');
@@ -248,7 +355,10 @@ const BetSlip = ({
                       type="text"
                       value={bet.event_name}
                       onChange={(e) => handleBetChange(bet.id, 'event_name', e.target.value)}
-                      className="w-full px-2 py-1 border border-default rounded text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-main"
+                      disabled={bet.confirmed}
+                      className={`w-full px-2 py-1 border border-default rounded text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-main ${
+                        bet.confirmed ? 'bg-gray-50 cursor-not-allowed opacity-75' : ''
+                      }`}
                       placeholder="Event name"
                     />
                   </td>
@@ -256,13 +366,16 @@ const BetSlip = ({
                     <select
                       value={bet.bet_type}
                       onChange={(e) => handleBetChange(bet.id, 'bet_type', e.target.value)}
-                      className="w-full px-2 py-1 border border-default rounded text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-main"
+                      disabled={bet.confirmed}
+                      className={`w-full px-2 py-1 border border-default rounded text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-main ${
+                        bet.confirmed ? 'bg-gray-50 cursor-not-allowed opacity-75' : ''
+                      }`}
                     >
                       <option value="">Select bet type</option>
                       {betTypes && betTypes.length > 0 ? (
                         betTypes.map((type) => (
                           type && type.code ? (
-                            <option key={type.code} value={type.code}>
+                            <option key={type.code} value={type.id ?? type.code}>
                               {type.code}
                             </option>
                           ) : null
@@ -277,7 +390,10 @@ const BetSlip = ({
                       type="text"
                       value={bet.line}
                       onChange={(e) => handleBetChange(bet.id, 'line', e.target.value)}
-                      className="w-full px-2 py-1 border border-default rounded text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-main"
+                      disabled={bet.confirmed}
+                      className={`w-full px-2 py-1 border border-default rounded text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-main ${
+                        bet.confirmed ? 'bg-gray-50 cursor-not-allowed opacity-75' : ''
+                      }`}
                       placeholder="Line"
                     />
                   </td>
@@ -286,11 +402,27 @@ const BetSlip = ({
                       type="text"
                       value={bet.odds}
                       onChange={(e) => handleBetChange(bet.id, 'odds', e.target.value)}
-                      className="w-full px-2 py-1 border border-default rounded text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-main"
+                      disabled={bet.confirmed}
+                      className={`w-full px-2 py-1 border border-default rounded text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-main ${
+                        bet.confirmed ? 'bg-gray-50 cursor-not-allowed opacity-75' : ''
+                      }`}
                       placeholder="Odds"
                     />
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 flex gap-1 items-center">
+                    {!bet.confirmed ? (
+                      <button
+                        onClick={() => handleConfirmBet(bet.id)}
+                        className="p-1 hover:bg-green-50 rounded transition-colors"
+                        title="Confirm bet"
+                      >
+                        <Check size={16} className="text-green-600" />
+                      </button>
+                    ) : (
+                      <div className="p-1">
+                        <Check size={16} className="text-green-600" />
+                      </div>
+                    )}
                     <button
                       onClick={() => handleRemoveBet(bet.id)}
                       className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-50 rounded"
@@ -321,8 +453,15 @@ const BetSlip = ({
       </div>
 
       {/* Summary Box */}
-      <div className="mb-6">
-        <SummaryBox />
+      <div className="mb-6 flex gap-4">
+        <div className="flex-1 bg-blue-50 rounded-lg p-4 border border-blue-200">
+          <div className="text-xs font-medium text-text-secondary mb-1">Total Multiplier</div>
+          <div className="text-2xl font-bold text-text-primary">{multiplier.toFixed(2)}</div>
+        </div>
+        <div className="flex-1 bg-green-50 rounded-lg p-4 border border-green-200">
+          <div className="text-xs font-medium text-text-secondary mb-1">Potential Payout</div>
+          <div className="text-2xl font-bold text-text-primary">${potentialPayout.toFixed(2)}</div>
+        </div>
       </div>
 
       {/* Stake Selector */}
@@ -334,7 +473,7 @@ const BetSlip = ({
           {['50', '100', '500', 'Custom'].map((stake) => (
             <button
               key={stake}
-              onClick={() => setActiveStake(stake)}
+              onClick={() => handleStakeChange(stake)}
               className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
                 activeStake === stake
                   ? 'bg-primary-main text-primary-contrast'
@@ -346,7 +485,7 @@ const BetSlip = ({
           ))}
         </div>
         {activeStake === 'Custom' && (
-          <div className="mt-3">
+          <div className="mt-3 flex gap-2">
             <input
               type="number"
               value={customStake}
@@ -354,8 +493,18 @@ const BetSlip = ({
               placeholder="Enter custom stake amount"
               min="0"
               step="0.01"
-              className="w-full px-4 py-2 border border-default rounded-lg text-sm text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-main focus:border-transparent"
+              className="flex-1 px-4 py-2 border border-default rounded-lg text-sm text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-main focus:border-transparent"
             />
+            <button
+              onClick={() => {
+                if (customStake) {
+                  handleStakeChange('Custom');
+                }
+              }}
+              className="px-4 py-2 bg-primary-main text-primary-contrast rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors"
+            >
+              Set
+            </button>
           </div>
         )}
       </div>

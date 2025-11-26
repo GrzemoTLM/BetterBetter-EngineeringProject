@@ -70,6 +70,15 @@ class ApiService {
 
         console.log('Backend error response:', raw);
 
+        if (typeof raw === 'string' && raw.includes('<title')) {
+          const match = raw.match(/<title>([^<]+)<\/title>/i);
+          if (match && match[1]) {
+            return match[1].trim();
+          }
+
+          return 'Server HTML error';
+        }
+
         if (typeof raw === 'string') {
           return raw;
         }
@@ -474,6 +483,115 @@ class ApiService {
     try {
       const response = await this.axiosInstance.post<Coupon>(API_ENDPOINTS.COUPONS.CREATE, data);
       return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async createEmptyCoupon(bookmakerAccountId: number, stake: string): Promise<Coupon> {
+    try {
+      const data = {
+        bookmaker_account: bookmakerAccountId,
+        coupon_type: 'SOLO',
+        bet_stake: stake,
+        placed_at: new Date().toISOString(),
+        bets: [],
+      };
+      const response = await this.axiosInstance.post<Coupon>(API_ENDPOINTS.COUPONS.CREATE, data);
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async getCoupon(id: number): Promise<Coupon> {
+    try {
+      const response = await this.axiosInstance.get<Coupon>(`${API_ENDPOINTS.COUPONS.LIST}${id}/`);
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async addBetsToCoupon(
+    couponId: number,
+    bets: Array<{
+      event_name: string;
+      bet_type: string;
+      line: string;
+      odds: string;
+      start_time: string;
+    }>
+  ): Promise<Coupon> {
+    try {
+      const response = await this.axiosInstance.post<Coupon>(
+        `${API_ENDPOINTS.COUPONS.LIST}${couponId}/bets/`,
+        { bets }
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async addSingleBetToCoupon(
+    couponId: number,
+    bet: {
+      event_name: string;
+      bet_type: string | number;
+      line: string | number;
+      odds: string | number;
+      start_time: string;
+    }
+  ): Promise<Coupon> {
+    try {
+      // Normalizacja pól – zamień na number jeśli to string liczb
+      const normalizedBet = {
+        ...bet,
+        line: typeof bet.line === 'string' && bet.line.trim() !== '' ? bet.line.trim() : bet.line,
+        odds: typeof bet.odds === 'string' && bet.odds.trim() !== '' ? bet.odds.trim() : bet.odds,
+        bet_type: bet.bet_type, // jeśli mamy id będzie number
+      };
+
+      console.log('addSingleBetToCoupon - sending payload:', normalizedBet);
+
+      const payload = { bets: [normalizedBet] };
+      const response = await this.axiosInstance.post<Coupon>(
+        `${API_ENDPOINTS.COUPONS.LIST}${couponId}/bets/`,
+        payload
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async updateCouponStake(couponId: number, stake: string): Promise<Coupon> {
+    try {
+      const response = await this.axiosInstance.patch<Coupon>(
+        `${API_ENDPOINTS.COUPONS.LIST}${couponId}/`,
+        { bet_stake: stake }
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async recalculateCoupon(couponId: number): Promise<Coupon> {
+    try {
+      const response = await this.axiosInstance.post<Coupon>(
+        `${API_ENDPOINTS.COUPONS.LIST}${couponId}/recalc/`
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async deleteCoupon(couponId: number): Promise<void> {
+    try {
+      await this.axiosInstance.delete(`${API_ENDPOINTS.COUPONS.LIST}${couponId}/`);
     } catch (error) {
       throw new Error(this.getErrorMessage(error));
     }
