@@ -26,7 +26,7 @@ import type { Transaction, TransactionSummary } from './types/finances';
 import './App.css';
 
 function AppContent() {
-  const { isAuthenticated, isLoading, logout } = useAuth();
+  const { isAuthenticated, isLoading, logout, user } = useAuth();
   const [authState, setAuthState] = useState<'login' | 'register' | 'reset-password' | '2fa' | 'authenticated'>(
     'login'
   );
@@ -34,6 +34,9 @@ function AppContent() {
     'dashboard' | 'money-flow' | 'settings' | 'coupons' | 'statistics' | 'admin' | 'help'
   >('dashboard');
   const [challengeId, setChallengeId] = useState<string | null>(null);
+
+  // Check if user is superuser
+  const isSuperuser = user?.is_superuser === true;
 
   // Money Flow state
   const [moneyFlowFilters, setMoneyFlowFilters] = useState<{
@@ -56,6 +59,13 @@ function AppContent() {
       setAuthState('login');
     }
   }, [isAuthenticated, authState]);
+
+  // If trying to access admin panel without superuser rights, redirect to dashboard
+  useEffect(() => {
+    if (activeView === 'admin' && !isSuperuser) {
+      setActiveView('dashboard');
+    }
+  }, [activeView, isSuperuser]);
 
   // Fetch money flow data when authenticated and on money-flow view
   useEffect(() => {

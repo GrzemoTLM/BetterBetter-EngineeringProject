@@ -43,6 +43,7 @@ export interface UserProfile {
   username: string;
   email: string;
   registered_at: string;
+  is_superuser?: boolean;
 }
 
 export interface AuthContextType {

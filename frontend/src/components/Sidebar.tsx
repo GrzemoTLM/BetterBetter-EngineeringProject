@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { useLanguage } from '../hooks/useLanguage';
+import { useAuth } from '../hooks/useAuth';
 import apiService from '../services/api';
 
 interface SidebarProps {
@@ -22,7 +23,15 @@ interface SidebarProps {
 
 const Sidebar = ({ activeView, onViewChange, onLogout, onLanguageChange }: SidebarProps) => {
   const { language, setLanguage, t } = useLanguage();
+  const { user } = useAuth();
   const [isChangingLanguage, setIsChangingLanguage] = useState(false);
+
+  // Check if user is superuser
+  const isSuperuser = user?.is_superuser === true;
+
+  console.log('Sidebar: User data:', user);
+  console.log('Sidebar: is_superuser:', isSuperuser);
+  console.log('Sidebar: user?.is_superuser:', user?.is_superuser);
 
   const handleLanguageChange = async (lang: 'pl' | 'en') => {
     if (language === lang) return;
@@ -84,11 +93,11 @@ const Sidebar = ({ activeView, onViewChange, onLogout, onLanguageChange }: Sideb
       label: t.sidebar.help,
       view: 'help' as const,
     },
-    {
+    ...(isSuperuser ? [{
       icon: Shield,
       label: t.sidebar.adminConsole,
       view: 'admin' as const,
-    },
+    }] : []),
   ];
 
   return (
