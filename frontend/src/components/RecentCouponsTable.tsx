@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
+import { useDateFormatter } from '../hooks/useDateFormatter';
 import type { Coupon } from '../types/coupons';
 
 const RecentCouponsTable = () => {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { formatDateWithoutTime } = useDateFormatter();
 
   useEffect(() => {
     const fetchCoupons = async () => {
@@ -48,14 +50,6 @@ const RecentCouponsTable = () => {
     }
   };
 
-  const formatDate = (dateString: string): string => {
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' });
-    } catch {
-      return dateString;
-    }
-  };
 
   const formatStatusDisplay = (status: string | undefined): string => {
     if (!status) return 'Pending';
@@ -127,7 +121,7 @@ const RecentCouponsTable = () => {
                 {coupon.bookmaker}
               </td>
               <td className="px-4 py-3 text-sm text-text-secondary">
-                {formatDate(coupon.created_at)}
+                {formatDateWithoutTime(coupon.created_at)}
               </td>
               <td className="px-4 py-3">
                 <span

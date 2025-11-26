@@ -1,29 +1,39 @@
 import { Pencil } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
 import api from '../services/api';
+import { useDateFormatter } from '../hooks/useDateFormatter';
 import type { Coupon } from '../types/coupons';
 
-const CouponsTable = () => {
+export interface CouponsTableRef {
+  refetch: () => Promise<void>;
+}
+
+const CouponsTable = forwardRef<CouponsTableRef>((_, ref) => {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { formatDateWithoutTime } = useDateFormatter();
+
+  const fetchCoupons = async () => {
+    try {
+      setLoading(true);
+      const data = await api.getCoupons();
+      setCoupons(data);
+      setError(null);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch coupons';
+      setError(errorMessage);
+      console.error('Error fetching coupons:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useImperativeHandle(ref, () => ({
+    refetch: fetchCoupons,
+  }));
 
   useEffect(() => {
-    const fetchCoupons = async () => {
-      try {
-        setLoading(true);
-        const data = await api.getCoupons();
-        setCoupons(data);
-        setError(null);
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch coupons';
-        setError(errorMessage);
-        console.error('Error fetching coupons:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchCoupons();
   }, []);
 
@@ -59,14 +69,6 @@ const CouponsTable = () => {
     return result.toFixed(2);
   };
 
-  const formatDate = (dateString: string): string => {
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' });
-    } catch {
-      return dateString;
-    }
-  };
 
   const formatStatusDisplay = (status: string | undefined): string => {
     if (!status) return 'Pending';
@@ -145,9 +147,9 @@ const CouponsTable = () => {
                 <td className="px-4 py-4 text-sm text-text-primary">
                   {multiplier}
                 </td>
-                <td className="px-4 py-4 text-sm text-text-secondary">
-                  {formatDate(coupon.created_at)}
-                </td>
+              <td className="px-4 py-4 text-sm text-text-secondary">
+                {formatDateWithoutTime(coupon.created_at)}
+              </td>
                 <td className="px-4 py-4 text-sm">
                   <span
                     className={`inline-block rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(
@@ -169,7 +171,9 @@ const CouponsTable = () => {
       </table>
     </div>
   );
-};
+});
+
+CouponsTable.displayName = 'CouponsTable';
 
 export default CouponsTable;
 

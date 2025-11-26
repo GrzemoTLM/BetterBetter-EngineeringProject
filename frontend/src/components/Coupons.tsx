@@ -1,17 +1,23 @@
-import { Bell, Calendar, Search, Plus } from 'lucide-react';
-import { useState } from 'react';
-import CouponsTable from './CouponsTable';
+import { Bell, Search, Plus } from 'lucide-react';
+import { useState, useRef } from 'react';
+import CouponsTable, { type CouponsTableRef } from './CouponsTable';
 import ActionBar from './ActionBar';
 import AddCoupon from './AddCoupon';
 import ManageStrategiesModal from './ManageStrategiesModal';
 import type { Strategy } from '../types/strategies';
 
 const Coupons = () => {
-  const [dateRange, setDateRange] = useState('03/03/2024 - 05/04/2024');
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddCoupon, setShowAddCoupon] = useState(false);
   const [showManageStrategies, setShowManageStrategies] = useState(false);
   const [strategies, setStrategies] = useState<Strategy[]>([]);
+  const couponsTableRef = useRef<CouponsTableRef>(null);
+
+  const handleCouponCreated = () => {
+    if (couponsTableRef.current) {
+      couponsTableRef.current.refetch();
+    }
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -40,11 +46,6 @@ const Coupons = () => {
             ALL COUPONS
           </h2>
           <div className="flex flex-wrap items-center gap-4">
-            {/* Date Picker */}
-            <div className="flex items-center gap-2 border border-default rounded-md px-3 py-2 text-sm text-text-secondary bg-background-input">
-              <Calendar size={16} />
-              <span>{dateRange}</span>
-            </div>
 
             {/* Search */}
             <div className="relative flex-1 min-w-[200px]">
@@ -64,7 +65,7 @@ const Coupons = () => {
         </div>
 
         {/* Table */}
-        <CouponsTable />
+        <CouponsTable ref={couponsTableRef} />
 
         {/* Action Bar */}
         <div className="p-6 border-t border-default">
@@ -77,6 +78,7 @@ const Coupons = () => {
         <AddCoupon
           onClose={() => setShowAddCoupon(false)}
           strategies={strategies}
+          onCouponCreated={handleCouponCreated}
         />
       )}
 

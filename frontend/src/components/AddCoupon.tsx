@@ -8,22 +8,19 @@ import type { Strategy } from '../types/strategies';
 interface AddCouponProps {
   onClose: () => void;
   strategies?: Strategy[];
+  onCouponCreated?: () => void;
 }
 
-const AddCoupon = ({ onClose, strategies = [] }: AddCouponProps) => {
+const AddCoupon = ({ onClose, strategies = [], onCouponCreated }: AddCouponProps) => {
   const [fetchedStrategies, setFetchedStrategies] = useState<Strategy[]>(strategies);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const fetchStrategies = async () => {
       try {
-        setLoading(true);
         const data = await api.getStrategies();
         setFetchedStrategies(data);
       } catch {
         setFetchedStrategies([]);
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -57,7 +54,7 @@ const AddCoupon = ({ onClose, strategies = [] }: AddCouponProps) => {
             <UploadCoupon />
 
             {/* Bet Slip Section */}
-            <BetSlip strategies={fetchedStrategies} />
+            <BetSlip strategies={fetchedStrategies} onCouponCreated={onCouponCreated} />
           </div>
         </div>
       </div>

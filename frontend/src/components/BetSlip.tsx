@@ -15,6 +15,7 @@ interface BetSlipProps {
   selectedStrategy?: string;
   onStrategyChange?: (strategy: string) => void;
   onClose?: () => void;
+  onCouponCreated?: () => void;
 }
 
 const BetSlip = ({
@@ -22,6 +23,7 @@ const BetSlip = ({
   selectedStrategy = '',
   onStrategyChange,
   onClose,
+  onCouponCreated,
 }: BetSlipProps) => {
   const [bookmakerAccounts, setBookmakerAccounts] = useState<BookmakerAccountCreateResponse[]>([]);
   const [betTypes, setBetTypes] = useState<BetTypeOption[]>([]);
@@ -124,6 +126,10 @@ const BetSlip = ({
       };
       await api.createCoupon(couponData);
       alert('Coupon saved successfully!');
+      if (onCouponCreated) {
+        onCouponCreated();
+      }
+
       if (onClose) {
         onClose();
       }
@@ -145,6 +151,7 @@ const BetSlip = ({
     setBets([]);
     setActiveStake('50');
     setCustomStake('');
+
     if (onClose) {
       onClose();
     }
