@@ -1,9 +1,11 @@
 export interface Bet {
+  id?: number; // backend bet id if available
   event_name: string;
-  start_time: string;
+  start_time: string | null | undefined;
   bet_type: number | string;
   line: number | string;
   odds: number | string;
+  result?: string | null; // outcome returned by backend (won/lost/null)
 }
 
 export interface BetType {

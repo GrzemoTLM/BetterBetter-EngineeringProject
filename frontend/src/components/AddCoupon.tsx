@@ -54,7 +54,7 @@ const AddCoupon = ({ onClose, strategies = [], onCouponCreated }: AddCouponProps
             <UploadCoupon />
 
             {/* Bet Slip Section */}
-            <BetSlip strategies={fetchedStrategies} onCouponCreated={onCouponCreated} />
+            <BetSlip strategies={fetchedStrategies} onCouponCreated={onCouponCreated} onClose={onClose} />
           </div>
         </div>
       </div>
@@ -63,4 +63,3 @@ const AddCoupon = ({ onClose, strategies = [], onCouponCreated }: AddCouponProps
 };
 
 export default AddCoupon;
-

@@ -5,18 +5,48 @@ import ActionBar from './ActionBar';
 import AddCoupon from './AddCoupon';
 import ManageStrategiesModal from './ManageStrategiesModal';
 import type { Strategy } from '../types/strategies';
+import api from '../services/api';
 
 const Coupons = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddCoupon, setShowAddCoupon] = useState(false);
   const [showManageStrategies, setShowManageStrategies] = useState(false);
   const [strategies, setStrategies] = useState<Strategy[]>([]);
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const couponsTableRef = useRef<CouponsTableRef>(null);
 
   const handleCouponCreated = () => {
     if (couponsTableRef.current) {
       couponsTableRef.current.refetch();
     }
+  };
+
+  const handleToggleBulk = () => {
+    if (!bulkMode) {
+      setBulkMode(true);
+      return;
+    }
+
+    if (bulkMode && selectedIds.size === 0) {
+      setBulkMode(false);
+      return;
+    }
+
+    const proceed = window.confirm(`Usunąć ${selectedIds.size} kuponów?`);
+    if (!proceed) return;
+
+    (async () => {
+      for (const id of selectedIds) {
+        await api.deleteCoupon(id);
+      }
+
+      setSelectedIds(new Set());
+      setBulkMode(false);
+      if (couponsTableRef.current) {
+        await couponsTableRef.current.refetch();
+      }
+    })();
   };
 
   return (
@@ -65,11 +95,17 @@ const Coupons = () => {
         </div>
 
         {/* Table */}
-        <CouponsTable ref={couponsTableRef} />
+        <CouponsTable ref={couponsTableRef} bulkMode={bulkMode} selectedIds={selectedIds} onToggleSelect={(id) => {
+          setSelectedIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+          });
+        }} />
 
         {/* Action Bar */}
         <div className="p-6 border-t border-default">
-          <ActionBar onManageStrategies={() => setShowManageStrategies(true)} />
+          <ActionBar onManageStrategies={() => setShowManageStrategies(true)} onBulkDelete={handleToggleBulk} bulkMode={bulkMode} selectedCount={selectedIds.size} />
         </div>
       </div>
 
@@ -94,4 +130,3 @@ const Coupons = () => {
 };
 
 export default Coupons;
-

@@ -42,10 +42,13 @@ class BetService:
     def _update_bet(self, bet: Bet, bet_data: Dict[str, Any]) -> Bet:
         coupon = Coupon.objects.select_for_update().get(id=bet.coupon.id, user=bet.coupon.user)
 
-        result_updated = 'result' in bet_data
+        start_time = bet_data.pop('start_time', None)
+
+        result_updated = 'result' in bet_data and bet_data['result'] is not None
 
         for field, value in bet_data.items():
-            setattr(bet, field, value)
+            if value is not None:
+                setattr(bet, field, value)
         bet.save()
         recalc_coupon_odds(coupon)
 

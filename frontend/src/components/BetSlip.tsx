@@ -6,7 +6,7 @@ import type { Bet as BetData, BetType as BetTypeOption } from '../types/coupons'
 import type { BookmakerAccountCreateResponse } from '../types/finances';
 
 interface Bet extends BetData {
-  id: string;
+  id: number; // lokalne tymczasowe ID jako number dla zgodności z BetData
   confirmed?: boolean;
 }
 
@@ -61,6 +61,7 @@ const BetSlip = ({
     };
 
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const applyCouponMetrics = (coupon: { potential_payout?: number; multiplier?: number; bet_stake?: number | string }) => {
@@ -118,7 +119,7 @@ const BetSlip = ({
     }
   };
 
-  const handleRemoveBet = async (id: string) => {
+  const handleRemoveBet = async (id: number) => {
     const betToRemove = bets.find(bet => bet.id === id);
 
     // Jeśli bet jest confirmed, trzeba go usunąć z serwera
@@ -143,7 +144,7 @@ const BetSlip = ({
     }
   };
 
-  const handleConfirmBet = async (id: string) => {
+  const handleConfirmBet = async (id: number) => {
     if (!couponId) {
       alert('Coupon not created');
       return;
@@ -188,7 +189,7 @@ const BetSlip = ({
 
   const handleAddBet = () => {
     const newBet: Bet = {
-      id: Date.now().toString(),
+      id: Date.now(),
       event_name: '',
       bet_type: '',
       line: '',
@@ -198,7 +199,7 @@ const BetSlip = ({
     setBets([...bets, newBet]);
   };
 
-  const handleBetChange = (id: string, field: keyof Bet, value: string) => {
+  const handleBetChange = (id: number, field: keyof Bet, value: string) => {
     setBets(bets.map((bet) => (bet.id === id ? { ...bet, [field]: value } : bet)));
   };
 

@@ -6,6 +6,7 @@ import type { TransactionCreateRequest, TransactionCreateResponse, BookmakerAcco
 import type { TicketCategory, CreateTicketRequest, Ticket, CreateCommentRequest, TicketComment } from '../types/tickets';
 import type { Strategy, CreateStrategyRequest } from '../types/strategies';
 import type { Coupon, CreateCouponRequest, BetType } from '../types/coupons';
+import type { Bet } from '../types/coupons';
 import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
 
 class ApiService {
@@ -30,13 +31,14 @@ class ApiService {
     });
 
     this.axiosInstance.interceptors.response.use(
-      (response) => response,
+      (response) => {
+        return response;
+      },
       (error) => {
         if (error.response?.status === 401) {
           this.removeToken();
           window.location.href = '/login';
         }
-
         return Promise.reject(error);
       }
     );
@@ -506,7 +508,8 @@ class ApiService {
 
   async getCoupon(id: number): Promise<Coupon> {
     try {
-      const response = await this.axiosInstance.get<Coupon>(`${API_ENDPOINTS.COUPONS.LIST}${id}/`);
+      const url = `${API_ENDPOINTS.COUPONS.LIST}${id}/`;
+      const response = await this.axiosInstance.get<Coupon>(url);
       return response.data;
     } catch (error) {
       throw new Error(this.getErrorMessage(error));
@@ -552,8 +555,6 @@ class ApiService {
         odds: typeof bet.odds === 'string' && bet.odds.trim() !== '' ? bet.odds.trim() : bet.odds,
         bet_type: bet.bet_type, // jeśli mamy id będzie number
       };
-
-      console.log('addSingleBetToCoupon - sending payload:', normalizedBet);
 
       const payload = { bets: [normalizedBet] };
       const response = await this.axiosInstance.post<Coupon>(
@@ -617,7 +618,19 @@ class ApiService {
 
   async forceWinCoupon(couponId: number): Promise<Coupon> {
     try {
-      const response = await this.axiosInstance.post<Coupon>(API_ENDPOINTS.COUPONS.FORCE_WIN(couponId));
+      const url = API_ENDPOINTS.COUPONS.FORCE_WIN(couponId);
+      const response = await this.axiosInstance.post<Coupon>(url);
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async settleBet(couponId: number, betId: number | string, status: 'won' | 'lost'): Promise<Bet> {
+    try {
+      const url = API_ENDPOINTS.COUPONS.BET_SETTLE(couponId, betId);
+      const payload = { result: status, status };
+      const response = await this.axiosInstance.patch<Bet>(url, payload);
       return response.data;
     } catch (error) {
       throw new Error(this.getErrorMessage(error));

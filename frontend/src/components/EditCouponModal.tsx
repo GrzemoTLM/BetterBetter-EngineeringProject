@@ -32,18 +32,55 @@ const EditCouponModal = ({ couponId, isOpen, onClose, onUpdated }: EditCouponMod
         setLoading(false);
       }
     };
+
     loadCoupon();
   }, [couponId, isOpen]);
 
   const handleForceWin = async () => {
+
     try {
       setLoading(true);
+      console.log('[PATCH] force win coupon', { couponId });
       const updated = await api.forceWinCoupon(couponId);
+      console.log('[GET] coupon after force win', { couponId, status: updated.status });
       setCoupon(updated);
-      if (onUpdated) onUpdated(updated);
+      onUpdated?.(updated);
+      onClose();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to mark coupon as won';
-      setError(msg);
+      setError(err instanceof Error ? err.message : 'Failed to mark coupon as won');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCloseWithRefresh = async () => {
+
+    try {
+      setLoading(true);
+      const refreshed = await api.getCoupon(couponId);
+      console.log('[GET] coupon on close', { couponId, status: refreshed.status });
+      onUpdated?.(refreshed);
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+      onClose();
+    }
+  };
+
+  const handleDeleteCoupon = async () => {
+    if (!coupon) return;
+    const proceed = window.confirm('Czy na pewno chcesz usunąć ten kupon? Tej operacji nie można cofnąć.');
+    if (!proceed) return;
+    try {
+      setLoading(true);
+      console.log('[DELETE] coupon', { couponId: coupon.id });
+      await api.deleteCoupon(coupon.id);
+      onUpdated?.(coupon); // parent robi refetch
+      onClose();
+    } catch (err) {
+      console.error('[ERROR] delete coupon', err);
+      setError(err instanceof Error ? err.message : 'Failed to delete coupon');
     } finally {
       setLoading(false);
     }
@@ -73,7 +110,7 @@ const EditCouponModal = ({ couponId, isOpen, onClose, onUpdated }: EditCouponMod
           <h3 className="text-base font-semibold text-text-primary">Edit Coupon</h3>
           <button
             className="p-2 rounded hover:bg-gray-100"
-            onClick={onClose}
+            onClick={handleCloseWithRefresh}
             aria-label="Close"
           >
             <X size={18} />
@@ -131,15 +168,68 @@ const EditCouponModal = ({ couponId, isOpen, onClose, onUpdated }: EditCouponMod
                         <th className="px-4 py-2 text-left text-xs uppercase tracking-wider text-text-secondary">Type</th>
                         <th className="px-4 py-2 text-left text-xs uppercase tracking-wider text-text-secondary">Line</th>
                         <th className="px-4 py-2 text-left text-xs uppercase tracking-wider text-text-secondary">Odds</th>
+                        <th className="px-4 py-2 text-right text-xs uppercase tracking-wider text-text-secondary">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-default">
                       {coupon.bets.map((b) => (
-                        <tr key={`${b.event_name}-${b.line}-${b.odds}`} className="bg-white">
+                        <tr key={`${b.id ?? `${b.event_name}-${b.line}-${b.odds}`}`} className="bg-white">
                           <td className="px-4 py-2 text-sm text-text-primary">{b.event_name}</td>
                           <td className="px-4 py-2 text-sm text-text-secondary">{String(b.bet_type)}</td>
                           <td className="px-4 py-2 text-sm text-text-primary">{String(b.line)}</td>
                           <td className="px-4 py-2 text-sm text-text-primary">{String(b.odds)}</td>
+                          <td className="px-4 py-2 text-sm text-right">
+                            {!['won','lost'].includes((coupon.status || '').toLowerCase()) && (
+                              <div className="inline-flex gap-2">
+                                <button
+                                  className="px-2 py-1 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 text-xs"
+                                  disabled={loading}
+                                  onClick={async () => {
+                                    try {
+                                      setLoading(true);
+                                      const betIdentifier = b.id ?? `${b.event_name}-${b.line}-${b.odds}`;
+                                      console.log('[PATCH] settle bet won', { couponId, betId: betIdentifier });
+                                      await api.settleBet(couponId, betIdentifier, 'won');
+                                      const refreshed = await api.getCoupon(couponId);
+                                      console.log('[GET] coupon after bet won', { couponId, status: refreshed.status });
+                                      setCoupon(refreshed);
+                                      onUpdated?.(refreshed);
+                                    } catch (err) {
+                                      console.error('[ERROR] settle bet won', err);
+                                      setError(err instanceof Error ? err.message : 'Failed to settle bet');
+                                    } finally {
+                                      setLoading(false);
+                                    }
+                                  }}
+                                >
+                                  Won
+                                </button>
+                                <button
+                                  className="px-2 py-1 rounded-md bg-red-600 text-white hover:bg-red-700 text-xs"
+                                  disabled={loading}
+                                  onClick={async () => {
+                                    try {
+                                      setLoading(true);
+                                      const betIdentifier = b.id ?? `${b.event_name}-${b.line}-${b.odds}`;
+                                      console.log('[PATCH] settle bet lost', { couponId, betId: betIdentifier });
+                                      await api.settleBet(couponId, betIdentifier, 'lost');
+                                      const refreshed = await api.getCoupon(couponId);
+                                      console.log('[GET] coupon after bet lost', { couponId, status: refreshed.status });
+                                      setCoupon(refreshed);
+                                      onUpdated?.(refreshed);
+                                    } catch (err) {
+                                      console.error('[ERROR] settle bet lost', err);
+                                      setError(err instanceof Error ? err.message : 'Failed to settle bet');
+                                    } finally {
+                                      setLoading(false);
+                                    }
+                                  }}
+                                >
+                                  Lost
+                                </button>
+                              </div>
+                            )}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -159,6 +249,13 @@ const EditCouponModal = ({ couponId, isOpen, onClose, onUpdated }: EditCouponMod
                     Mark as Won
                   </button>
                 )}
+                <button
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white disabled:opacity-50`}
+                  onClick={handleDeleteCoupon}
+                  disabled={loading}
+                >
+                  {loading ? 'Deleting...' : 'Delete Coupon'}
+                </button>
               </div>
             </div>
           )}
@@ -169,4 +266,3 @@ const EditCouponModal = ({ couponId, isOpen, onClose, onUpdated }: EditCouponMod
 };
 
 export default EditCouponModal;
-
