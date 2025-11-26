@@ -10,7 +10,7 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 
-const Tickets = () => {
+const TicketsAdminPage = () => {
   const [showTickets, setShowTickets] = useState(false);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
@@ -161,7 +161,7 @@ const Tickets = () => {
       minute: '2-digit',
     });
   };
-
+  
   if (!showTickets) {
     return (
       <div className="bg-background-paper rounded-lg shadow-sm border border-gray-200 p-4">
@@ -177,7 +177,7 @@ const Tickets = () => {
       </div>
     );
   }
-
+  
   return (
     <>
       {/* Backdrop */}
@@ -324,7 +324,7 @@ const Tickets = () => {
                         // Resolved na dnie
                         if (a.status === 'resolved' && b.status !== 'resolved') return 1;
                         if (a.status !== 'resolved' && b.status === 'resolved') return -1;
-                        // Closed také na dnie (po resolved)
+                        // Closed także na dnie (po resolved)
                         if (a.status === 'closed' && b.status !== 'closed') return 1;
                         if (a.status !== 'closed' && b.status === 'closed') return -1;
                         return 0;
@@ -371,5 +371,5 @@ const Tickets = () => {
   );
 };
 
-export default Tickets;
+export default TicketsAdminPage;
 

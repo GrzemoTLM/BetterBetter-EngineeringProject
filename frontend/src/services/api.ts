@@ -386,10 +386,8 @@ class ApiService {
 
   async addCommentToTicket(ticketId: string | number, data: CreateCommentRequest): Promise<TicketComment> {
     try {
-      const response = await this.axiosInstance.post<TicketComment>(
-        API_ENDPOINTS.TICKETS.ADD_COMMENT(ticketId.toString()),
-        data
-      );
+      const url = API_ENDPOINTS.TICKETS.ADD_COMMENT(ticketId.toString());
+      const response = await this.axiosInstance.post<TicketComment>(url, data);
       return response.data;
     } catch (error) {
       throw new Error(this.getErrorMessage(error));
@@ -403,6 +401,18 @@ class ApiService {
         {
           params: { ticket_id: ticketId },
         }
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async updateTicketStatus(ticketId: string | number, status: string): Promise<Ticket> {
+    try {
+      const response = await this.axiosInstance.patch<Ticket>(
+        API_ENDPOINTS.TICKETS.DETAIL(ticketId.toString()),
+        { status }
       );
       return response.data;
     } catch (error) {

@@ -3,7 +3,7 @@ import UsersTable from './UsersTable';
 import ActivityLog from './ActivityLog';
 import UserQuickView from './UserQuickView';
 import Snapshots from './Snapshots';
-import Tickets from './Tickets';
+import TicketsAdminPage from './TicketsAdminPage';
 import Backups from './Backups';
 import SystemHealth from './SystemHealth';
 
@@ -39,7 +39,7 @@ const AdminConsole = () => {
 
         {/* Right Column - Tickets, Backups, System Health (Span 3) */}
         <div className="lg:col-span-3 flex flex-col gap-4">
-          <Tickets />
+          <TicketsAdminPage />
           <Backups />
           <SystemHealth />
         </div>
