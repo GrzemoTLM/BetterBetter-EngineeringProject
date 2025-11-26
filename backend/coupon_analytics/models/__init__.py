@@ -8,6 +8,7 @@ from .queries import (
 from .alerts import AlertRule
 from .reports import Report
 from .alert_event import AlertEvent
+from .user_strategy import UserStrategy
 
 __all__ = [
     "AnalyticsQuery",
@@ -16,4 +17,5 @@ __all__ = [
     "AlertRule",
     "Report",
     "AlertEvent",
+    "UserStrategy",
 ]

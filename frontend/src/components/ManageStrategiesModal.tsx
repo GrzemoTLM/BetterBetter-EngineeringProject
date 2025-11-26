@@ -1,28 +1,82 @@
 import { X, Plus, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import api from '../services/api';
+import type { Strategy } from '../types/strategies';
 
 interface ManageStrategiesModalProps {
   onClose: () => void;
-  strategies: string[];
-  onStrategiesChange: (strategies: string[]) => void;
+  onStrategiesChange?: (strategies: Strategy[]) => void;
 }
 
 const ManageStrategiesModal = ({
   onClose,
-  strategies,
   onStrategiesChange,
 }: ManageStrategiesModalProps) => {
-  const [newStrategy, setNewStrategy] = useState('');
+  const [strategies, setStrategies] = useState<Strategy[]>([]);
+  const [newStrategyName, setNewStrategyName] = useState('');
+  const [newStrategyDescription, setNewStrategyDescription] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [loadingCreate, setLoadingCreate] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
-  const handleAddStrategy = () => {
-    if (newStrategy.trim() && !strategies.includes(newStrategy.trim())) {
-      onStrategiesChange([...strategies, newStrategy.trim()]);
-      setNewStrategy('');
+  useEffect(() => {
+    fetchStrategies();
+  }, []);
+
+  const fetchStrategies = async () => {
+    try {
+      setLoading(true);
+      const data = await api.getStrategies();
+      setStrategies(data);
+    } catch {
+      // Silently fail
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleDeleteStrategy = (strategyToDelete: string) => {
-    onStrategiesChange(strategies.filter((s) => s !== strategyToDelete));
+  const handleAddStrategy = async () => {
+    if (!newStrategyName.trim()) {
+      return;
+    }
+
+    try {
+      setLoadingCreate(true);
+      const newStrategy = await api.createStrategy({
+        name: newStrategyName.trim(),
+        description: newStrategyDescription.trim() || undefined,
+      });
+
+      const updatedStrategies = [...strategies, newStrategy];
+      setStrategies(updatedStrategies);
+      if (onStrategiesChange) {
+        onStrategiesChange(updatedStrategies);
+      }
+
+      setNewStrategyName('');
+      setNewStrategyDescription('');
+    } catch {
+      // Silently fail
+    } finally {
+      setLoadingCreate(false);
+    }
+  };
+
+  const handleDeleteStrategy = async (id: number) => {
+    try {
+      setDeletingId(id);
+      await api.deleteStrategy(id);
+
+      const updatedStrategies = strategies.filter((s) => s.id !== id);
+      setStrategies(updatedStrategies);
+      if (onStrategiesChange) {
+        onStrategiesChange(updatedStrategies);
+      }
+    } catch {
+      // Silently fail
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -58,24 +112,32 @@ const ManageStrategiesModal = ({
             >
               Add New Strategy
             </label>
-            <div className="flex gap-2">
+            <div className="space-y-2 mb-3">
               <input
                 id="newStrategy"
                 type="text"
-                value={newStrategy}
-                onChange={(e) => setNewStrategy(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Enter strategy name"
-                className="flex-1 px-3 py-2 border border-border-default rounded-md text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-main focus:border-transparent"
+                value={newStrategyName}
+                onChange={(e) => setNewStrategyName(e.target.value)}
+                onKeyDown={handleKeyPress}
+                placeholder="Strategy name"
+                className="w-full px-3 py-2 border border-border-default rounded-md text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-main focus:border-transparent"
               />
-              <button
-                onClick={handleAddStrategy}
-                className="px-4 py-2 rounded-md text-sm font-medium bg-primary-main text-primary-contrast hover:bg-primary-hover transition-colors flex items-center gap-2"
-              >
-                <Plus size={16} />
-                Add
-              </button>
+              <textarea
+                value={newStrategyDescription}
+                onChange={(e) => setNewStrategyDescription(e.target.value)}
+                placeholder="Description (optional)"
+                className="w-full px-3 py-2 border border-border-default rounded-md text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-main focus:border-transparent resize-none"
+                rows={2}
+              />
             </div>
+            <button
+              onClick={handleAddStrategy}
+              disabled={loadingCreate || !newStrategyName.trim()}
+              className="w-full px-4 py-2 rounded-md text-sm font-medium bg-primary-main text-primary-contrast hover:bg-primary-main/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Plus size={16} />
+              {loadingCreate ? 'Adding...' : 'Add Strategy'}
+            </button>
           </div>
 
           {/* Strategies List */}
@@ -83,24 +145,39 @@ const ManageStrategiesModal = ({
             <h3 className="text-sm font-semibold text-text-primary mb-3">
               Existing Strategies ({strategies.length})
             </h3>
-            {strategies.length === 0 ? (
+            {loading ? (
+              <div className="text-center py-8 text-text-secondary">
+                <p className="text-sm">Loading strategies...</p>
+              </div>
+            ) : strategies.length === 0 ? (
               <div className="text-center py-8 text-text-secondary">
                 <p className="text-sm">No strategies yet</p>
                 <p className="text-xs mt-1">Add your first strategy above</p>
               </div>
             ) : (
               <div className="space-y-2">
-                {strategies.map((strategy, index) => (
+                {strategies.map((strategy) => (
                   <div
-                    key={index}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                    key={strategy.id}
+                    className="flex items-start justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                   >
-                    <span className="text-sm font-medium text-text-primary">
-                      {strategy}
-                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-text-primary">
+                        {strategy.name}
+                      </p>
+                      {strategy.description && (
+                        <p className="text-xs text-text-secondary mt-1">
+                          {strategy.description}
+                        </p>
+                      )}
+                      <p className="text-xs text-text-tertiary mt-1">
+                        Created: {new Date(strategy.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
                     <button
-                      onClick={() => handleDeleteStrategy(strategy)}
-                      className="p-2 hover:bg-red-50 rounded transition-colors group"
+                      onClick={() => handleDeleteStrategy(strategy.id)}
+                      disabled={deletingId === strategy.id}
+                      className="ml-2 p-2 hover:bg-red-50 rounded transition-colors group disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
                       title="Delete strategy"
                     >
                       <Trash2
@@ -119,7 +196,7 @@ const ManageStrategiesModal = ({
         <div className="p-6 border-t border-border-default flex justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-md text-sm font-medium bg-primary-main text-primary-contrast hover:bg-primary-hover transition-colors"
+            className="px-4 py-2 rounded-md text-sm font-medium bg-primary-main text-primary-contrast hover:bg-primary-main/90 transition-colors"
           >
             Close
           </button>

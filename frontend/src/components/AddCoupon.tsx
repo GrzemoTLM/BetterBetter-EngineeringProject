@@ -1,10 +1,11 @@
 import { X } from 'lucide-react';
 import UploadCoupon from './UploadCoupon';
 import BetSlip from './BetSlip';
+import type { Strategy } from '../types/strategies';
 
 interface AddCouponProps {
   onClose: () => void;
-  strategies?: string[];
+  strategies?: Strategy[];
 }
 
 const AddCoupon = ({ onClose, strategies = [] }: AddCouponProps) => {

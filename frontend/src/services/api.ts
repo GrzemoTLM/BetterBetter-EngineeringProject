@@ -4,6 +4,7 @@ import type { LoginRequest, RegisterRequest, AuthResponse, UserProfile, TwoFacto
 import type { UserSettings, UpdateSettingsRequest, TwoFactorStartRequest, TwoFactorStartResponse, TwoFactorVerifyRequest, TelegramAuthResponse, TelegramConnectionStatus } from '../types/settings';
 import type { TransactionCreateRequest, TransactionCreateResponse, BookmakerAccountCreateRequest, BookmakerAccountCreateResponse, AvailableBookmaker, Transaction, TransactionSummary } from '../types/finances';
 import type { TicketCategory, CreateTicketRequest, Ticket, CreateCommentRequest, TicketComment } from '../types/tickets';
+import type { Strategy, CreateStrategyRequest } from '../types/strategies';
 import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
 
 class ApiService {
@@ -415,6 +416,51 @@ class ApiService {
         { status }
       );
       return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  // Strategies
+  async getStrategies(): Promise<Strategy[]> {
+    try {
+      const response = await this.axiosInstance.get<Strategy[]>(API_ENDPOINTS.STRATEGIES.LIST);
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async getStrategyDetail(id: number): Promise<Strategy> {
+    try {
+      const response = await this.axiosInstance.get<Strategy>(API_ENDPOINTS.STRATEGIES.DETAIL(id));
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async createStrategy(data: CreateStrategyRequest): Promise<Strategy> {
+    try {
+      const response = await this.axiosInstance.post<Strategy>(API_ENDPOINTS.STRATEGIES.CREATE, data);
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async updateStrategy(id: number, data: CreateStrategyRequest): Promise<Strategy> {
+    try {
+      const response = await this.axiosInstance.patch<Strategy>(API_ENDPOINTS.STRATEGIES.UPDATE(id), data);
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async deleteStrategy(id: number): Promise<void> {
+    try {
+      await this.axiosInstance.delete(API_ENDPOINTS.STRATEGIES.DELETE(id));
     } catch (error) {
       throw new Error(this.getErrorMessage(error));
     }

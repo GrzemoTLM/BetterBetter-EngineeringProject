@@ -1,6 +1,7 @@
 import { Plus, Trash2, Search } from 'lucide-react';
 import { useState } from 'react';
 import SummaryBox from './SummaryBox';
+import type { Strategy } from '../types/strategies';
 
 interface Bet {
   id: string;
@@ -10,18 +11,18 @@ interface Bet {
 }
 
 interface BetSlipProps {
-  strategies?: string[];
+  strategies?: Strategy[];
   selectedStrategy?: string;
   onStrategyChange?: (strategy: string) => void;
 }
 
 const BetSlip = ({
-  strategies = ['Progression', 'Value Betting', 'Arbitrage'],
+  strategies = [],
   selectedStrategy = '',
   onStrategyChange,
 }: BetSlipProps) => {
   const [bookmaker, setBookmaker] = useState('STS');
-  const [strategy, setStrategy] = useState(selectedStrategy || strategies[0] || '');
+  const [strategy, setStrategy] = useState(selectedStrategy || (strategies[0]?.name ?? ''));
   const [bets, setBets] = useState<Bet[]>([
     { id: '1', name: 'Barcelona goals', bet: 'over 2.5', multiplier: '2.11' },
     { id: '2', name: 'Real Madrid win', bet: '1X2', multiplier: '1.85' },
@@ -72,8 +73,8 @@ const BetSlip = ({
           >
             {strategies.length > 0 ? (
               strategies.map((s) => (
-                <option key={s} value={s}>
-                  {s}
+                <option key={s.id} value={s.name}>
+                  {s.name}
                 </option>
               ))
             ) : (

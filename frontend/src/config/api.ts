@@ -36,4 +36,11 @@ export const API_ENDPOINTS = {
     ADD_COMMENT: (id: string) => `/api/tickets/tickets/${id}/add_comment/`,
     COMMENTS: '/api/tickets/comments/',
   },
+  STRATEGIES: {
+    LIST: '/api/analytics/strategies/',
+    CREATE: '/api/analytics/strategies/',
+    DETAIL: (id: number) => `/api/analytics/strategies/${id}/`,
+    UPDATE: (id: number) => `/api/analytics/strategies/${id}/`,
+    DELETE: (id: number) => `/api/analytics/strategies/${id}/`,
+  },
 };

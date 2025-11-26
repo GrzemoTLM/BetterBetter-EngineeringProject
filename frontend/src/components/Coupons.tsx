@@ -4,18 +4,14 @@ import CouponsTable from './CouponsTable';
 import ActionBar from './ActionBar';
 import AddCoupon from './AddCoupon';
 import ManageStrategiesModal from './ManageStrategiesModal';
+import type { Strategy } from '../types/strategies';
 
 const Coupons = () => {
   const [dateRange, setDateRange] = useState('03/03/2024 - 05/04/2024');
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddCoupon, setShowAddCoupon] = useState(false);
   const [showManageStrategies, setShowManageStrategies] = useState(false);
-  const [strategies, setStrategies] = useState([
-    'Progression',
-    'Value Betting',
-    'Arbitrage',
-    'Martingale',
-  ]);
+  const [strategies, setStrategies] = useState<Strategy[]>([]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -88,7 +84,6 @@ const Coupons = () => {
       {showManageStrategies && (
         <ManageStrategiesModal
           onClose={() => setShowManageStrategies(false)}
-          strategies={strategies}
           onStrategiesChange={setStrategies}
         />
       )}
