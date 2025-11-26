@@ -39,6 +39,7 @@ class ApiService {
           this.removeToken();
           window.location.href = '/login';
         }
+
         return Promise.reject(error);
       }
     );
