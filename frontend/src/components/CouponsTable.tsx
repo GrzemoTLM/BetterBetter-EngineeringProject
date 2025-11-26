@@ -3,6 +3,8 @@ import { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
 import api from '../services/api';
 import { useDateFormatter } from '../hooks/useDateFormatter';
 import type { Coupon } from '../types/coupons';
+import { useCurrency } from '../hooks/useCurrency';
+import EditCouponModal from './EditCouponModal';
 
 export interface CouponsTableRef {
   refetch: () => Promise<void>;
@@ -12,7 +14,10 @@ const CouponsTable = forwardRef<CouponsTableRef>((_, ref) => {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editingCouponId, setEditingCouponId] = useState<number | null>(null);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const { formatDateWithoutTime } = useDateFormatter();
+  const { formatCurrency } = useCurrency();
 
   const fetchCoupons = async () => {
     try {
@@ -109,6 +114,16 @@ const CouponsTable = forwardRef<CouponsTableRef>((_, ref) => {
 
   return (
     <div className="overflow-x-auto">
+      {/* Edit Modal */}
+      <EditCouponModal
+        couponId={editingCouponId ?? 0}
+        isOpen={isEditOpen && editingCouponId !== null}
+        onClose={() => setIsEditOpen(false)}
+        onUpdated={async () => {
+          await fetchCoupons();
+          setIsEditOpen(false);
+        }}
+      />
       <table className="w-full">
         <thead>
           <tr className="bg-background-table-header">
@@ -120,6 +135,9 @@ const CouponsTable = forwardRef<CouponsTableRef>((_, ref) => {
             </th>
             <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-table-header">
               Multiplier
+            </th>
+            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-table-header">
+              Payout / Balance
             </th>
             <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-table-header">
               Date
@@ -138,23 +156,56 @@ const CouponsTable = forwardRef<CouponsTableRef>((_, ref) => {
               coupon.bets.map((b) => b.odds)
             );
 
+            const stake = parseFloat(String(coupon.bet_stake)) || 0;
+            const potential = coupon.potential_payout ?? (parseFloat(multiplier) * stake);
+            const statusNorm = (coupon.status || 'pending').toLowerCase();
+
+            let payoutOrBalanceLabel: string;
+            let payoutOrBalanceClass = 'text-text-primary';
+
+            if (statusNorm === 'in_progress' || statusNorm === 'in progress' || statusNorm === 'pending') {
+              payoutOrBalanceLabel = formatCurrency(potential || 0);
+              payoutOrBalanceClass = 'text-blue-700';
+            } else if (statusNorm === 'won') {
+              const net = (potential || 0) - stake;
+              payoutOrBalanceLabel = formatCurrency(net);
+              payoutOrBalanceClass = 'text-green-700';
+            } else if (statusNorm === 'lost') {
+              const net = -stake;
+              payoutOrBalanceLabel = formatCurrency(net);
+              payoutOrBalanceClass = 'text-red-700';
+            } else if (statusNorm === 'cashed out') {
+              const net = (potential || 0) - stake;
+              payoutOrBalanceLabel = formatCurrency(net);
+              payoutOrBalanceClass = net >= 0 ? 'text-green-700' : 'text-red-700';
+            } else {
+              payoutOrBalanceLabel = formatCurrency(potential || 0);
+            }
+
             return (
               <tr
                 key={coupon.id}
-                className="hover:bg-gray-50 transition-colors bg-background-paper group"
+                className="hover:bg-gray-50 transition-colors bg-background-paper group cursor-pointer"
+                onClick={() => {
+                  setEditingCouponId(coupon.id);
+                  setIsEditOpen(true);
+                }}
               >
                 <td className="px-4 py-4 text-sm text-text-primary font-medium">
                   {coupon.coupon_type}
                 </td>
                 <td className="px-4 py-4 text-sm text-text-primary">
-                  ${coupon.bet_stake}
+                  {formatCurrency(stake)}
                 </td>
                 <td className="px-4 py-4 text-sm text-text-primary">
                   {multiplier}
                 </td>
-              <td className="px-4 py-4 text-sm text-text-secondary">
-                {formatDateWithoutTime(coupon.created_at)}
-              </td>
+                <td className={`px-4 py-4 text-sm font-medium ${payoutOrBalanceClass}`}>
+                  {payoutOrBalanceLabel}
+                </td>
+                <td className="px-4 py-4 text-sm text-text-secondary">
+                  {formatDateWithoutTime(coupon.created_at)}
+                </td>
                 <td className="px-4 py-4 text-sm">
                   <span
                     className={`inline-block rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(
@@ -165,7 +216,14 @@ const CouponsTable = forwardRef<CouponsTableRef>((_, ref) => {
                   </span>
                 </td>
                 <td className="px-4 py-4">
-                  <button className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-blue-50 rounded">
+                  <button
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-blue-50 rounded"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingCouponId(coupon.id);
+                      setIsEditOpen(true);
+                    }}
+                  >
                     <Pencil size={16} className="text-primary-main" />
                   </button>
                 </td>

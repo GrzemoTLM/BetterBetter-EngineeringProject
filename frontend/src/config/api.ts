@@ -47,5 +47,6 @@ export const API_ENDPOINTS = {
     LIST: '/api/coupons/coupons/',
     CREATE: '/api/coupons/coupons/',
     BET_TYPES: '/api/coupons/bet-types/',
+    FORCE_WIN: (id: number) => `/api/coupons/coupons/${id}/force-win/`,
   },
 };

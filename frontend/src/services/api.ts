@@ -614,6 +614,15 @@ class ApiService {
       throw new Error(this.getErrorMessage(error));
     }
   }
+
+  async forceWinCoupon(couponId: number): Promise<Coupon> {
+    try {
+      const response = await this.axiosInstance.post<Coupon>(API_ENDPOINTS.COUPONS.FORCE_WIN(couponId));
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
 }
 
 export default new ApiService();
