@@ -1,143 +1,79 @@
 import {
   HelpCircle,
   Plus,
-  MessageSquare,
+  FileText,
+  AlertCircle,
   Clock,
   CheckCircle2,
   XCircle,
-  AlertCircle,
   Send,
-  FileText,
+  MessageSquare,
 } from 'lucide-react';
-import { useState } from 'react';
-
-interface Ticket {
-  id: string;
-  title: string;
-  category: string;
-  status: 'open' | 'in-progress' | 'resolved' | 'closed';
-  priority: 'low' | 'medium' | 'high';
-  createdAt: string;
-  updatedAt: string;
-  description: string;
-  messages?: TicketMessage[];
-}
-
-interface TicketMessage {
-  id: string;
-  author: string;
-  content: string;
-  timestamp: string;
-  isAdmin: boolean;
-}
+import { useState, useEffect } from 'react';
+import api from '../services/api';
+import type { TicketCategory, Ticket, CreateTicketRequest } from '../types/tickets';
 
 const Help = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [categories, setCategories] = useState<TicketCategory[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [loadingTickets, setLoadingTickets] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [commentContent, setCommentContent] = useState('');
+  const [loadingComment, setLoadingComment] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
-    category: 'technical',
+    category: '',
     priority: 'medium',
     description: '',
   });
 
-  // Dummy tickets data
-  const [tickets, setTickets] = useState<Ticket[]>([
-    {
-      id: '1',
-      title: 'Cannot add new bookmaker',
-      category: 'technical',
-      status: 'in-progress',
-      priority: 'high',
-      createdAt: '2024-01-15',
-      updatedAt: '2024-01-16',
-      description:
-        'I am unable to add a new bookmaker to my account. The form keeps showing an error.',
-      messages: [
-        {
-          id: '1',
-          author: 'You',
-          content:
-            'I am unable to add a new bookmaker to my account. The form keeps showing an error.',
-          timestamp: '2024-01-15 10:30',
-          isAdmin: false,
-        },
-        {
-          id: '2',
-          author: 'Support Team',
-          content:
-            'Thank you for reporting this issue. We are investigating the problem and will get back to you shortly.',
-          timestamp: '2024-01-15 14:20',
-          isAdmin: true,
-        },
-        {
-          id: '3',
-          author: 'Support Team',
-          content:
-            'We have identified the issue. Please try clearing your browser cache and try again. If the problem persists, please let us know.',
-          timestamp: '2024-01-16 09:15',
-          isAdmin: true,
-        },
-      ],
-    },
-    {
-      id: '2',
-      title: 'Question about statistics calculation',
-      category: 'question',
-      status: 'resolved',
-      priority: 'medium',
-      createdAt: '2024-01-10',
-      updatedAt: '2024-01-12',
-      description:
-        'How is the ROI calculated in the Statistics view? I see different values than expected.',
-      messages: [
-        {
-          id: '1',
-          author: 'You',
-          content:
-            'How is the ROI calculated in the Statistics view? I see different values than expected.',
-          timestamp: '2024-01-10 11:00',
-          isAdmin: false,
-        },
-        {
-          id: '2',
-          author: 'Support Team',
-          content:
-            'ROI is calculated as (Total Profit / Total Staked) * 100. The calculation includes all bets within the selected date range. If you need more details, please check our documentation.',
-          timestamp: '2024-01-11 15:30',
-          isAdmin: true,
-        },
-      ],
-    },
-    {
-      id: '3',
-      title: 'Feature request: Export to Excel',
-      category: 'feature',
-      status: 'open',
-      priority: 'low',
-      createdAt: '2024-01-20',
-      updatedAt: '2024-01-20',
-      description:
-        'It would be great to have an option to export statistics data directly to Excel format.',
-    },
-    {
-      id: '4',
-      title: 'Account settings not saving',
-      category: 'bug',
-      status: 'closed',
-      priority: 'high',
-      createdAt: '2024-01-05',
-      updatedAt: '2024-01-08',
-      description:
-        'Changes made in Settings are not being saved. I have tried multiple times.',
-    },
-  ]);
+  // Fetch categories on component mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setLoadingCategories(true);
+        const data = await api.getTicketCategories();
+        setCategories(data);
+        if (data.length > 0) {
+          setFormData(prev => ({ ...prev, category: data[0].name }));
+        }
+      } catch (error) {
+        console.error('Failed to fetch ticket categories:', error);
+        setError('Failed to load categories');
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  // Fetch tickets on component mount
+  useEffect(() => {
+    const fetchTickets = async () => {
+      try {
+        setLoadingTickets(true);
+        const data = await api.getTickets();
+        setTickets(data);
+      } catch (error) {
+        console.error('Failed to fetch tickets:', error);
+        setError('Failed to load tickets');
+      } finally {
+        setLoadingTickets(false);
+      }
+    };
+
+    fetchTickets();
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'open':
         return 'bg-blue-100 text-blue-800';
-      case 'in-progress':
+      case 'in_progress':
         return 'bg-yellow-100 text-yellow-800';
       case 'resolved':
         return 'bg-green-100 text-green-800';
@@ -152,7 +88,7 @@ const Help = () => {
     switch (status) {
       case 'open':
         return AlertCircle;
-      case 'in-progress':
+      case 'in_progress':
         return Clock;
       case 'resolved':
         return CheckCircle2;
@@ -171,44 +107,94 @@ const Help = () => {
         return 'text-yellow-600';
       case 'high':
         return 'text-red-600';
+      case 'critical':
+        return 'text-red-800';
       default:
         return 'text-gray-600';
     }
   };
 
-  const handleSubmitTicket = (e: React.FormEvent) => {
+  const handleSubmitTicket = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newTicket: Ticket = {
-      id: String(tickets.length + 1),
-      title: formData.title,
-      category: formData.category,
-      status: 'open',
-      priority: formData.priority as 'low' | 'medium' | 'high',
-      createdAt: new Date().toISOString().split('T')[0],
-      updatedAt: new Date().toISOString().split('T')[0],
-      description: formData.description,
-      messages: [
-        {
-          id: '1',
-          author: 'You',
-          content: formData.description,
-          timestamp: new Date().toLocaleString(),
-          isAdmin: false,
-        },
-      ],
-    };
-    setTickets([newTicket, ...tickets]);
-    setFormData({ title: '', category: 'technical', priority: 'medium', description: '' });
-    setShowCreateForm(false);
+
+    if (!formData.title.trim() || !formData.description.trim()) {
+      setError('Title and description are required');
+      return;
+    }
+
+    try {
+      const createData: CreateTicketRequest = {
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        priority: formData.priority as 'low' | 'medium' | 'high' | 'critical',
+      };
+
+      const newTicket = await api.createTicket(createData);
+      setTickets([newTicket, ...tickets]);
+      setFormData({
+        title: '',
+        category: categories.length > 0 ? categories[0].name : '',
+        priority: 'medium',
+        description: ''
+      });
+      setShowCreateForm(false);
+      setError(null);
+    } catch (error) {
+      console.error('Failed to create ticket:', error);
+      setError('Failed to create ticket. Please try again.');
+    }
   };
 
-  const categories = [
-    { value: 'technical', label: 'Technical Issue' },
-    { value: 'question', label: 'Question' },
-    { value: 'feature', label: 'Feature Request' },
-    { value: 'bug', label: 'Bug Report' },
-    { value: 'account', label: 'Account Issue' },
-  ];
+  const handleSubmitComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!commentContent.trim() || !selectedTicket) {
+      return;
+    }
+
+    try {
+      setLoadingComment(true);
+      const newComment = await api.addCommentToTicket(selectedTicket.id, {
+        content: commentContent,
+      });
+
+      const existingComments = selectedTicket.comments || [];
+
+      // Update the selected ticket with the new comment
+      setSelectedTicket({
+        ...selectedTicket,
+        comments: [...existingComments, newComment],
+      });
+
+      // Update the ticket in the list
+      setTickets(
+        tickets.map((ticket) =>
+          ticket.id === selectedTicket.id
+            ? { ...ticket, comments: [...(ticket.comments || []), newComment] }
+            : ticket
+        )
+      );
+
+      setCommentContent('');
+      setError(null);
+    } catch (error) {
+      console.error('Failed to add comment:', error);
+      setError('Failed to add comment. Please try again.');
+    } finally {
+      setLoadingComment(false);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
 
   return (
     <div className="flex flex-col gap-5">
@@ -216,13 +202,23 @@ const Help = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-4xl font-bold text-text-primary">Help & Support</h1>
         <button
-          onClick={() => setShowCreateForm(!showCreateForm)}
-          className="bg-primary-main text-primary-contrast rounded-lg px-4 py-2 hover:bg-primary-hover transition-colors flex items-center gap-2 font-medium text-sm"
+          onClick={() => {
+            setShowCreateForm(!showCreateForm);
+            setError(null);
+          }}
+          className="bg-primary-main text-primary-contrast rounded-lg px-4 py-2 hover:bg-primary-main/90 transition-colors flex items-center gap-2 font-medium text-sm"
         >
           <Plus size={18} />
           Create Ticket
         </button>
       </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">
+          {error}
+        </div>
+      )}
 
       {/* Create Ticket Form */}
       {showCreateForm && (
@@ -263,12 +259,19 @@ const Help = () => {
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                   className="w-full px-3 py-2 border border-border-default rounded-md text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-main focus:border-transparent"
                   required
+                  disabled={loadingCategories}
                 >
-                  {categories.map((cat) => (
-                    <option key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </option>
-                  ))}
+                  {loadingCategories ? (
+                    <option value="">Loading categories...</option>
+                  ) : categories.length === 0 ? (
+                    <option value="">No categories available</option>
+                  ) : (
+                    categories.map((cat) => (
+                      <option key={cat.name} value={cat.name}>
+                        {cat.description}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
 
@@ -291,6 +294,7 @@ const Help = () => {
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
                   <option value="high">High</option>
+                  <option value="critical">Critical</option>
                 </select>
               </div>
             </div>
@@ -322,10 +326,11 @@ const Help = () => {
                   setShowCreateForm(false);
                   setFormData({
                     title: '',
-                    category: 'technical',
+                    category: categories.length > 0 ? categories[0].name : '',
                     priority: 'medium',
                     description: '',
                   });
+                  setError(null);
                 }}
                 className="px-4 py-2 rounded-md text-sm font-medium text-text-secondary hover:bg-gray-100 transition-colors"
               >
@@ -333,7 +338,7 @@ const Help = () => {
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 rounded-md text-sm font-medium bg-primary-main text-primary-contrast hover:bg-primary-hover transition-colors flex items-center gap-2"
+                className="px-4 py-2 rounded-md text-sm font-medium bg-primary-main text-primary-contrast hover:bg-primary-main/90 transition-colors flex items-center gap-2"
               >
                 <Send size={16} />
                 Submit Ticket
@@ -363,7 +368,7 @@ const Help = () => {
                 <div className="flex items-center gap-3 mb-2">
                   <button
                     onClick={() => setSelectedTicket(null)}
-                    className="text-text-secondary hover:text-text-primary transition-colors"
+                    className="text-text-secondary hover:text-text-primary transition-colors text-sm font-medium"
                   >
                     ← Back to tickets
                   </button>
@@ -377,69 +382,103 @@ const Help = () => {
                       selectedTicket.status
                     )}`}
                   >
-                    {selectedTicket.status.replace('-', ' ').toUpperCase()}
+                    {selectedTicket.status_display}
                   </span>
                   <span
                     className={`text-xs font-medium ${getPriorityColor(
                       selectedTicket.priority
                     )}`}
                   >
-                    Priority: {selectedTicket.priority.toUpperCase()}
+                    Priority: {selectedTicket.priority_display}
                   </span>
                   <span className="text-xs text-text-secondary">
-                    Created: {selectedTicket.createdAt}
+                    Created: {formatDate(selectedTicket.created_at)}
                   </span>
                   <span className="text-xs text-text-secondary">
-                    Updated: {selectedTicket.updatedAt}
+                    Updated: {formatDate(selectedTicket.updated_at)}
                   </span>
                 </div>
+                <p className="text-sm text-text-secondary mt-4 whitespace-pre-wrap">
+                  {selectedTicket.description}
+                </p>
               </div>
             </div>
 
-            {/* Messages */}
-            <div className="space-y-4 mt-6">
-              {selectedTicket.messages?.map((message) => (
-                <div
-                  key={message.id}
-                  className={`p-4 rounded-lg ${
-                    message.isAdmin
-                      ? 'bg-blue-50 border border-blue-200'
-                      : 'bg-gray-50 border border-gray-200'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-sm text-text-primary">
-                      {message.isAdmin ? '👤 Support Team' : '👤 You'}
-                    </span>
-                    <span className="text-xs text-text-secondary">
-                      {message.timestamp}
-                    </span>
-                  </div>
-                  <p className="text-sm text-text-secondary whitespace-pre-wrap">
-                    {message.content}
-                  </p>
+            {/* Comments */}
+            {selectedTicket.comments && selectedTicket.comments.length > 0 && (
+              <div className="mt-6 pt-6 border-t border-border-default">
+                <h4 className="text-sm font-semibold text-text-primary mb-4">
+                  Comments ({selectedTicket.comments.length})
+                </h4>
+                <div className="space-y-4">
+                  {selectedTicket.comments.map((comment) => (
+                    <div
+                      key={comment.id}
+                      className={`p-4 rounded-lg ${
+                        comment.is_staff_comment
+                          ? 'bg-blue-50 border border-blue-200'
+                          : 'bg-gray-50 border border-gray-200'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm text-text-primary">
+                            {comment.author.first_name || comment.author.username}
+                          </span>
+                          {comment.is_staff_comment && (
+                            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                              Support Team
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-xs text-text-secondary">
+                          {formatDate(comment.created_at)}
+                        </span>
+                      </div>
+                      <p className="text-sm text-text-secondary whitespace-pre-wrap">
+                        {comment.content}
+                      </p>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
 
             {/* Reply Section */}
             <div className="mt-6 pt-6 border-t border-border-default">
               <h4 className="text-sm font-medium text-text-primary mb-3">Add Reply</h4>
-              <textarea
-                placeholder="Type your message..."
-                rows={4}
-                className="w-full px-3 py-2 border border-border-default rounded-md text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-main focus:border-transparent resize-none mb-3"
-              />
-              <button className="px-4 py-2 rounded-md text-sm font-medium bg-primary-main text-primary-contrast hover:bg-primary-hover transition-colors flex items-center gap-2">
-                <Send size={16} />
-                Send Reply
-              </button>
+              <form onSubmit={handleSubmitComment} className="space-y-3">
+                <textarea
+                  placeholder="Type your message..."
+                  rows={4}
+                  value={commentContent}
+                  onChange={(e) => setCommentContent(e.target.value)}
+                  className="w-full px-3 py-2 border border-border-default rounded-md text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-main focus:border-transparent resize-none"
+                />
+                <button
+                  type="submit"
+                  disabled={loadingComment || !commentContent.trim()}
+                  className="px-4 py-2 rounded-md text-sm font-medium bg-primary-main text-primary-contrast hover:bg-primary-main/90 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Send size={16} />
+                  {loadingComment ? 'Sending...' : 'Send Reply'}
+                </button>
+              </form>
             </div>
           </div>
         ) : (
           /* Tickets List View */
           <div className="divide-y divide-border-default">
-            {tickets.length === 0 ? (
+            {loadingTickets ? (
+              <div className="p-8 text-center text-text-secondary">
+                <div className="flex justify-center mb-3">
+                  <div className="animate-spin">
+                    <Clock size={32} className="text-primary-main" />
+                  </div>
+                </div>
+                <p className="text-sm">Loading tickets...</p>
+              </div>
+            ) : tickets.length === 0 ? (
               <div className="p-8 text-center text-text-secondary">
                 <HelpCircle size={48} className="mx-auto mb-3 opacity-50" />
                 <p className="text-sm">No tickets yet</p>
@@ -466,22 +505,22 @@ const Help = () => {
                             )}`}
                           >
                             <StatusIcon size={12} />
-                            {ticket.status.replace('-', ' ').toUpperCase()}
+                            {ticket.status_display}
                           </span>
                         </div>
                         <p className="text-sm text-text-secondary mb-3 line-clamp-2">
                           {ticket.description}
                         </p>
-                        <div className="flex items-center gap-4 text-xs text-text-secondary">
-                          <span className="capitalize">{ticket.category}</span>
+                        <div className="flex items-center gap-4 text-xs text-text-secondary flex-wrap">
+                          <span className="capitalize">{ticket.category_display}</span>
                           <span className={`font-medium ${getPriorityColor(ticket.priority)}`}>
-                            {ticket.priority.toUpperCase()} Priority
+                            {ticket.priority_display} Priority
                           </span>
-                          <span>Created: {ticket.createdAt}</span>
-                          {ticket.messages && ticket.messages.length > 1 && (
+                          <span>Created: {formatDate(ticket.created_at)}</span>
+                          {ticket.comments && ticket.comments.length > 0 && (
                             <span className="flex items-center gap-1">
                               <MessageSquare size={12} />
-                              {ticket.messages.length} messages
+                              {ticket.comments.length} comments
                             </span>
                           )}
                         </div>

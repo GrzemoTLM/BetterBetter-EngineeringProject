@@ -28,4 +28,12 @@ export const API_ENDPOINTS = {
     BOOKMAKER_ACCOUNT_CREATE: '/api/finances/bookmakers/accounts/create/',
     BOOKMAKER_ACCOUNTS_LIST: '/api/finances/bookmakers/accounts/',
   },
+  TICKETS: {
+    CATEGORIES: '/api/tickets/categories/',
+    LIST: '/api/tickets/tickets/',
+    CREATE: '/api/tickets/tickets/',
+    DETAIL: (id: string) => `/api/tickets/tickets/${id}/`,
+    ADD_COMMENT: (id: string) => `/api/tickets/tickets/${id}/add_comment/`,
+    COMMENTS: '/api/tickets/comments/',
+  },
 };

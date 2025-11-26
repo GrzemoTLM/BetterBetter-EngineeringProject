@@ -3,6 +3,7 @@ import type { AxiosInstance } from 'axios';
 import type { LoginRequest, RegisterRequest, AuthResponse, UserProfile, TwoFactorRequest, PasswordResetRequestRequest, PasswordResetConfirmRequest, PasswordResetResponse } from '../types/auth';
 import type { UserSettings, UpdateSettingsRequest, TwoFactorStartRequest, TwoFactorStartResponse, TwoFactorVerifyRequest, TelegramAuthResponse, TelegramConnectionStatus } from '../types/settings';
 import type { TransactionCreateRequest, TransactionCreateResponse, BookmakerAccountCreateRequest, BookmakerAccountCreateResponse, AvailableBookmaker, Transaction, TransactionSummary } from '../types/finances';
+import type { TicketCategory, CreateTicketRequest, Ticket, CreateCommentRequest, TicketComment } from '../types/tickets';
 import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
 
 class ApiService {
@@ -339,6 +340,70 @@ class ApiService {
         }
       }
 
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async getTicketCategories(): Promise<TicketCategory[]> {
+    try {
+      const response = await this.axiosInstance.get<TicketCategory[]>(API_ENDPOINTS.TICKETS.CATEGORIES);
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async createTicket(data: CreateTicketRequest): Promise<Ticket> {
+    try {
+      const response = await this.axiosInstance.post<Ticket>(API_ENDPOINTS.TICKETS.CREATE, data);
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async getTickets(queryParams?: Record<string, unknown>): Promise<Ticket[]> {
+    try {
+      const response = await this.axiosInstance.get<Ticket[]>(API_ENDPOINTS.TICKETS.LIST, {
+        params: queryParams,
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async getTicketDetail(id: string): Promise<Ticket> {
+    try {
+      const response = await this.axiosInstance.get<Ticket>(API_ENDPOINTS.TICKETS.DETAIL(id));
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async addCommentToTicket(ticketId: string | number, data: CreateCommentRequest): Promise<TicketComment> {
+    try {
+      const response = await this.axiosInstance.post<TicketComment>(
+        API_ENDPOINTS.TICKETS.ADD_COMMENT(ticketId.toString()),
+        data
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async getTicketComments(ticketId: string | number): Promise<TicketComment[]> {
+    try {
+      const response = await this.axiosInstance.get<TicketComment[]>(
+        API_ENDPOINTS.TICKETS.COMMENTS,
+        {
+          params: { ticket_id: ticketId },
+        }
+      );
       return response.data;
     } catch (error) {
       throw new Error(this.getErrorMessage(error));

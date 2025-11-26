@@ -22,6 +22,14 @@ export const DateFormatProvider: React.FC<DateFormatProviderProps> = ({ children
   useEffect(() => {
     const loadDateFormat = async () => {
       try {
+        // Only load if user is authenticated
+        const token = apiService.getToken();
+        if (!token) {
+          setDateFormatState('DD/MM/YYYY');
+          setIsLoading(false);
+          return;
+        }
+
         const settings = await apiService.getSettings();
         setDateFormatState(settings.date_format || 'DD/MM/YYYY');
       } catch (error) {

@@ -26,6 +26,14 @@ export const CurrencyProvider: React.FC<CurrencyProviderProps> = ({ children }) 
   useEffect(() => {
     const loadCurrency = async () => {
       try {
+        // Only load if user is authenticated
+        const token = apiService.getToken();
+        if (!token) {
+          setCurrencyState('USD');
+          setIsLoading(false);
+          return;
+        }
+
         const settings = await apiService.getSettings();
         setCurrencyState((settings.basic_currency as Currency) || 'USD');
       } catch (error) {
