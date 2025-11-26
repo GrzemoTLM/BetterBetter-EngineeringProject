@@ -1,6 +1,5 @@
 // pl.json - Polskie tłumaczenia
 export const pl = {
-  // Common
   common: {
     save: 'Zapisz',
     cancel: 'Anuluj',
@@ -12,8 +11,7 @@ export const pl = {
     success: 'Sukces',
     notSet: 'Nie ustawiono',
   },
-  
-  // Navigation
+
   nav: {
     dashboard: 'Dashboard',
     moneyFlow: 'Przepływy Pieniędzy',
@@ -22,7 +20,6 @@ export const pl = {
     help: 'Pomoc',
   },
 
-  // Dashboard
   dashboard: {
     welcomeBack: 'WITAJ Z POWROTEM',
     monthlyBalance: 'Saldo miesięczne',
@@ -31,7 +28,6 @@ export const pl = {
     recentCoupons: 'Ostatnie kupony',
   },
 
-  // Money Flow
   moneyFlow: {
     currentBalance: 'Aktualne saldo',
     totalDeposited: 'Całkowicie wpłacone',
@@ -43,7 +39,6 @@ export const pl = {
     exportToPDF: 'Eksportuj do PDF',
   },
 
-  // Settings
   settings: {
     title: 'Ustawienia',
     nickname: 'Pseudonim',
@@ -58,7 +53,6 @@ export const pl = {
     notificationsGate: 'Kanał powiadomień',
   },
 
-  // Coupons
   coupons: {
     title: 'Kupony',
     status: 'Status',
@@ -69,7 +63,6 @@ export const pl = {
     lost: 'Przegrane',
   },
 
-  // Messages
   messages: {
     settingsSaved: 'Ustawienia zapisane pomyślnie',
     settingsError: 'Błąd zapisywania ustawień',
@@ -77,7 +70,6 @@ export const pl = {
     failedToLoadSettings: 'Nie udało się załadować ustawień',
   },
 
-  // Sidebar
   sidebar: {
     dashboard: 'Dashboard',
     coupons: 'Kupony',
@@ -92,7 +84,6 @@ export const pl = {
 };
 
 export const en = {
-  // Common
   common: {
     save: 'Save',
     cancel: 'Cancel',
@@ -105,7 +96,6 @@ export const en = {
     notSet: 'Not set',
   },
 
-  // Navigation
   nav: {
     dashboard: 'Dashboard',
     moneyFlow: 'Money Flow',
@@ -114,7 +104,6 @@ export const en = {
     help: 'Help',
   },
 
-  // Dashboard
   dashboard: {
     welcomeBack: 'WELCOME BACK',
     monthlyBalance: 'Monthly balance',
@@ -123,7 +112,6 @@ export const en = {
     recentCoupons: 'Recent coupons',
   },
 
-  // Money Flow
   moneyFlow: {
     currentBalance: 'Current Balance',
     totalDeposited: 'Total Deposited',
@@ -135,7 +123,6 @@ export const en = {
     exportToPDF: 'Export to PDF',
   },
 
-  // Settings
   settings: {
     title: 'Settings',
     nickname: 'Nickname',
@@ -150,7 +137,6 @@ export const en = {
     notificationsGate: 'Notifications gate',
   },
 
-  // Coupons
   coupons: {
     title: 'Coupons',
     status: 'Status',
@@ -161,7 +147,6 @@ export const en = {
     lost: 'Lost',
   },
 
-  // Messages
   messages: {
     settingsSaved: 'Settings saved successfully',
     settingsError: 'Error saving settings',
@@ -169,7 +154,6 @@ export const en = {
     failedToLoadSettings: 'Failed to load settings',
   },
 
-  // Sidebar
   sidebar: {
     dashboard: 'Dashboard',
     coupons: 'Coupons',
