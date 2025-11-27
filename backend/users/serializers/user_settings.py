@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from coupons.models import Currency, Discipline, BetTypeDict
+from coupons.models import Currency
 from ..models import UserSettings, TelegramAuthCode
 from ..models.choices import TwoFactorMethod
 from django_otp.plugins.otp_totp.models import TOTPDevice
@@ -27,16 +27,6 @@ class UserSettingsSerializer(serializers.ModelSerializer):
     )
     telegram_auth_code = serializers.SerializerMethodField(read_only=True)
     two_factor_enabled = serializers.BooleanField(required=False)
-    favourite_disciplines = serializers.PrimaryKeyRelatedField(
-        queryset=Discipline.objects.all(),
-        many=True,
-        required=False,
-    )
-    favourite_bet_types = serializers.PrimaryKeyRelatedField(
-        queryset=BetTypeDict.objects.all(),
-        many=True,
-        required=False,
-    )
 
     class Meta:
         model = UserSettings
@@ -54,8 +44,6 @@ class UserSettingsSerializer(serializers.ModelSerializer):
             'two_factor_enabled',
             'two_factor_method',
             'telegram_auth_code',
-            'favourite_disciplines',
-            'favourite_bet_types',
         ]
         read_only_fields = ['two_factor_method', 'telegram_auth_code']
 
@@ -89,10 +77,6 @@ class UserSettingsSerializer(serializers.ModelSerializer):
                 for v in validated_data['predefined_bet_values']
             ]
 
-        # Pobierz ManyToMany pola
-        favourite_disciplines = validated_data.pop('favourite_disciplines', None)
-        favourite_bet_types = validated_data.pop('favourite_bet_types', None)
-
         for field in [
             'notification_gate', 'notification_gate_ref', 'nickname', 'auto_coupon_payoff',
             'monthly_budget_limit', 'locale', 'date_format', 'preferred_currency', 'predefined_bet_values'
@@ -107,11 +91,4 @@ class UserSettingsSerializer(serializers.ModelSerializer):
                 instance.two_factor_method = TwoFactorMethod.NONE
                 instance.two_factor_secret = None
         instance.save()
-
-        # Zaktualizuj ManyToMany relacje
-        if favourite_disciplines is not None:
-            instance.favourite_disciplines.set(favourite_disciplines)
-        if favourite_bet_types is not None:
-            instance.favourite_bet_types.set(favourite_bet_types)
-
         return instance
