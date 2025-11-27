@@ -1,4 +1,4 @@
-import { Plus, Trash2, Search, Check } from 'lucide-react';
+import { Plus, Trash2, Search, Check, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import api from '../services/api';
 import type { Strategy } from '../types/strategies';
@@ -34,6 +34,10 @@ const BetSlip = ({
   const [betTypes, setBetTypes] = useState<BetTypeOption[]>([]);
   const [disciplines, setDisciplines] = useState<DisciplineOption[]>([]);
   const [couponBookmakerAccountId, setCouponBookmakerAccountId] = useState<number | null>(null);
+  const [disciplineModalOpen, setDisciplineModalOpen] = useState<{ betId: number | null }>({ betId: null });
+  const [betTypeModalOpen, setBetTypeModalOpen] = useState<{ betId: number | null }>({ betId: null });
+  const [disciplineSearchQuery, setDisciplineSearchQuery] = useState('');
+  const [betTypeSearchQuery, setBetTypeSearchQuery] = useState('');
   const [couponBookmakerName, setCouponBookmakerName] = useState<string>('');
   const [strategy, setStrategy] = useState(selectedStrategy || (strategies[0]?.name ?? ''));
   const [bets, setBets] = useState<Bet[]>([]);
@@ -273,8 +277,46 @@ const BetSlip = ({
     setBets([...bets, newBet]);
   };
 
-  const handleBetChange = (id: number, field: keyof Bet, value: string) => {
-    setBets(bets.map((bet) => (bet.id === id ? { ...bet, [field]: value } : bet)));
+  const handleBetChange = async (id: number, field: keyof Bet, value: string) => {
+    setBets(prevBets => {
+      return prevBets.map((bet) => {
+        if (bet.id === id) {
+          // For discipline, convert to number (ID)
+          if (field === 'discipline') {
+            if (!value || value === '') {
+              return { ...bet, discipline: null };
+            }
+
+            const disciplineId = parseInt(value, 10);
+
+            if (!isNaN(disciplineId)) {
+              return { ...bet, discipline: disciplineId };
+            }
+
+            return { ...bet, discipline: null };
+          }
+
+          return { ...bet, [field]: value };
+        }
+
+        return bet;
+      });
+    });
+
+    // If discipline changed, fetch bet types for that discipline
+    if (field === 'discipline' && value) {
+      try {
+        const disciplineId = parseInt(value, 10);
+
+        if (!isNaN(disciplineId)) {
+          const filtered = await api.fetchBetTypesByDiscipline(disciplineId);
+
+          setBetTypes(filtered);
+        }
+      } catch (error) {
+        console.error('Error fetching bet types for discipline:', error);
+      }
+    }
   };
 
   const handleSaveAndExit = async () => {
@@ -444,46 +486,41 @@ const BetSlip = ({
                     />
                   </td>
                   <td className="px-4 py-3 text-sm">
-                    <select
-                      value={bet.discipline ?? ''}
-                      onChange={(e) => handleBetChange(bet.id, 'discipline', e.target.value)}
+                    <button
+                      type="button"
+                      onClick={() => !bet.confirmed && setDisciplineModalOpen({ betId: bet.id })}
                       disabled={bet.confirmed}
-                      className={`w-full px-2 py-1 border border-default rounded text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-main ${
-                        bet.confirmed ? 'bg-gray-50 cursor-not-allowed opacity-75' : ''
+                      className={`w-full px-2 py-1 border border-default rounded text-text-primary text-left focus:outline-none focus:ring-2 focus:ring-primary-main ${
+                        bet.confirmed ? 'bg-gray-50 cursor-not-allowed opacity-75' : 'hover:bg-gray-50 cursor-pointer'
                       }`}
                     >
-                      <option value="">Select discipline</option>
-                      {disciplines && disciplines.length > 0 ? (
-                        disciplines.map((d) => (
-                          <option key={d.id} value={d.id}>{d.code}{d.name ? ` — ${d.name}` : ''}</option>
-                        ))
-                      ) : (
-                        <option disabled>Loading disciplines...</option>
-                      )}
-                    </select>
+                      {bet.discipline != null 
+                        ? (() => {
+                            const disciplineId = typeof bet.discipline === 'number' ? bet.discipline : parseInt(String(bet.discipline), 10);
+                            const selectedDiscipline = disciplines.find(d => d.id === disciplineId);
+                            return selectedDiscipline?.name ? selectedDiscipline.name : 'Select discipline';
+                          })()
+                        : 'Select discipline'}
+                    </button>
                   </td>
                   <td className="px-4 py-3 text-sm">
-                    <select
-                      value={bet.bet_type}
-                      onChange={(e) => handleBetChange(bet.id, 'bet_type', e.target.value)}
+                    <button
+                      type="button"
+                      onClick={() => !bet.confirmed && setBetTypeModalOpen({ betId: bet.id })}
                       disabled={bet.confirmed}
-                      className={`w-full px-2 py-1 border border-default rounded text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-main ${
-                        bet.confirmed ? 'bg-gray-50 cursor-not-allowed opacity-75' : ''
+                      className={`w-full px-2 py-1 border border-default rounded text-text-primary text-left focus:outline-none focus:ring-2 focus:ring-primary-main ${
+                        bet.confirmed ? 'bg-gray-50 cursor-not-allowed opacity-75' : 'hover:bg-gray-50 cursor-pointer'
                       }`}
                     >
-                      <option value="">Select bet type</option>
-                      {betTypes && betTypes.length > 0 ? (
-                        betTypes.map((type) => (
-                          type && type.code ? (
-                            <option key={type.code} value={type.id ?? type.code}>
-                              {type.code}
-                            </option>
-                          ) : null
-                        ))
-                      ) : (
-                        <option disabled>Loading bet types...</option>
-                      )}
-                    </select>
+                      {bet.bet_type
+                        ? (() => {
+                            const selectedType = betTypes.find(t => t.code === bet.bet_type);
+                            return selectedType
+                              ? `${selectedType.code} - ${selectedType.description ?? selectedType.code}`
+                              : 'Select bet type';
+                          })()
+                        : 'Select bet type'}
+                    </button>
                   </td>
                   <td className="px-4 py-3 text-sm">
                     <input
@@ -626,6 +663,209 @@ const BetSlip = ({
           {loading ? 'Saving...' : 'Save and exit'}
         </button>
       </div>
+
+      {/* Discipline Selection Modal */}
+      {disciplineModalOpen.betId !== null && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-background-paper rounded-xl shadow-lg w-full max-w-md p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-text-primary">Select Discipline</h2>
+              <button
+                onClick={() => {
+                  setDisciplineModalOpen({ betId: null });
+                  setDisciplineSearchQuery('');
+                }}
+                className="p-2 hover:bg-background-table-header rounded-lg transition-colors"
+              >
+                <X size={20} className="text-text-secondary" />
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <input
+                type="text"
+                value={disciplineSearchQuery}
+                onChange={(e) => setDisciplineSearchQuery(e.target.value)}
+                placeholder="Search disciplines..."
+                className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-main"
+              />
+            </div>
+
+            <div className="space-y-2 mb-6 max-h-80 overflow-y-auto">
+              {(() => {
+                const filtered = disciplines.filter(d =>
+                  (d.name?.toLowerCase() || '').includes(disciplineSearchQuery.toLowerCase()) ||
+                  (d.code?.toLowerCase() || '').includes(disciplineSearchQuery.toLowerCase())
+                );
+
+                const currentBet = bets.find(b => b.id === disciplineModalOpen.betId);
+                const currentDisciplineId = currentBet?.discipline
+                  ? (typeof currentBet.discipline === 'number' ? currentBet.discipline : parseInt(String(currentBet.discipline), 10))
+                  : null;
+
+                return filtered.length > 0 ? (
+                  filtered.map((discipline) => {
+                    const isSelected = currentDisciplineId === discipline.id;
+
+                    return (
+                      <button
+                        key={discipline.id}
+                        onClick={async () => {
+                          if (disciplineModalOpen.betId !== null && discipline.id) {
+                            setBets(prevBets => {
+                              return prevBets.map((bet) => {
+                                if (bet.id === disciplineModalOpen.betId) {
+                                  return { ...bet, discipline: discipline.id, bet_type: '' };
+                                }
+
+                                return bet;
+                              });
+                            });
+
+                            try {
+                              const filtered = await api.fetchBetTypesByDiscipline(discipline.id);
+
+                              setBetTypes(filtered);
+                            } catch (error) {
+                              console.error('Error fetching bet types for discipline:', error);
+                            }
+
+                            setDisciplineModalOpen({ betId: null });
+                            setDisciplineSearchQuery('');
+                          }
+                        }}
+                        className={`w-full flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors text-left text-sm ${
+                          isSelected
+                            ? 'border-primary-main bg-blue-50'
+                            : 'border-border-light hover:border-border-medium hover:bg-gray-50'
+                        }`}
+                      >
+                        <div>
+                          <div className="font-medium text-text-primary">{discipline.name}</div>
+                        </div>
+                        {isSelected && (
+                          <Check size={16} className="text-primary-main" />
+                        )}
+                      </button>
+                    );
+                  })
+                ) : (
+                  <div className="text-center text-text-secondary py-8 text-sm">No disciplines found</div>
+                );
+              })()}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setDisciplineModalOpen({ betId: null });
+                  setDisciplineSearchQuery('');
+                }}
+                className="flex-1 px-4 py-2 border border-border-light rounded-lg hover:bg-background-table-header transition-colors text-sm"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bet Type Selection Modal */}
+      {betTypeModalOpen.betId !== null && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-background-paper rounded-xl shadow-lg w-full max-w-md p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-text-primary">Select Bet Type</h2>
+              <button
+                onClick={() => {
+                  setBetTypeModalOpen({ betId: null });
+                  setBetTypeSearchQuery('');
+                }}
+                className="p-2 hover:bg-background-table-header rounded-lg transition-colors"
+              >
+                <X size={20} className="text-text-secondary" />
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <input
+                type="text"
+                value={betTypeSearchQuery}
+                onChange={(e) => setBetTypeSearchQuery(e.target.value)}
+                placeholder="Search bet types..."
+                className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-main"
+              />
+            </div>
+
+            <div className="space-y-2 mb-6 max-h-80 overflow-y-auto">
+              {(() => {
+                const filtered = betTypes.filter(bt =>
+                  (bt.code?.toLowerCase() || '').includes(betTypeSearchQuery.toLowerCase()) ||
+                  (bt.description?.toLowerCase() || '').includes(betTypeSearchQuery.toLowerCase())
+                );
+
+                const currentBet = bets.find(b => b.id === betTypeModalOpen.betId);
+                const currentBetType = currentBet?.bet_type;
+
+                return filtered.length > 0 ? (
+                  filtered.map((type) => {
+                    const isSelected = currentBetType === type.code;
+
+                    return (
+                      <button
+                        key={type.id ?? `${type.code}`}
+                        onClick={() => {
+                          if (betTypeModalOpen.betId !== null) {
+                            setBets(prevBets => {
+                              return prevBets.map((bet) => {
+                                if (bet.id === betTypeModalOpen.betId) {
+                                  return { ...bet, bet_type: type.code };
+                                }
+
+                                return bet;
+                              });
+                            });
+
+                            setBetTypeModalOpen({ betId: null });
+                            setBetTypeSearchQuery('');
+                          }
+                        }}
+                        className={`w-full flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors text-left text-sm ${
+                          isSelected
+                            ? 'border-primary-main bg-blue-50'
+                            : 'border-border-light hover:border-border-medium hover:bg-gray-50'
+                        }`}
+                      >
+                        <div>
+                          <div className="font-medium text-text-primary">{type.code}</div>
+                          <div className="text-xs text-text-secondary mt-0.5">{type.description}</div>
+                        </div>
+                        {isSelected && (
+                          <Check size={16} className="text-primary-main" />
+                        )}
+                      </button>
+                    );
+                  })
+                ) : (
+                  <div className="text-center text-text-secondary py-8 text-sm">No bet types found</div>
+                );
+              })()}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setBetTypeModalOpen({ betId: null });
+                  setBetTypeSearchQuery('');
+                }}
+                className="flex-1 px-4 py-2 border border-border-light rounded-lg hover:bg-background-table-header transition-colors text-sm"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

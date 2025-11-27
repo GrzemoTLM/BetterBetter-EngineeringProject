@@ -1,5 +1,6 @@
 from rest_framework import viewsets, status, permissions
 from rest_framework.response import Response
+from django_filters.rest_framework import DjangoFilterBackend
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from ..models import BetTypeDict, Discipline
@@ -11,6 +12,8 @@ class BetTypeDictViewSet(viewsets.ModelViewSet):
     queryset = BetTypeDict.objects.all()
     serializer_class = BetTypeDictSerializer
     permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['discipline']
 
     @swagger_auto_schema(
         operation_summary='List bet types',

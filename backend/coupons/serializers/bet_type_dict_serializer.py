@@ -8,4 +8,4 @@ class BetTypeDictSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = BetTypeDict
-        fields = ['id', 'discipline', 'code', 'description']
+        fields = ['id', 'code', 'description', 'discipline']

@@ -640,6 +640,17 @@ class ApiService {
     }
   }
 
+  async fetchBetTypesByDiscipline(disciplineId: number): Promise<BetType[]> {
+    try {
+      const response = await this.axiosInstance.get<BetType[]>(API_ENDPOINTS.COUPONS.BET_TYPES, {
+        params: { discipline: disciplineId }
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
   async getDisciplines(): Promise<Array<{ id: number; code: string; name?: string }>> {
     try {
       const response = await this.axiosInstance.get<Array<{ id: number; code: string; name?: string }>>(API_ENDPOINTS.COUPONS.DISCIPLINES);
