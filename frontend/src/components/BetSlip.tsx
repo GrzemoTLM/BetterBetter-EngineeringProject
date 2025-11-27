@@ -51,13 +51,11 @@ const BetSlip = ({
         const accounts = await api.getBookmakerAccounts();
         setBookmakerAccounts(accounts);
         if (accounts.length > 0) {
-          // jeśli mamy przekazany z rodzica ID konta, pokaż natychmiast
           if (initialBookmakerAccountId) {
             setCouponBookmakerAccountId(initialBookmakerAccountId);
             const acc = accounts.find(a => a.id === initialBookmakerAccountId);
             if (acc) setCouponBookmakerName(acc.bookmaker);
           }
-          // Jeśli mamy initialCouponId z rodzica, nie twórz ponownie
 
           if (initialCouponId && !couponId) {
             setCouponId(initialCouponId);
@@ -67,16 +65,14 @@ const BetSlip = ({
               setCouponBookmakerAccountId((existing as Coupon).bookmaker_account ?? null);
               setCouponBookmakerName((existing as Coupon).bookmaker ?? '');
             } catch {
-              // fallback: jeśli nie istnieje z jakiegoś powodu, utwórz
-              const created = await api.createEmptyCoupon(accounts[0].id, activeStake);
+              const created = await api.createEmptyCoupon(accounts[0].id, activeStake, { strategy: strategy || undefined });
               setCouponId(created.id);
               applyCouponMetrics(created);
               setCouponBookmakerAccountId((created as Coupon).bookmaker_account ?? accounts[0].id);
               setCouponBookmakerName((created as Coupon).bookmaker ?? accounts[0].bookmaker);
             }
           } else if (!couponId) {
-            // Brak initialCouponId – utwórz tylko raz
-            const created = await api.createEmptyCoupon(accounts[0].id, activeStake);
+            const created = await api.createEmptyCoupon(accounts[0].id, activeStake, { strategy: strategy || undefined });
             setCouponId(created.id);
             applyCouponMetrics(created);
             setCouponBookmakerAccountId((created as Coupon).bookmaker_account ?? accounts[0].id);
@@ -113,15 +109,28 @@ const BetSlip = ({
  // eslint-disable-next-line react-hooks/exhaustive-deps
    }, [initialCouponId]);
 
-  const applyCouponMetrics = (coupon: { potential_payout?: number; multiplier?: number; bet_stake?: number | string }) => {
-    const stakeNumber = coupon.bet_stake !== undefined ? Number(coupon.bet_stake) : Number(activeStake);
+  // Ensure default strategy gets set once strategies are fetched
+  useEffect(() => {
+    if (!strategy && strategies && strategies.length > 0) {
+      const defaultName = strategies[0].name;
+      setStrategy(defaultName);
+      onStrategyChange?.(defaultName);
+      console.log('[UI] Strategies loaded - default strategy set to:', defaultName);
+    }
+  }, [strategies]);
+
+  const applyCouponMetrics = (coupon: { potential_payout?: number; multiplier?: number; bet_stake?: number | string; bets?: Array<{ odds: number | string }> }) => {
     const backendMultiplier = coupon.multiplier;
     const backendPayout = coupon.potential_payout;
 
     if (backendMultiplier !== undefined && backendMultiplier !== null) {
       setMultiplier(backendMultiplier);
-    } else if (backendPayout !== undefined && stakeNumber > 0) {
-      setMultiplier(Number((backendPayout / stakeNumber).toFixed(2)));
+    } else if (Array.isArray(coupon.bets) && coupon.bets.length > 0) {
+      const product = coupon.bets.reduce((acc, b) => {
+        const v = parseFloat(String(b.odds));
+        return isNaN(v) ? acc : acc * v;
+      }, 1);
+      setMultiplier(Number(product.toFixed(2)));
     } else {
       setMultiplier(1);
     }
@@ -136,6 +145,7 @@ const BetSlip = ({
     if (onStrategyChange) {
       onStrategyChange(value);
     }
+    console.log('[UI] Strategy changed:', value);
   };
 
   const handleStakeChange = async (stake: string) => {
@@ -220,11 +230,17 @@ const BetSlip = ({
         start_time: betToConfirm.start_time || new Date().toISOString(),
       };
 
+      console.log('[UI] Confirm bet - payload:', betData);
+
       await api.addSingleBetToCoupon(couponId, betData);
 
-      // Recalculate coupon
-      const updatedCoupon = await api.recalculateCoupon(couponId);
-      applyCouponMetrics(updatedCoupon);
+      // Recalculate coupon and then fetch fresh coupon
+      const recalcResult = await api.recalculateCoupon(couponId);
+      console.log('[UI] After add bet - recalc result:', recalcResult);
+      const refreshed = await api.getCoupon(couponId);
+      console.log('[UI] After add bet - full coupon:', refreshed);
+      console.log('[UI] After add bet - refreshed coupon:', { multiplier: refreshed.multiplier, potential_payout: refreshed.potential_payout });
+      applyCouponMetrics(refreshed);
 
       // Mark bet as confirmed locally
       setBets(bets.map((bet) => (bet.id === id ? { ...bet, confirmed: true } : bet)));
@@ -263,7 +279,6 @@ const BetSlip = ({
       return;
     }
 
-    // Validate all bets are confirmed
     const unconfirmedBets = bets.filter(bet => !bet.confirmed);
     if (unconfirmedBets.length > 0) {
       alert('Please confirm all bets before saving');
@@ -273,27 +288,25 @@ const BetSlip = ({
     try {
       setLoading(true);
 
-      // Verify coupon exists in database
       const verifiedCoupon = await api.getCoupon(couponId);
       if (!verifiedCoupon) {
         alert('Coupon not found in database');
         return;
       }
 
-      // Patch coupon meta if needed (stake/placed_at/strategy)
-      await api.updateCoupon(couponId, {
+      const payload = {
         bet_stake: verifiedCoupon.bet_stake,
         placed_at: verifiedCoupon.created_at ?? new Date().toISOString(),
-      });
+        ...(strategy ? { strategy } : {}),
+      } as const;
+      console.log('[UI] Save & Exit - current strategy:', strategy);
+      console.log('[UI] Save & Exit - updateCoupon payload:', payload);
+
+      await api.updateCoupon(couponId, payload);
 
       alert('Coupon saved successfully!');
-      if (onCouponCreated) {
-        onCouponCreated();
-      }
-
-      if (onClose) {
-        onClose();
-      }
+      onCouponCreated?.();
+      onClose?.();
     } catch (error) {
       console.error('Error saving coupon:', error);
       alert('Error verifying coupon');
@@ -337,6 +350,7 @@ const BetSlip = ({
                   </div>
                 );
               }
+
               if (couponBookmakerName) return <span className="font-medium">{couponBookmakerName}</span>;
 
                return <span className="text-text-secondary">Loading...</span>;

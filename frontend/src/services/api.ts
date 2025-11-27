@@ -484,31 +484,47 @@ class ApiService {
   // Coupons
   async createCoupon(data: CreateCouponRequest): Promise<Coupon> {
     try {
+      console.log('[API] createCoupon - URL:', API_ENDPOINTS.COUPONS.CREATE);
+      console.log('[API] createCoupon - Payload:', JSON.parse(JSON.stringify(data)));
       const response = await this.axiosInstance.post<Coupon>(API_ENDPOINTS.COUPONS.CREATE, data);
+      console.log('[API] createCoupon - Status:', response.status);
+      console.log('[API] createCoupon - Data:', response.data);
       return response.data;
     } catch (error) {
+      console.error('[API] createCoupon - Error:', error);
       throw new Error(this.getErrorMessage(error));
     }
   }
 
-  async createEmptyCoupon(bookmakerAccountId: number, stake: string): Promise<Coupon> {
+  async createEmptyCoupon(bookmakerAccountId: number, stake: string, opts?: { strategy?: string; strategy_id?: number; coupon_type?: 'SOLO' | 'AKO' | 'SYSTEM' }): Promise<Coupon> {
     try {
-      const data = {
+      const data: CreateCouponRequest = {
         bookmaker_account: bookmakerAccountId,
-        coupon_type: 'SOLO',
+        coupon_type: opts?.coupon_type ?? 'SOLO',
         bet_stake: stake,
         placed_at: new Date().toISOString(),
+        ...(opts?.strategy_id ? { strategy_id: opts.strategy_id } : {}),
+        ...(opts?.strategy && !opts?.strategy_id ? { strategy: opts.strategy } : {}),
         bets: [],
       };
+      console.log('[API] createEmptyCoupon - URL:', API_ENDPOINTS.COUPONS.CREATE);
+      console.log('[API] createEmptyCoupon - Payload:', JSON.parse(JSON.stringify(data)));
       const response = await this.axiosInstance.post<Coupon>(API_ENDPOINTS.COUPONS.CREATE, data);
+      console.log('[API] createEmptyCoupon - Status:', response.status);
+      console.log('[API] createEmptyCoupon - Data:', response.data);
       return response.data;
     } catch (error) {
+      console.error('[API] createEmptyCoupon - Error:', error);
       throw new Error(this.getErrorMessage(error));
     }
   }
 
   async getCoupon(id: number): Promise<Coupon> {
     try {
+      const token = this.getToken();
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
       const url = `${API_ENDPOINTS.COUPONS.LIST}${id}/`;
       const response = await this.axiosInstance.get<Coupon>(url);
       return response.data;
@@ -601,6 +617,10 @@ class ApiService {
 
   async getCoupons(): Promise<Coupon[]> {
     try {
+      const token = this.getToken();
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
       const response = await this.axiosInstance.get<Coupon[]>(API_ENDPOINTS.COUPONS.LIST);
       return response.data;
     } catch (error) {
@@ -641,9 +661,14 @@ class ApiService {
   async updateCoupon(id: number, data: Partial<CreateCouponRequest> & { [key: string]: unknown }): Promise<Coupon> {
     try {
       const url = `${API_ENDPOINTS.COUPONS.LIST}${id}/`;
+      console.log('[API] updateCoupon - URL:', url);
+      console.log('[API] updateCoupon - Payload:', JSON.parse(JSON.stringify(data)));
       const response = await this.axiosInstance.patch<Coupon>(url, data);
+      console.log('[API] updateCoupon - Status:', response.status);
+      console.log('[API] updateCoupon - Data:', response.data);
       return response.data;
     } catch (error) {
+      console.error('[API] updateCoupon - Error:', error);
       throw new Error(this.getErrorMessage(error));
     }
   }

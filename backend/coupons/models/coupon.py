@@ -28,13 +28,13 @@ class Coupon(models.Model):
         blank=True,
     )
     strategy = models.ForeignKey(
-        'Strategy',
+        'coupon_analytics.UserStrategy',
         on_delete=models.SET_NULL,
         related_name='coupons',
         null=True,
         blank=True,
         related_query_name='coupon',
-        help_text="The strategy that this coupon should be applied to."
+        help_text="User-defined strategy associated with this coupon."
     )
     coupon_type = models.CharField(
         max_length=10,

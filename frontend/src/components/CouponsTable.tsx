@@ -1,5 +1,6 @@
 import { Pencil, CheckCircle, XCircle, Circle } from 'lucide-react';
 import { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
+import type { ReactNode } from 'react';
 import api from '../services/api';
 import { useDateFormatter } from '../hooks/useDateFormatter';
 import type { Coupon } from '../types/coupons';
@@ -16,7 +17,91 @@ export interface CouponsTableRef {
   refetch: () => Promise<void>;
 }
 
-interface CouponWithStrategy extends Coupon { strategy?: string | { id?: number; name?: string } | number | null }
+type StrategyExtended = number | null | string | { id?: number; name?: string };
+type CouponWithStrategy = Omit<Coupon, 'strategy'> & { strategy?: StrategyExtended };
+
+// Helpers extracted to avoid duplication
+const normalizeStatus = (status?: string) => String(status ?? 'pending').trim().toLowerCase().replace(/[-\s]+/g, '_');
+
+const deriveStatusHelper = (coupon: Coupon): string => {
+  const norm = normalizeStatus(coupon.status);
+  if (norm.includes('won') || norm === 'win') return 'won';
+  if (norm.includes('lost') || norm === 'lose') return 'lost';
+  const hasLost = coupon.bets.some(b => normalizeStatus(String(b.result)).includes('lost'));
+  if (hasLost) return 'lost';
+  const allWon = coupon.bets.length > 0 && coupon.bets.every(b => {
+    const r = normalizeStatus(String(b.result));
+    return r.includes('win') || r.includes('won');
+  });
+  if (allWon) return 'won';
+  if (norm.includes('cashed')) return 'cashed_out';
+  if (norm.includes('progress')) return 'in_progress';
+  if (norm.includes('pending')) return 'pending';
+  return norm || 'pending';
+};
+
+const getStatusColor = (status: string) => {
+  const norm = normalizeStatus(status);
+  if (norm.includes('won') || norm === 'win') return 'bg-green-100 text-green-800';
+  if (norm.includes('lost') || norm === 'lose' || norm === 'lost_final') return 'bg-red-100 text-red-800';
+  if (norm.includes('cashed')) return 'bg-blue-100 text-blue-800';
+  if (norm.includes('progress') || norm.includes('pending')) return 'bg-yellow-100 text-yellow-800';
+  return 'bg-gray-100 text-gray-800';
+};
+
+const formatStatusDisplay = (status: string | undefined): string => {
+  if (!status) return 'Pending';
+  return status.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+};
+
+const calculateMultiplier = (odds: Array<string | number>): string => {
+  if (!odds || odds.length === 0) return '1.00';
+  let result = 1;
+  for (const odd of odds) {
+    const oddNum = parseFloat(String(odd));
+    if (!isNaN(oddNum)) result *= oddNum;
+  }
+
+  return result.toFixed(2);
+};
+
+const computePayoutOrBalanceLabel = (coupon: Coupon, derived: string, formatCurrencyFn: (n: number) => string): string => {
+  const multiplier = Number(calculateMultiplier(coupon.bets.map(b => b.odds)));
+  const stake = parseFloat(String(coupon.bet_stake)) || 0;
+  const potential = coupon.potential_payout ?? (multiplier * stake);
+  if (derived === 'won') return formatCurrencyFn((potential || 0) - stake);
+  if (derived === 'lost') return formatCurrencyFn(-stake);
+  if (derived === 'cashed_out') return formatCurrencyFn((potential || 0) - stake);
+  return formatCurrencyFn(potential || 0); // in_progress / pending
+};
+
+const renderBetResultIcons = (coupon: Coupon): ReactNode => (
+  <div className="flex items-center gap-1 flex-wrap">
+    {coupon.bets.map((b, idx) => {
+      const res = normalizeStatus(String(b.result));
+      if (res.includes('win')) {
+        return <CheckCircle key={b.id ?? idx} size={16} className="text-green-600" aria-label="Won" />;
+      } else if (res.includes('lost')) {
+        return <XCircle key={b.id ?? idx} size={16} className="text-red-600" aria-label="Lost" />;
+      } else {
+        return <Circle key={b.id ?? idx} size={14} className="text-gray-400" aria-label="Pending" />;
+      }
+    })}
+  </div>
+);
+
+const renderStatusBadge = (derived: string): ReactNode => (
+  <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium gap-1 ${getStatusColor(derived)}`}>
+    {derived === 'won' ? (
+      <CheckCircle size={14} aria-label="Won" />
+    ) : derived === 'lost' ? (
+      <XCircle size={14} aria-label="Lost" />
+    ) : (
+      <Circle size={12} aria-label="Pending" />
+    )}
+    <span>{formatStatusDisplay(derived)}</span>
+  </span>
+);
 
 const CouponsTable = forwardRef<CouponsTableRef, CouponsTableProps>(({ bulkMode = false, selectedIds = new Set(), onToggleSelect }, ref) => {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
@@ -65,54 +150,6 @@ const CouponsTable = forwardRef<CouponsTableRef, CouponsTableProps>(({ bulkMode 
 
   const handlePrev = () => setPage(p => Math.max(0, p - 1));
   const handleNext = () => setPage(p => Math.min(totalPages - 1, p + 1));
-
-  const normalizeStatus = (status?: string) =>
-    String(status ?? 'pending').trim().toLowerCase().replace(/[-\s]+/g, '_');
-
-  const deriveStatus = (coupon: Coupon): string => {
-    const norm = normalizeStatus(coupon.status);
-    if (norm.includes('won') || norm === 'win') return 'won';
-    if (norm.includes('lost') || norm === 'lose') return 'lost';
-    // Fallback – wyprowadź status z betów
-    const hasLost = coupon.bets.some(b => normalizeStatus(String(b.result)).includes('lost'));
-    if (hasLost) return 'lost';
-    const allWon = coupon.bets.length > 0 && coupon.bets.every(b => {
-      const r = normalizeStatus(String(b.result));
-      return r.includes('win') || r.includes('won');
-    });
-    if (allWon) return 'won';
-    if (norm.includes('cashed')) return 'cashed_out';
-    if (norm.includes('progress')) return 'in_progress';
-    if (norm.includes('pending')) return 'pending';
-    return norm || 'pending';
-  };
-
-  const getStatusColor = (status: string) => {
-    const norm = normalizeStatus(status);
-
-    if (norm.includes('won') || norm === 'win') return 'bg-green-100 text-green-800';
-    if (norm.includes('lost') || norm === 'lose' || norm === 'lost_final') return 'bg-red-100 text-red-800';
-    if (norm.includes('cashed')) return 'bg-blue-100 text-blue-800';
-    if (norm.includes('progress') || norm.includes('pending')) return 'bg-yellow-100 text-yellow-800';
-    return 'bg-gray-100 text-gray-800';
-  };
-
-  const calculateMultiplier = (odds: Array<string | number>): string => {
-    if (!odds || odds.length === 0) return '1.00';
-
-    let result = 1;
-    for (const odd of odds) {
-      const oddNum = parseFloat(String(odd));
-      if (!isNaN(oddNum)) result *= oddNum;
-    }
-
-    return result.toFixed(2);
-  };
-
-  const formatStatusDisplay = (status: string | undefined): string => {
-    if (!status) return 'Pending';
-    return status.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-  };
 
   const toggleSelect = (id: number) => {
     if (onToggleSelect) onToggleSelect(id);
@@ -196,23 +233,9 @@ const CouponsTable = forwardRef<CouponsTableRef, CouponsTableProps>(({ bulkMode 
         </thead>
         <tbody className="divide-y divide-default">
           {pageCoupons.map(coupon => {
+            const derived = deriveStatusHelper(coupon);
+            const payoutOrBalanceLabel = computePayoutOrBalanceLabel(coupon, derived, formatCurrency);
             const multiplier = calculateMultiplier(coupon.bets.map(b => b.odds));
-            const stake = parseFloat(String(coupon.bet_stake)) || 0;
-            const potential = coupon.potential_payout ?? (parseFloat(multiplier) * stake);
-            const derived = deriveStatus(coupon);
-
-            // Payout / Balance: używamy statusu pochodnego (derived)
-            let payoutOrBalanceLabel = formatCurrency(potential || 0);
-            if (derived === 'won') {
-              const net = (potential || 0) - stake; // balance
-              payoutOrBalanceLabel = formatCurrency(net);
-            } else if (derived === 'lost') {
-              const net = -stake; // balance na minus
-              payoutOrBalanceLabel = formatCurrency(net);
-            } else if (derived === 'cashed_out') {
-              const net = (potential || 0) - stake;
-              payoutOrBalanceLabel = formatCurrency(net);
-            } // in_progress/pending -> pokazuj potencjalną wygraną
 
             return (
               <tr
@@ -240,45 +263,14 @@ const CouponsTable = forwardRef<CouponsTableRef, CouponsTableProps>(({ bulkMode 
                 <td className="px-4 py-4 text-sm text-text-primary font-medium">{coupon.coupon_type}</td>
                 <td className="px-4 py-4 text-sm text-text-secondary">{coupon.bookmaker ?? '—'}</td>
                 <td className="px-4 py-4 text-sm text-text-secondary">{strategyLabel(coupon as CouponWithStrategy)}</td>
-                <td className="px-4 py-4 text-sm text-text-primary">{formatCurrency(stake)}</td>
+                <td className="px-4 py-4 text-sm text-text-primary">{formatCurrency(parseFloat(String(coupon.bet_stake)) || 0)}</td>
                 <td className="px-4 py-4 text-sm text-text-primary">{multiplier}</td>
-                <td className="px-4 py-4">
-                  <div className="flex items-center gap-1 flex-wrap">
-                    {coupon.bets.map((b, idx) => {
-                      const res = normalizeStatus(String(b.result));
-                      if (res.includes('win')) {
-                        return <CheckCircle key={b.id ?? idx} size={16} className="text-green-600" aria-label="Won" />;
-                      } else if (res.includes('lost')) {
-                        return <XCircle key={b.id ?? idx} size={16} className="text-red-600" aria-label="Lost" />;
-                       } else {
-                         return <Circle key={b.id ?? idx} size={14} className="text-gray-400" aria-label="Pending" />;
-                       }
-                    })}
-                  </div>
-                </td>
+                <td className="px-4 py-4">{renderBetResultIcons(coupon)}</td>
                 <td className="px-4 py-4 text-sm">
-                  <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(derived)}`}>
-                    {payoutOrBalanceLabel}
-                  </span>
+                  <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(derived)}`}>{payoutOrBalanceLabel}</span>
                 </td>
                 <td className="px-4 py-4 text-sm text-text-secondary">{formatDateWithoutTime(coupon.created_at)}</td>
-                <td className="px-4 py-4 text-sm">
-                  {(() => {
-                     const badgeCls = `inline-flex items-center rounded-full px-2 py-1 text-xs font-medium gap-1 ${getStatusColor(derived)}`;
-                     return (
-                       <span className={badgeCls}>
-                         {derived === 'won' ? (
-                            <CheckCircle size={14} aria-label="Won" />
-                          ) : derived === 'lost' ? (
-                            <XCircle size={14} aria-label="Lost" />
-                          ) : (
-                            <Circle size={12} aria-label="Pending" />
-                          )}
-                         <span>{formatStatusDisplay(derived)}</span>
-                       </span>
-                     );
-                  })()}
-                </td>
+                <td className="px-4 py-4 text-sm">{renderStatusBadge(derived)}</td>
                 <td className="px-4 py-4">
                   {!bulkMode && (
                     <button
