@@ -39,6 +39,25 @@ class BetCreateSerializer(serializers.ModelSerializer):
         fields = ['event', 'event_name', 'bet_type', 'discipline', 'line', 'odds', 'start_time']
 
 
+class ResultChoiceField(serializers.ChoiceField):
+    def to_internal_value(self, data):
+        if isinstance(data, str):
+            normalized = data.strip().lower()
+            alias_map = {
+                'won': 'win',
+                'win': 'win',
+                'lose': 'lost',
+                'lost': 'lost',
+                'cancel': 'canceled',
+                'canceled': 'canceled',
+                'cancelled': 'canceled',
+                'void': 'canceled',
+                'push': 'canceled',
+            }
+            data = alias_map.get(normalized, normalized)
+        return super().to_internal_value(data)
+
+
 class BetUpdateSerializer(serializers.ModelSerializer):
     bet_type = serializers.SlugRelatedField(
         slug_field='code',
@@ -55,7 +74,7 @@ class BetUpdateSerializer(serializers.ModelSerializer):
         queryset=Event.objects.all(), allow_null=True, required=False
     )
     start_time = serializers.DateTimeField(required=False, allow_null=True)
-    result = serializers.ChoiceField(choices=Bet.BetResult.choices, required=False, allow_null=True)
+    result = ResultChoiceField(choices=Bet.BetResult.choices, required=False, allow_null=True)
 
     class Meta:
         model = Bet

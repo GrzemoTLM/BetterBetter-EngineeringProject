@@ -1,4 +1,4 @@
-import { Pencil } from 'lucide-react';
+import { Pencil, CheckCircle, XCircle, Circle } from 'lucide-react';
 import { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
 import api from '../services/api';
 import { useDateFormatter } from '../hooks/useDateFormatter';
@@ -16,12 +16,16 @@ export interface CouponsTableRef {
   refetch: () => Promise<void>;
 }
 
+interface CouponWithStrategy extends Coupon { strategy?: string | { id?: number; name?: string } | number | null }
+
 const CouponsTable = forwardRef<CouponsTableRef, CouponsTableProps>(({ bulkMode = false, selectedIds = new Set(), onToggleSelect }, ref) => {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingCouponId, setEditingCouponId] = useState<number | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [pageSize, setPageSize] = useState<number>(10);
+  const [page, setPage] = useState<number>(0);
   const { formatDateWithoutTime } = useDateFormatter();
   const { formatCurrency } = useCurrency();
 
@@ -32,6 +36,7 @@ const CouponsTable = forwardRef<CouponsTableRef, CouponsTableProps>(({ bulkMode 
       const sorted = [...data].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setCoupons(sorted);
       setError(null);
+      setPage(0);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch coupons';
       setError(errorMessage);
@@ -45,16 +50,51 @@ const CouponsTable = forwardRef<CouponsTableRef, CouponsTableProps>(({ bulkMode 
 
   useEffect(() => { fetchCoupons(); }, []);
 
+  // Pagination derivations
+  const total = coupons.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(page, totalPages - 1);
+  const start = safePage * pageSize;
+  const end = Math.min(start + pageSize, total);
+  const pageCoupons = coupons.slice(start, end);
+
+  const handleChangePageSize = (value: number) => {
+    setPageSize(value);
+    setPage(0);
+  };
+
+  const handlePrev = () => setPage(p => Math.max(0, p - 1));
+  const handleNext = () => setPage(p => Math.min(totalPages - 1, p + 1));
+
+  const normalizeStatus = (status?: string) =>
+    String(status ?? 'pending').trim().toLowerCase().replace(/[-\s]+/g, '_');
+
+  const deriveStatus = (coupon: Coupon): string => {
+    const norm = normalizeStatus(coupon.status);
+    if (norm.includes('won') || norm === 'win') return 'won';
+    if (norm.includes('lost') || norm === 'lose') return 'lost';
+    // Fallback – wyprowadź status z betów
+    const hasLost = coupon.bets.some(b => normalizeStatus(String(b.result)).includes('lost'));
+    if (hasLost) return 'lost';
+    const allWon = coupon.bets.length > 0 && coupon.bets.every(b => {
+      const r = normalizeStatus(String(b.result));
+      return r.includes('win') || r.includes('won');
+    });
+    if (allWon) return 'won';
+    if (norm.includes('cashed')) return 'cashed_out';
+    if (norm.includes('progress')) return 'in_progress';
+    if (norm.includes('pending')) return 'pending';
+    return norm || 'pending';
+  };
+
   const getStatusColor = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case 'won': return 'bg-green-100 text-green-800';
-      case 'lost': return 'bg-red-100 text-red-800';
-      case 'in_progress':
-      case 'in progress': return 'bg-yellow-100 text-yellow-800';
-      case 'cashed out': return 'bg-blue-100 text-blue-800';
-      case 'pending': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+    const norm = normalizeStatus(status);
+
+    if (norm.includes('won') || norm === 'win') return 'bg-green-100 text-green-800';
+    if (norm.includes('lost') || norm === 'lose' || norm === 'lost_final') return 'bg-red-100 text-red-800';
+    if (norm.includes('cashed')) return 'bg-blue-100 text-blue-800';
+    if (norm.includes('progress') || norm.includes('pending')) return 'bg-yellow-100 text-yellow-800';
+    return 'bg-gray-100 text-gray-800';
   };
 
   const calculateMultiplier = (odds: Array<string | number>): string => {
@@ -78,6 +118,19 @@ const CouponsTable = forwardRef<CouponsTableRef, CouponsTableProps>(({ bulkMode 
     if (onToggleSelect) onToggleSelect(id);
   };
 
+  const strategyLabel = (c: CouponWithStrategy): string => {
+    const s = c.strategy;
+    if (!s) return 'none';
+    if (typeof s === 'string') return s || 'none';
+    if (typeof s === 'number') return `#${s}`;
+    if (typeof s === 'object') {
+      const name = (s as { name?: unknown }).name;
+      if (typeof name === 'string' && name.trim()) return name;
+    }
+
+    return 'none';
+  };
+
   if (loading) return <div className="p-8 text-center text-text-secondary">Loading coupons...</div>;
   if (error) return <div className="p-8 text-center text-status-error">Error: {error}</div>;
   if (coupons.length === 0) return <div className="p-8 text-center text-text-secondary">No coupons found</div>;
@@ -91,15 +144,50 @@ const CouponsTable = forwardRef<CouponsTableRef, CouponsTableProps>(({ bulkMode 
         onUpdated={async () => { await fetchCoupons(); }}
       />
       <div className="p-4">
-        {/* Bulk controls removed */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-text-secondary">Show last:</span>
+            <select
+              value={pageSize}
+              onChange={(e) => handleChangePageSize(Number(e.target.value))}
+              className="px-3 py-1 border border-default rounded-md text-sm"
+            >
+              {[5, 10, 15, 20].map(sz => (
+                <option key={sz} value={sz}>{sz}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePrev}
+              disabled={safePage === 0}
+              className="px-3 py-1 border border-default rounded-md text-sm disabled:opacity-50 hover:bg-gray-50"
+            >
+              Prev
+            </button>
+            <span className="text-sm text-text-secondary">
+              Page {safePage + 1} / {totalPages}
+            </span>
+            <button
+              onClick={handleNext}
+              disabled={safePage >= totalPages - 1}
+              className="px-3 py-1 border border-default rounded-md text-sm disabled:opacity-50 hover:bg-gray-50"
+            >
+              Next
+            </button>
+          </div>
+        </div>
       </div>
       <table className="w-full">
         <thead>
           <tr className="bg-background-table-header">
             {bulkMode && <th className="px-2 py-3"></th>}
             <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-table-header">Coupon Type</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-table-header">Bookmaker</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-table-header">Strategy</th>
             <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-table-header">Bet Amount</th>
             <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-table-header">Multiplier</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-table-header">Bets</th>
             <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-table-header">Payout / Balance</th>
             <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-table-header">Date</th>
             <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-table-header">Status</th>
@@ -107,23 +195,24 @@ const CouponsTable = forwardRef<CouponsTableRef, CouponsTableProps>(({ bulkMode 
           </tr>
         </thead>
         <tbody className="divide-y divide-default">
-          {coupons.map(coupon => {
+          {pageCoupons.map(coupon => {
             const multiplier = calculateMultiplier(coupon.bets.map(b => b.odds));
             const stake = parseFloat(String(coupon.bet_stake)) || 0;
             const potential = coupon.potential_payout ?? (parseFloat(multiplier) * stake);
-            const statusNorm = (coupon.status || 'pending').toLowerCase();
+            const derived = deriveStatus(coupon);
 
+            // Payout / Balance: używamy statusu pochodnego (derived)
             let payoutOrBalanceLabel = formatCurrency(potential || 0);
-            let payoutOrBalanceClass = 'text-text-primary';
-            if (statusNorm === 'won') {
-              const net = (potential || 0) - stake; payoutOrBalanceLabel = formatCurrency(net); payoutOrBalanceClass = 'text-green-700';
-            } else if (statusNorm === 'lost') {
-              const net = -stake; payoutOrBalanceLabel = formatCurrency(net); payoutOrBalanceClass = 'text-red-700';
-            } else if (statusNorm === 'cashed out') {
-              const net = (potential || 0) - stake; payoutOrBalanceLabel = formatCurrency(net); payoutOrBalanceClass = net >= 0 ? 'text-green-700' : 'text-red-700';
-            } else if (statusNorm === 'in_progress' || statusNorm === 'in progress' || statusNorm === 'pending') {
-              payoutOrBalanceClass = 'text-blue-700';
-            }
+            if (derived === 'won') {
+              const net = (potential || 0) - stake; // balance
+              payoutOrBalanceLabel = formatCurrency(net);
+            } else if (derived === 'lost') {
+              const net = -stake; // balance na minus
+              payoutOrBalanceLabel = formatCurrency(net);
+            } else if (derived === 'cashed_out') {
+              const net = (potential || 0) - stake;
+              payoutOrBalanceLabel = formatCurrency(net);
+            } // in_progress/pending -> pokazuj potencjalną wygraną
 
             return (
               <tr
@@ -149,12 +238,46 @@ const CouponsTable = forwardRef<CouponsTableRef, CouponsTableProps>(({ bulkMode 
                   </td>
                 )}
                 <td className="px-4 py-4 text-sm text-text-primary font-medium">{coupon.coupon_type}</td>
+                <td className="px-4 py-4 text-sm text-text-secondary">{coupon.bookmaker ?? '—'}</td>
+                <td className="px-4 py-4 text-sm text-text-secondary">{strategyLabel(coupon as CouponWithStrategy)}</td>
                 <td className="px-4 py-4 text-sm text-text-primary">{formatCurrency(stake)}</td>
                 <td className="px-4 py-4 text-sm text-text-primary">{multiplier}</td>
-                <td className={`px-4 py-4 text-sm font-medium ${payoutOrBalanceClass}`}>{payoutOrBalanceLabel}</td>
+                <td className="px-4 py-4">
+                  <div className="flex items-center gap-1 flex-wrap">
+                    {coupon.bets.map((b, idx) => {
+                      const res = normalizeStatus(String(b.result));
+                      if (res.includes('win')) {
+                        return <CheckCircle key={b.id ?? idx} size={16} className="text-green-600" aria-label="Won" />;
+                      } else if (res.includes('lost')) {
+                        return <XCircle key={b.id ?? idx} size={16} className="text-red-600" aria-label="Lost" />;
+                       } else {
+                         return <Circle key={b.id ?? idx} size={14} className="text-gray-400" aria-label="Pending" />;
+                       }
+                    })}
+                  </div>
+                </td>
+                <td className="px-4 py-4 text-sm">
+                  <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(derived)}`}>
+                    {payoutOrBalanceLabel}
+                  </span>
+                </td>
                 <td className="px-4 py-4 text-sm text-text-secondary">{formatDateWithoutTime(coupon.created_at)}</td>
                 <td className="px-4 py-4 text-sm">
-                  <span className={`inline-block rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(coupon.status || 'pending')}`}>{formatStatusDisplay(coupon.status)}</span>
+                  {(() => {
+                     const badgeCls = `inline-flex items-center rounded-full px-2 py-1 text-xs font-medium gap-1 ${getStatusColor(derived)}`;
+                     return (
+                       <span className={badgeCls}>
+                         {derived === 'won' ? (
+                            <CheckCircle size={14} aria-label="Won" />
+                          ) : derived === 'lost' ? (
+                            <XCircle size={14} aria-label="Lost" />
+                          ) : (
+                            <Circle size={12} aria-label="Pending" />
+                          )}
+                         <span>{formatStatusDisplay(derived)}</span>
+                       </span>
+                     );
+                  })()}
                 </td>
                 <td className="px-4 py-4">
                   {!bulkMode && (

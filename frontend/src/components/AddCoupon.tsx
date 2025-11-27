@@ -9,9 +9,11 @@ interface AddCouponProps {
   onClose: () => void;
   strategies?: Strategy[];
   onCouponCreated?: () => void;
+  initialCouponId?: number;
+  initialBookmakerAccountId?: number;
 }
 
-const AddCoupon = ({ onClose, strategies = [], onCouponCreated }: AddCouponProps) => {
+const AddCoupon = ({ onClose, strategies = [], onCouponCreated, initialCouponId, initialBookmakerAccountId }: AddCouponProps) => {
   const [fetchedStrategies, setFetchedStrategies] = useState<Strategy[]>(strategies);
 
   useEffect(() => {
@@ -54,7 +56,13 @@ const AddCoupon = ({ onClose, strategies = [], onCouponCreated }: AddCouponProps
             <UploadCoupon />
 
             {/* Bet Slip Section */}
-            <BetSlip strategies={fetchedStrategies} onCouponCreated={onCouponCreated} onClose={onClose} />
+            <BetSlip
+              strategies={fetchedStrategies}
+              onCouponCreated={onCouponCreated}
+              onClose={onClose}
+              initialCouponId={initialCouponId}
+              initialBookmakerAccountId={initialBookmakerAccountId}
+            />
           </div>
         </div>
       </div>

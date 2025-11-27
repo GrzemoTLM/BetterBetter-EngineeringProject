@@ -4,9 +4,10 @@ import api from '../services/api';
 import type { Strategy } from '../types/strategies';
 import type { Bet as BetData, BetType as BetTypeOption } from '../types/coupons';
 import type { BookmakerAccountCreateResponse } from '../types/finances';
+import type { Coupon } from '../types/coupons';
 
 interface Bet extends BetData {
-  id: number; // lokalne tymczasowe ID jako number dla zgodności z BetData
+  id: number;
   confirmed?: boolean;
 }
 
@@ -16,6 +17,8 @@ interface BetSlipProps {
   onStrategyChange?: (strategy: string) => void;
   onClose?: () => void;
   onCouponCreated?: () => void;
+  initialCouponId?: number;
+  initialBookmakerAccountId?: number;
 }
 
 const BetSlip = ({
@@ -24,17 +27,20 @@ const BetSlip = ({
   onStrategyChange,
   onClose,
   onCouponCreated,
+  initialCouponId,
+  initialBookmakerAccountId,
 }: BetSlipProps) => {
   const [bookmakerAccounts, setBookmakerAccounts] = useState<BookmakerAccountCreateResponse[]>([]);
   const [betTypes, setBetTypes] = useState<BetTypeOption[]>([]);
-  const [selectedBookmaker, setSelectedBookmaker] = useState<string>('');
+  const [couponBookmakerAccountId, setCouponBookmakerAccountId] = useState<number | null>(null);
+  const [couponBookmakerName, setCouponBookmakerName] = useState<string>('');
   const [strategy, setStrategy] = useState(selectedStrategy || (strategies[0]?.name ?? ''));
   const [bets, setBets] = useState<Bet[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeStake, setActiveStake] = useState('50');
   const [customStake, setCustomStake] = useState('');
   const [loading, setLoading] = useState(false);
-  const [couponId, setCouponId] = useState<number | null>(null);
+  const [couponId, setCouponId] = useState<number | null>(initialCouponId ?? null);
   const [multiplier, setMultiplier] = useState<number>(1);
   const [potentialPayout, setPotentialPayout] = useState<number>(0);
 
@@ -45,12 +51,37 @@ const BetSlip = ({
         const accounts = await api.getBookmakerAccounts();
         setBookmakerAccounts(accounts);
         if (accounts.length > 0) {
-          setSelectedBookmaker(accounts[0].id.toString());
+          // jeśli mamy przekazany z rodzica ID konta, pokaż natychmiast
+          if (initialBookmakerAccountId) {
+            setCouponBookmakerAccountId(initialBookmakerAccountId);
+            const acc = accounts.find(a => a.id === initialBookmakerAccountId);
+            if (acc) setCouponBookmakerName(acc.bookmaker);
+          }
+          // Jeśli mamy initialCouponId z rodzica, nie twórz ponownie
 
-          // Create empty coupon with first bookmaker and default stake
-          const newCoupon = await api.createEmptyCoupon(accounts[0].id, activeStake);
-          setCouponId(newCoupon.id);
-          applyCouponMetrics(newCoupon);
+          if (initialCouponId && !couponId) {
+            setCouponId(initialCouponId);
+            try {
+              const existing = await api.getCoupon(initialCouponId);
+              applyCouponMetrics(existing);
+              setCouponBookmakerAccountId((existing as Coupon).bookmaker_account ?? null);
+              setCouponBookmakerName((existing as Coupon).bookmaker ?? '');
+            } catch {
+              // fallback: jeśli nie istnieje z jakiegoś powodu, utwórz
+              const created = await api.createEmptyCoupon(accounts[0].id, activeStake);
+              setCouponId(created.id);
+              applyCouponMetrics(created);
+              setCouponBookmakerAccountId((created as Coupon).bookmaker_account ?? accounts[0].id);
+              setCouponBookmakerName((created as Coupon).bookmaker ?? accounts[0].bookmaker);
+            }
+          } else if (!couponId) {
+            // Brak initialCouponId – utwórz tylko raz
+            const created = await api.createEmptyCoupon(accounts[0].id, activeStake);
+            setCouponId(created.id);
+            applyCouponMetrics(created);
+            setCouponBookmakerAccountId((created as Coupon).bookmaker_account ?? accounts[0].id);
+            setCouponBookmakerName((created as Coupon).bookmaker ?? accounts[0].bookmaker);
+          }
         }
 
         const types = await api.getBetTypes();
@@ -63,6 +94,24 @@ const BetSlip = ({
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Sync coupon id if AddCoupon supplies it after mount
+  useEffect(() => {
+    if (initialCouponId && !couponId) {
+      setCouponId(initialCouponId);
+      (async () => {
+        try {
+          const existing = await api.getCoupon(initialCouponId);
+          applyCouponMetrics(existing);
+          setCouponBookmakerAccountId((existing as Coupon).bookmaker_account ?? null);
+          setCouponBookmakerName((existing as Coupon).bookmaker ?? '');
+        } catch {
+          // ignore
+        }
+      })();
+    }
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+   }, [initialCouponId]);
 
   const applyCouponMetrics = (coupon: { potential_payout?: number; multiplier?: number; bet_stake?: number | string }) => {
     const stakeNumber = coupon.bet_stake !== undefined ? Number(coupon.bet_stake) : Number(activeStake);
@@ -122,12 +171,12 @@ const BetSlip = ({
   const handleRemoveBet = async (id: number) => {
     const betToRemove = bets.find(bet => bet.id === id);
 
-    // Jeśli bet jest confirmed, trzeba go usunąć z serwera
+    // If bet is confirmed, it must be removed on server (when backend supports it)
     if (betToRemove?.confirmed && couponId) {
       try {
         setLoading(true);
-        // TODO: Backend powinien obsługiwać DELETE /api/coupons/coupons/{id}/bets/{bet_id}/
-        // Na razie tylko usuwamy lokalnie i recalc
+        // TODO: Backend should support DELETE /api/coupons/coupons/{id}/bets/{bet_id}/
+        // For now, remove locally and recalc
         setBets(bets.filter((bet) => bet.id !== id));
 
         // Recalculate
@@ -139,7 +188,7 @@ const BetSlip = ({
         setLoading(false);
       }
     } else {
-      // Jeśli niezatwierdzony, tylko usuń lokalnie
+      // If not confirmed, just remove locally
       setBets(bets.filter((bet) => bet.id !== id));
     }
   };
@@ -231,6 +280,12 @@ const BetSlip = ({
         return;
       }
 
+      // Patch coupon meta if needed (stake/placed_at/strategy)
+      await api.updateCoupon(couponId, {
+        bet_stake: verifiedCoupon.bet_stake,
+        placed_at: verifiedCoupon.created_at ?? new Date().toISOString(),
+      });
+
       alert('Coupon saved successfully!');
       if (onCouponCreated) {
         onCouponCreated();
@@ -270,24 +325,23 @@ const BetSlip = ({
       {/* Top Controls */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div>
-          <label className="block text-sm font-medium text-text-secondary mb-2">
-            Bookmaker
-          </label>
-          <select
-            value={selectedBookmaker}
-            onChange={(e) => setSelectedBookmaker(e.target.value)}
-            className="w-full px-4 py-2 border border-default rounded-lg text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-main focus:border-transparent"
-          >
-            {bookmakerAccounts.length > 0 ? (
-              bookmakerAccounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.bookmaker} - {account.external_username}
-                </option>
-              ))
-            ) : (
-              <option value="">No bookmaker accounts</option>
-            )}
-          </select>
+          <label className="block text-sm font-medium text-text-secondary mb-2">Bookmaker</label>
+          <div className="w-full px-4 py-2 border border-default rounded-lg text-sm text-text-primary bg-gray-50">
+            {(() => {
+              const acc = bookmakerAccounts.find(a => a.id === couponBookmakerAccountId);
+              if (acc) {
+                return (
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">{acc.bookmaker}</span>
+                    <span className="text-text-secondary text-xs">{acc.external_username}</span>
+                  </div>
+                );
+              }
+              if (couponBookmakerName) return <span className="font-medium">{couponBookmakerName}</span>;
+
+               return <span className="text-text-secondary">Loading...</span>;
+            })()}
+          </div>
         </div>
         <div>
           <label className="block text-sm font-medium text-text-secondary mb-2">

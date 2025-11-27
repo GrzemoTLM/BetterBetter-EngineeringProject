@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import api from '../services/api';
 import type { Coupon } from '../types/coupons';
 import { useCurrency } from '../hooks/useCurrency';
+import { CheckCircle as CheckIcon, XCircle as XIcon, Circle as PendingIcon } from 'lucide-react';
 
 interface EditCouponModalProps {
   couponId: number;
@@ -76,7 +77,7 @@ const EditCouponModal = ({ couponId, isOpen, onClose, onUpdated }: EditCouponMod
       setLoading(true);
       console.log('[DELETE] coupon', { couponId: coupon.id });
       await api.deleteCoupon(coupon.id);
-      onUpdated?.(coupon); // parent robi refetch
+      onUpdated?.(coupon);
       onClose();
     } catch (err) {
       console.error('[ERROR] delete coupon', err);
@@ -87,18 +88,35 @@ const EditCouponModal = ({ couponId, isOpen, onClose, onUpdated }: EditCouponMod
   };
 
   const computeMultiplier = (c: Coupon) => c.bets.reduce((acc, b) => {
-    const o = parseFloat(String(b.odds));
-    return isNaN(o) ? acc : acc * o;
-  }, 1);
+     const o = parseFloat(String(b.odds));
+     return isNaN(o) ? acc : acc * o;
+   }, 1);
+
+  const normalizeStatus = (s?: string | null) => String(s ?? '').trim().toLowerCase().replace(/[-\s]+/g, '_');
 
   const computeBalance = (c: Coupon) => {
     const stake = Number(c.bet_stake) || 0;
     const payout = Number(c.potential_payout) || computeMultiplier(c) * stake;
-    const statusNorm = (c.status || '').toLowerCase();
-    if (statusNorm === 'won') return payout - stake;
-    if (statusNorm === 'lost') return -stake;
-    if (statusNorm === 'cashed out') return payout - stake;
+    const statusNorm = normalizeStatus(c.status);
+    if (statusNorm.includes('won') || statusNorm === 'win') return payout - stake;
+    if (statusNorm.includes('lost') || statusNorm === 'lose') return -stake;
+    if (statusNorm.includes('cashed')) return payout - stake;
     return 0;
+  };
+
+  type StrategyValue = string | { id?: number; name?: string } | number | null | undefined;
+
+  const computeStrategyLabel = (c: Coupon): string => {
+    const s = (c as unknown as { strategy?: StrategyValue }).strategy;
+    if (!s) return 'none';
+    if (typeof s === 'string') return s || 'none';
+    if (typeof s === 'number') return `#${s}`;
+    if (typeof s === 'object') {
+      const name = (s as { name?: unknown }).name;
+      if (typeof name === 'string' && name.trim()) return name;
+    }
+
+    return 'none';
   };
 
   if (!isOpen) return null;
@@ -148,6 +166,12 @@ const EditCouponModal = ({ couponId, isOpen, onClose, onUpdated }: EditCouponMod
                 </div>
               </div>
 
+              {/* Strategy info */}
+              <div className="bg-white rounded-lg p-3 border border-default">
+                <div className="text-xs text-text-secondary">Strategy</div>
+                <div className="text-base font-medium text-text-primary">{computeStrategyLabel(coupon)}</div>
+              </div>
+
               {/* Balance box visible when coupon is settled */}
               {['won','lost','cashed out'].includes((coupon.status || '').toLowerCase()) && (
                 <div className="bg-white rounded-lg p-3 border border-default">
@@ -168,6 +192,7 @@ const EditCouponModal = ({ couponId, isOpen, onClose, onUpdated }: EditCouponMod
                         <th className="px-4 py-2 text-left text-xs uppercase tracking-wider text-text-secondary">Type</th>
                         <th className="px-4 py-2 text-left text-xs uppercase tracking-wider text-text-secondary">Line</th>
                         <th className="px-4 py-2 text-left text-xs uppercase tracking-wider text-text-secondary">Odds</th>
+                        <th className="px-4 py-2 text-left text-xs uppercase tracking-wider text-text-secondary">Result</th>
                         <th className="px-4 py-2 text-right text-xs uppercase tracking-wider text-text-secondary">Actions</th>
                       </tr>
                     </thead>
@@ -178,8 +203,17 @@ const EditCouponModal = ({ couponId, isOpen, onClose, onUpdated }: EditCouponMod
                           <td className="px-4 py-2 text-sm text-text-secondary">{String(b.bet_type)}</td>
                           <td className="px-4 py-2 text-sm text-text-primary">{String(b.line)}</td>
                           <td className="px-4 py-2 text-sm text-text-primary">{String(b.odds)}</td>
+                          <td className="px-4 py-2 text-sm">
+                            {(() => {
+                              const res = normalizeStatus(String(b.result));
+                              if (res.includes('won') || res === 'win') return <CheckIcon size={18} className="text-green-600" aria-label="Won" />;
+                              if (res.includes('lost') || res === 'lose') return <XIcon size={18} className="text-red-600" aria-label="Lost" />;
+                              if (res.includes('canceled')) return <PendingIcon size={14} className="text-gray-400" aria-label="Canceled" />;
+                              return <PendingIcon size={14} className="text-gray-400" aria-label="Pending" />;
+                            })()}
+                          </td>
                           <td className="px-4 py-2 text-sm text-right">
-                            {!['won','lost'].includes((coupon.status || '').toLowerCase()) && (
+                            {!['won','win','lost','lose'].includes((coupon.status || '').toLowerCase()) && (
                               <div className="inline-flex gap-2">
                                 <button
                                   className="px-2 py-1 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 text-xs"

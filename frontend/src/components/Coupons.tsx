@@ -6,6 +6,7 @@ import AddCoupon from './AddCoupon';
 import ManageStrategiesModal from './ManageStrategiesModal';
 import type { Strategy } from '../types/strategies';
 import api from '../services/api';
+import { SelectBookmakerModal } from '.';
 
 const Coupons = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -14,11 +15,41 @@ const Coupons = () => {
   const [strategies, setStrategies] = useState<Strategy[]>([]);
   const [bulkMode, setBulkMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [newCouponId, setNewCouponId] = useState<number | null>(null);
+  const [selectedBookmakerAccountId, setSelectedBookmakerAccountId] = useState<number | null>(null);
+  const [showSelectBookmaker, setShowSelectBookmaker] = useState(false);
+  const [creating, setCreating] = useState(false);
   const couponsTableRef = useRef<CouponsTableRef>(null);
 
   const handleCouponCreated = () => {
     if (couponsTableRef.current) {
       couponsTableRef.current.refetch();
+    }
+  };
+
+  const handleOpenAddCoupon = () => {
+    setShowSelectBookmaker(true);
+  };
+
+  const handleSelectBookmaker = async (accountId: number) => {
+    setShowSelectBookmaker(false);
+    try {
+      setCreating(true);
+      const accounts = await api.getBookmakerAccounts();
+      if (!accounts || accounts.length === 0) {
+        alert('No bookmaker accounts available');
+        return;
+      }
+
+      const created = await api.createEmptyCoupon(accountId, '50');
+      setNewCouponId(created.id);
+      setSelectedBookmakerAccountId(accountId);
+      setShowAddCoupon(true);
+    } catch (err) {
+      console.error('Failed to create coupon for selected bookmaker:', err);
+      alert('Failed to create coupon');
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -56,8 +87,9 @@ const Coupons = () => {
         <h1 className="text-4xl font-bold text-text-primary">Coupons</h1>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setShowAddCoupon(true)}
+            onClick={handleOpenAddCoupon}
             className="bg-primary-main text-primary-contrast rounded-lg px-6 py-2 shadow-sm hover:bg-primary-hover transition-colors flex items-center gap-2 font-medium"
+            disabled={creating}
           >
             <Plus size={18} />
             Add new coupon
@@ -76,7 +108,6 @@ const Coupons = () => {
             ALL COUPONS
           </h2>
           <div className="flex flex-wrap items-center gap-4">
-
             {/* Search */}
             <div className="relative flex-1 min-w-[200px]">
               <Search
@@ -95,26 +126,51 @@ const Coupons = () => {
         </div>
 
         {/* Table */}
-        <CouponsTable ref={couponsTableRef} bulkMode={bulkMode} selectedIds={selectedIds} onToggleSelect={(id) => {
-          setSelectedIds(prev => {
-            const next = new Set(prev);
-            if (next.has(id)) next.delete(id); else next.add(id);
-            return next;
-          });
-        }} />
+        <CouponsTable
+          ref={couponsTableRef}
+          bulkMode={bulkMode}
+          selectedIds={selectedIds}
+          onToggleSelect={(id) => {
+            setSelectedIds((prev) => {
+              const next = new Set(prev);
+              if (next.has(id)) next.delete(id);
+              else next.add(id);
+              return next;
+            });
+          }}
+        />
 
         {/* Action Bar */}
         <div className="p-6 border-t border-default">
-          <ActionBar onManageStrategies={() => setShowManageStrategies(true)} onBulkDelete={handleToggleBulk} bulkMode={bulkMode} selectedCount={selectedIds.size} />
+          <ActionBar
+            onManageStrategies={() => setShowManageStrategies(true)}
+            onBulkDelete={handleToggleBulk}
+            bulkMode={bulkMode}
+            selectedCount={selectedIds.size}
+          />
         </div>
       </div>
 
       {/* Add Coupon Modal */}
       {showAddCoupon && (
         <AddCoupon
-          onClose={() => setShowAddCoupon(false)}
+          onClose={() => {
+            setShowAddCoupon(false);
+            setNewCouponId(null);
+            setSelectedBookmakerAccountId(null);
+          }}
           strategies={strategies}
           onCouponCreated={handleCouponCreated}
+          initialCouponId={newCouponId ?? undefined}
+          initialBookmakerAccountId={selectedBookmakerAccountId ?? undefined}
+        />
+      )}
+
+      {/* Select Bookmaker Modal */}
+      {showSelectBookmaker && (
+        <SelectBookmakerModal
+          onClose={() => setShowSelectBookmaker(false)}
+          onSelect={handleSelectBookmaker}
         />
       )}
 

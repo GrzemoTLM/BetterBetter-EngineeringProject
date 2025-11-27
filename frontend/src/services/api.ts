@@ -637,6 +637,16 @@ class ApiService {
       throw new Error(this.getErrorMessage(error));
     }
   }
+
+  async updateCoupon(id: number, data: Partial<CreateCouponRequest> & { [key: string]: unknown }): Promise<Coupon> {
+    try {
+      const url = `${API_ENDPOINTS.COUPONS.LIST}${id}/`;
+      const response = await this.axiosInstance.patch<Coupon>(url, data);
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
 }
 
 export default new ApiService();
