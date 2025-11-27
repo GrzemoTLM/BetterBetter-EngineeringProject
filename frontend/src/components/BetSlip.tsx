@@ -2,7 +2,7 @@ import { Plus, Trash2, Search, Check } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import api from '../services/api';
 import type { Strategy } from '../types/strategies';
-import type { Bet as BetData, BetType as BetTypeOption } from '../types/coupons';
+import type { Bet as BetData, BetType as BetTypeOption, Discipline as DisciplineOption } from '../types/coupons';
 import type { BookmakerAccountCreateResponse } from '../types/finances';
 import type { Coupon } from '../types/coupons';
 
@@ -32,6 +32,7 @@ const BetSlip = ({
 }: BetSlipProps) => {
   const [bookmakerAccounts, setBookmakerAccounts] = useState<BookmakerAccountCreateResponse[]>([]);
   const [betTypes, setBetTypes] = useState<BetTypeOption[]>([]);
+  const [disciplines, setDisciplines] = useState<DisciplineOption[]>([]);
   const [couponBookmakerAccountId, setCouponBookmakerAccountId] = useState<number | null>(null);
   const [couponBookmakerName, setCouponBookmakerName] = useState<string>('');
   const [strategy, setStrategy] = useState(selectedStrategy || (strategies[0]?.name ?? ''));
@@ -80,8 +81,12 @@ const BetSlip = ({
           }
         }
 
-        const types = await api.getBetTypes();
+        const [types, discs] = await Promise.all([
+          api.getBetTypes(),
+          api.getDisciplines(),
+        ]);
         setBetTypes(types);
+        setDisciplines(discs);
       } catch (error) {
         console.error('Error fetching data:', error);
       }
@@ -135,6 +140,7 @@ const BetSlip = ({
       setMultiplier(1);
     }
 
+
     if (backendPayout !== undefined && backendPayout !== null) {
       setPotentialPayout(backendPayout);
     }
@@ -145,6 +151,7 @@ const BetSlip = ({
     if (onStrategyChange) {
       onStrategyChange(value);
     }
+
     console.log('[UI] Strategy changed:', value);
   };
 
@@ -228,6 +235,7 @@ const BetSlip = ({
         line: betToConfirm.line,
         odds: betToConfirm.odds,
         start_time: betToConfirm.start_time || new Date().toISOString(),
+        discipline: betToConfirm.discipline ?? null,
       };
 
       console.log('[UI] Confirm bet - payload:', betData);
@@ -260,6 +268,7 @@ const BetSlip = ({
       line: '',
       odds: '',
       start_time: new Date().toISOString(),
+      discipline: null,
     };
     setBets([...bets, newBet]);
   };
@@ -400,6 +409,9 @@ const BetSlip = ({
                   Event
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-table-header">
+                  Discipline
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-table-header">
                   Bet Type
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-table-header">
@@ -430,6 +442,25 @@ const BetSlip = ({
                       }`}
                       placeholder="Event name"
                     />
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    <select
+                      value={bet.discipline ?? ''}
+                      onChange={(e) => handleBetChange(bet.id, 'discipline', e.target.value)}
+                      disabled={bet.confirmed}
+                      className={`w-full px-2 py-1 border border-default rounded text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-main ${
+                        bet.confirmed ? 'bg-gray-50 cursor-not-allowed opacity-75' : ''
+                      }`}
+                    >
+                      <option value="">Select discipline</option>
+                      {disciplines && disciplines.length > 0 ? (
+                        disciplines.map((d) => (
+                          <option key={d.id} value={d.id}>{d.code}{d.name ? ` — ${d.name}` : ''}</option>
+                        ))
+                      ) : (
+                        <option disabled>Loading disciplines...</option>
+                      )}
+                    </select>
                   </td>
                   <td className="px-4 py-3 text-sm">
                     <select
@@ -600,4 +631,3 @@ const BetSlip = ({
 };
 
 export default BetSlip;
-

@@ -203,7 +203,7 @@ class CouponCopyView(_CouponRetrieveMixin, generics.GenericAPIView):
 
         copy_data = {
             'bookmaker_account': coupon.bookmaker_account_id,
-            'strategy': coupon.strategy.code if coupon.strategy else None,
+            'strategy': coupon.strategy.name if coupon.strategy else None,
             'coupon_type': coupon.coupon_type,
             'bet_stake': coupon.bet_stake,
             'bets': coupon.bets.all(),

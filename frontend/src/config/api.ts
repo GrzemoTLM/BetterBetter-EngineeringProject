@@ -47,6 +47,8 @@ export const API_ENDPOINTS = {
     LIST: '/api/coupons/coupons/',
     CREATE: '/api/coupons/coupons/',
     BET_TYPES: '/api/coupons/bet-types/',
+    DISCIPLINES: '/api/coupons/disciplines/',
+    DISCIPLINE_DETAIL: (id: number | string) => `/api/coupons/disciplines/${id}/`,
     FORCE_WIN: (id: number) => `/api/coupons/coupons/${id}/force-win/`,
     BET_SETTLE: (couponId: number, betId: number | string) => `/api/coupons/coupons/${couponId}/bets/${betId}/`,
   },

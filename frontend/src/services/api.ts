@@ -525,6 +525,7 @@ class ApiService {
       if (!token) {
         throw new Error('Not authenticated');
       }
+
       const url = `${API_ENDPOINTS.COUPONS.LIST}${id}/`;
       const response = await this.axiosInstance.get<Coupon>(url);
       return response.data;
@@ -562,15 +563,16 @@ class ApiService {
       line: string | number;
       odds: string | number;
       start_time: string;
+      discipline?: string | number | null;
     }
   ): Promise<Coupon> {
     try {
-      // Normalizacja pól – zamień na number jeśli to string liczb
       const normalizedBet = {
         ...bet,
         line: typeof bet.line === 'string' && bet.line.trim() !== '' ? bet.line.trim() : bet.line,
         odds: typeof bet.odds === 'string' && bet.odds.trim() !== '' ? bet.odds.trim() : bet.odds,
-        bet_type: bet.bet_type, // jeśli mamy id będzie number
+        bet_type: bet.bet_type,
+        discipline: bet.discipline ?? null,
       };
 
       const payload = { bets: [normalizedBet] };
@@ -621,6 +623,7 @@ class ApiService {
       if (!token) {
         throw new Error('Not authenticated');
       }
+
       const response = await this.axiosInstance.get<Coupon[]>(API_ENDPOINTS.COUPONS.LIST);
       return response.data;
     } catch (error) {
@@ -631,6 +634,24 @@ class ApiService {
   async getBetTypes(): Promise<BetType[]> {
     try {
       const response = await this.axiosInstance.get<BetType[]>(API_ENDPOINTS.COUPONS.BET_TYPES);
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async getDisciplines(): Promise<Array<{ id: number; code: string; name?: string }>> {
+    try {
+      const response = await this.axiosInstance.get<Array<{ id: number; code: string; name?: string }>>(API_ENDPOINTS.COUPONS.DISCIPLINES);
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async getDisciplineDetail(id: number | string): Promise<{ id: number; code: string; name?: string }> {
+    try {
+      const response = await this.axiosInstance.get<{ id: number; code: string; name?: string }>(API_ENDPOINTS.COUPONS.DISCIPLINE_DETAIL(id));
       return response.data;
     } catch (error) {
       throw new Error(this.getErrorMessage(error));

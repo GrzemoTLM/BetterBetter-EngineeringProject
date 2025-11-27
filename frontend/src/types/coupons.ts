@@ -5,13 +5,20 @@ export interface Bet {
   bet_type: number | string;
   line: number | string;
   odds: number | string;
-  result?: string | null; // outcome returned by backend (won/lost/null)
+  discipline?: number | string | null;
+  result?: string | null;
 }
 
 export interface BetType {
   id?: number;
   code: string;
   description?: string;
+}
+
+export interface Discipline {
+  id: number;
+  code: string;
+  name?: string;
 }
 
 export interface CreateCouponRequest {
