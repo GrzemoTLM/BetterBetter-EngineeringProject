@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.db import models
 
-from coupons.models import Currency
+from coupons.models import Currency, Discipline, BetTypeDict
 from .choices import NotificationGate, TwoFactorMethod
 
 
@@ -47,6 +47,18 @@ class UserSettings(models.Model):
         null=True
     )
     predefined_bet_values = models.JSONField(default=list, blank=True)
+
+    favourite_disciplines = models.ManyToManyField(
+        Discipline,
+        blank=True,
+        related_name='user_favourite_settings'
+    )
+
+    favourite_bet_types = models.ManyToManyField(
+        BetTypeDict,
+        blank=True,
+        related_name='user_favourite_settings'
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
 
