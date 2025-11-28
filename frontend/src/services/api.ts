@@ -216,7 +216,10 @@ class ApiService {
 
   async getSettings(): Promise<UserSettings> {
     try {
+      console.log('[API] getSettings - calling', API_ENDPOINTS.SETTINGS.GET);
       const response = await this.axiosInstance.get<UserSettings>(API_ENDPOINTS.SETTINGS.GET);
+      console.log('[API] getSettings - status:', response.status);
+      console.log('[API] getSettings - data:', response.data);
       return response.data;
     }
     catch (error) {
@@ -226,10 +229,15 @@ class ApiService {
 
   async updateSettings(data: UpdateSettingsRequest): Promise<UserSettings> {
     try {
+      console.log('[API] updateSettings - URL:', API_ENDPOINTS.SETTINGS.UPDATE);
+      console.log('[API] updateSettings - payload:', JSON.parse(JSON.stringify(data)));
       const response = await this.axiosInstance.patch<UserSettings>(API_ENDPOINTS.SETTINGS.UPDATE, data);
+      console.log('[API] updateSettings - status:', response.status);
+      console.log('[API] updateSettings - response data:', response.data);
       return response.data;
     }
     catch (error) {
+      console.error('[API] updateSettings - error raw:', error);
       throw new Error(this.getErrorMessage(error));
     }
   }

@@ -20,6 +20,10 @@ class UserSettingsService:
                 for v in data['predefined_bet_values']
             ]
 
+
+        favourite_disciplines = data.pop('favourite_disciplines', None)
+        favourite_bet_types = data.pop('favourite_bet_types', None)
+
         updatable_fields = [
             'preferred_currency',
             'notification_gate',
@@ -48,6 +52,13 @@ class UserSettingsService:
             settings.notification_gate_ref = None
 
         settings.save()
+
+        # Zaktualizuj ManyToMany relacje
+        if favourite_disciplines is not None:
+            settings.favourite_disciplines.set(favourite_disciplines)
+        if favourite_bet_types is not None:
+            settings.favourite_bet_types.set(favourite_bet_types)
+
         return settings
 
 _service = UserSettingsService()

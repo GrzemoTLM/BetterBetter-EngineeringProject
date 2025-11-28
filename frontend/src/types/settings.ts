@@ -15,6 +15,8 @@ export interface UserSettings {
   two_factor_enabled: boolean;
   two_factor_method: 'sms' | 'email' | 'mobile_app' | 'totp' | 'none';
   telegram_auth_code: string | null;
+  favourite_disciplines?: number[];
+  favourite_bet_types?: number[];
 }
 
 export interface UpdateSettingsRequest {
@@ -30,6 +32,8 @@ export interface UpdateSettingsRequest {
   notification_gate_ref?: string | null;
   two_factor_enabled?: boolean;
   two_factor_method?: 'sms' | 'email' | 'mobile_app' | 'totp' | 'none';
+  favourite_disciplines?: number[];
+  favourite_bet_types?: number[];
 }
 
 export interface TwoFactorStartRequest {

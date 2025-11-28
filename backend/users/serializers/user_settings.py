@@ -31,11 +31,13 @@ class UserSettingsSerializer(serializers.ModelSerializer):
         queryset=Discipline.objects.all(),
         many=True,
         required=False,
+        allow_null=True,
     )
     favourite_bet_types = serializers.PrimaryKeyRelatedField(
         queryset=BetTypeDict.objects.all(),
         many=True,
         required=False,
+        allow_null=True,
     )
 
     class Meta:
@@ -81,6 +83,13 @@ class UserSettingsSerializer(serializers.ModelSerializer):
                 'message': 'Wyślij /login KOD do bota na Telegramie'
             }
         return None
+
+    def to_representation(self, instance):
+        """Zwracaj favourite_* pola jako listy ID w GET"""
+        ret = super().to_representation(instance)
+        ret['favourite_disciplines'] = list(instance.favourite_disciplines.values_list('id', flat=True))
+        ret['favourite_bet_types'] = list(instance.favourite_bet_types.values_list('id', flat=True))
+        return ret
 
     def update(self, instance, validated_data):
         if 'predefined_bet_values' in validated_data and validated_data['predefined_bet_values'] is not None:

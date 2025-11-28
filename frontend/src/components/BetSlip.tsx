@@ -38,6 +38,8 @@ const BetSlip = ({
   const [betTypeModalOpen, setBetTypeModalOpen] = useState<{ betId: number | null }>({ betId: null });
   const [disciplineSearchQuery, setDisciplineSearchQuery] = useState('');
   const [betTypeSearchQuery, setBetTypeSearchQuery] = useState('');
+  const [favoriteDisciplines, setFavoriteDisciplines] = useState<number[]>([]);
+  const [favoriteBetTypes, setFavoriteBetTypes] = useState<number[]>([]);
   const [couponBookmakerName, setCouponBookmakerName] = useState<string>('');
   const [strategy, setStrategy] = useState(selectedStrategy || (strategies[0]?.name ?? ''));
   const [bets, setBets] = useState<Bet[]>([]);
@@ -49,12 +51,29 @@ const BetSlip = ({
   const [multiplier, setMultiplier] = useState<number>(1);
   const [potentialPayout, setPotentialPayout] = useState<number>(0);
 
-  // Fetch bookmaker accounts and bet types on component mount
+  // Fetch bookmaker accounts, bet types, disciplines and user favourites on component mount
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const accounts = await api.getBookmakerAccounts();
+        const [accounts, types, discs, settings] = await Promise.all([
+          api.getBookmakerAccounts(),
+          api.getBetTypes(),
+          api.getDisciplines(),
+          api.getSettings(),
+        ]);
+
         setBookmakerAccounts(accounts);
+        setBetTypes(types);
+        setDisciplines(discs);
+
+        if (settings.favourite_disciplines) {
+          setFavoriteDisciplines(settings.favourite_disciplines);
+        }
+
+        if (settings.favourite_bet_types) {
+          setFavoriteBetTypes(settings.favourite_bet_types);
+        }
+
         if (accounts.length > 0) {
           if (initialBookmakerAccountId) {
             setCouponBookmakerAccountId(initialBookmakerAccountId);
@@ -84,13 +103,6 @@ const BetSlip = ({
             setCouponBookmakerName((created as Coupon).bookmaker ?? accounts[0].bookmaker);
           }
         }
-
-        const [types, discs] = await Promise.all([
-          api.getBetTypes(),
-          api.getDisciplines(),
-        ]);
-        setBetTypes(types);
-        setDisciplines(discs);
       } catch (error) {
         console.error('Error fetching data:', error);
       }
@@ -383,6 +395,38 @@ const BetSlip = ({
       onClose();
     }
   };
+
+  const toggleFavoriteDiscipline = (id: number) => {
+    setFavoriteDisciplines((prev) =>
+      prev.includes(id) ? prev.filter((d) => d !== id) : [...prev, id]
+    );
+  };
+
+  const toggleFavoriteBetType = (id: number | undefined) => {
+    if (id === undefined) return;
+    setFavoriteBetTypes((prev) =>
+      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
+    );
+  };
+
+  useEffect(() => {
+    if (!favoriteDisciplines.length && !favoriteBetTypes.length) {
+      return;
+    }
+
+    const timeout = setTimeout(async () => {
+      try {
+        await api.updateSettings({
+          favourite_disciplines: favoriteDisciplines,
+          favourite_bet_types: favoriteBetTypes,
+        } as never);
+      } catch (error) {
+        console.error('Error saving favourites to user settings:', error);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [favoriteDisciplines, favoriteBetTypes]);
 
   return (
     <div className="bg-background-paper rounded-xl shadow-sm p-6 flex flex-col">
@@ -698,55 +742,87 @@ const BetSlip = ({
                   (d.code?.toLowerCase() || '').includes(disciplineSearchQuery.toLowerCase())
                 );
 
+                const sorted = [...filtered].sort((a, b) => {
+                  const aFav = favoriteDisciplines.includes(a.id);
+                  const bFav = favoriteDisciplines.includes(b.id);
+                  if (aFav === bFav) return 0;
+                  return aFav ? -1 : 1;
+                });
+
                 const currentBet = bets.find(b => b.id === disciplineModalOpen.betId);
                 const currentDisciplineId = currentBet?.discipline
                   ? (typeof currentBet.discipline === 'number' ? currentBet.discipline : parseInt(String(currentBet.discipline), 10))
                   : null;
 
-                return filtered.length > 0 ? (
-                  filtered.map((discipline) => {
+                return sorted.length > 0 ? (
+                  sorted.map((discipline) => {
                     const isSelected = currentDisciplineId === discipline.id;
+                    const isFavorite = favoriteDisciplines.includes(discipline.id);
 
                     return (
-                      <button
+                      <div
                         key={discipline.id}
-                        onClick={async () => {
-                          if (disciplineModalOpen.betId !== null && discipline.id) {
-                            setBets(prevBets => {
-                              return prevBets.map((bet) => {
-                                if (bet.id === disciplineModalOpen.betId) {
-                                  return { ...bet, discipline: discipline.id, bet_type: '' };
-                                }
-
-                                return bet;
-                              });
-                            });
-
-                            try {
-                              const filtered = await api.fetchBetTypesByDiscipline(discipline.id);
-
-                              setBetTypes(filtered);
-                            } catch (error) {
-                              console.error('Error fetching bet types for discipline:', error);
-                            }
-
-                            setDisciplineModalOpen({ betId: null });
-                            setDisciplineSearchQuery('');
-                          }
-                        }}
-                        className={`w-full flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors text-left text-sm ${
+                        className={`w-full flex items-center justify-between p-3 border rounded-lg transition-colors text-left text-sm ${
                           isSelected
                             ? 'border-primary-main bg-blue-50'
                             : 'border-border-light hover:border-border-medium hover:bg-gray-50'
                         }`}
                       >
-                        <div>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (disciplineModalOpen.betId !== null && discipline.id) {
+                              setBets(prevBets => {
+                                return prevBets.map((bet) => {
+                                  if (bet.id === disciplineModalOpen.betId) {
+                                    return { ...bet, discipline: discipline.id, bet_type: '' };
+                                  }
+
+                                  return bet;
+                                });
+                              });
+
+                              try {
+                                const filtered = await api.fetchBetTypesByDiscipline(discipline.id);
+
+                                setBetTypes(filtered);
+                              } catch (error) {
+                                console.error('Error fetching bet types for discipline:', error);
+                              }
+
+                              setDisciplineModalOpen({ betId: null });
+                              setDisciplineSearchQuery('');
+                            }
+                          }}
+                          className="flex-1 flex items-center justify-between mr-3"
+                        >
                           <div className="font-medium text-text-primary">{discipline.name}</div>
-                        </div>
-                        {isSelected && (
-                          <Check size={16} className="text-primary-main" />
-                        )}
-                      </button>
+                          {isSelected && (
+                            <Check size={16} className="text-primary-main ml-2" />
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => toggleFavoriteDiscipline(discipline.id)}
+                          className="p-2 rounded-full hover:bg-background-table-header transition-colors"
+                          aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill={isFavorite ? '#FBBF24' : 'none'}
+                            stroke={isFavorite ? '#FBBF24' : '#9CA3AF'}
+                            strokeWidth="1.5"
+                            className="w-5 h-5"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.563.563 0 0 0-.586 0L6.98 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.563.563 0 0 0-.182-.557L3.04 10.385a.563.563 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z"
+                          />
+                        </svg>
+                        </button>
+                      </div>
                     );
                   })
                 ) : (
@@ -799,51 +875,76 @@ const BetSlip = ({
 
             <div className="space-y-2 mb-6 max-h-80 overflow-y-auto">
               {(() => {
-                const filtered = betTypes.filter(bt =>
+                const filteredBetTypes = betTypes.filter(bt =>
                   (bt.code?.toLowerCase() || '').includes(betTypeSearchQuery.toLowerCase()) ||
                   (bt.description?.toLowerCase() || '').includes(betTypeSearchQuery.toLowerCase())
                 );
 
+                const sortedBetTypes = [...filteredBetTypes].sort((a, b) => {
+                  const aFav = a.id !== undefined && favoriteBetTypes.includes(a.id);
+                  const bFav = b.id !== undefined && favoriteBetTypes.includes(b.id);
+                  if (aFav === bFav) return 0;
+                  return aFav ? -1 : 1;
+                });
+
                 const currentBet = bets.find(b => b.id === betTypeModalOpen.betId);
                 const currentBetType = currentBet?.bet_type;
 
-                return filtered.length > 0 ? (
-                  filtered.map((type) => {
+                return sortedBetTypes.length > 0 ? (
+                  sortedBetTypes.map((type) => {
                     const isSelected = currentBetType === type.code;
-
+                    const isFavorite = type.id !== undefined && favoriteBetTypes.includes(type.id);
                     return (
-                      <button
+                      <div
                         key={type.id ?? `${type.code}`}
-                        onClick={() => {
-                          if (betTypeModalOpen.betId !== null) {
-                            setBets(prevBets => {
-                              return prevBets.map((bet) => {
-                                if (bet.id === betTypeModalOpen.betId) {
-                                  return { ...bet, bet_type: type.code };
-                                }
-
-                                return bet;
-                              });
-                            });
-
-                            setBetTypeModalOpen({ betId: null });
-                            setBetTypeSearchQuery('');
-                          }
-                        }}
                         className={`w-full flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors text-left text-sm ${
                           isSelected
                             ? 'border-primary-main bg-blue-50'
                             : 'border-border-light hover:border-border-medium hover:bg-gray-50'
                         }`}
                       >
-                        <div>
-                          <div className="font-medium text-text-primary">{type.code}</div>
-                          <div className="text-xs text-text-secondary mt-0.5">{type.description}</div>
-                        </div>
-                        {isSelected && (
-                          <Check size={16} className="text-primary-main" />
-                        )}
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (betTypeModalOpen.betId !== null) {
+                              setBets(prevBets => prevBets.map((bet) => (
+                                bet.id === betTypeModalOpen.betId ? { ...bet, bet_type: type.code } : bet
+                              )));
+                              setBetTypeModalOpen({ betId: null });
+                              setBetTypeSearchQuery('');
+                            }
+                          }}
+                          className="flex-1 flex items-center justify-between mr-3"
+                        >
+                          <div>
+                            <div className="font-medium text-text-primary">{type.code}</div>
+                            <div className="text-xs text-text-secondary mt-0.5">{type.description}</div>
+                          </div>
+                          {isSelected && (
+                            <Check size={16} className="text-primary-main" />
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => toggleFavoriteBetType(type.id)}
+                          className="p-2 rounded-full hover:bg-background-table-header transition-colors"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill={isFavorite ? '#FBBF24' : 'none'}
+                            stroke={isFavorite ? '#FBBF24' : '#9CA3AF'}
+                            strokeWidth="1.5"
+                            className="w-5 h-5"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.563.563 0 0 0-.586 0L6.98 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.563.563 0 0 0-.182-.557L3.04 10.385a.563.563 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z"
+                          />
+                        </svg>
+                        </button>
+                      </div>
                     );
                   })
                 ) : (
