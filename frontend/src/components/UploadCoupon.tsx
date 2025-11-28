@@ -14,24 +14,59 @@ const UploadCoupon = ({ onOcrParsed }: UploadCouponProps) => {
   const [successProgress, setSuccessProgress] = useState(0);
   const [finished, setFinished] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const progressIntervalRef = useRef<number | null>(null);
+
+  const clearProgressInterval = () => {
+    if (progressIntervalRef.current !== null) {
+      window.clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
+  };
 
   const startSuccessProgress = () => {
     setSuccessVisible(true);
     setFinished(false);
     setSuccessProgress(0);
 
-    const totalDuration = 3500;
-    const stepMs = 100;
+    clearProgressInterval();
+
+    const target = 90;
+    const totalDuration = 8000;
+    const stepMs = 200;
     const steps = totalDuration / stepMs;
     let currentStep = 0;
 
-    const interval = window.setInterval(() => {
+    progressIntervalRef.current = window.setInterval(() => {
       currentStep += 1;
-      const pct = Math.min(100, (currentStep / steps) * 100);
-      setSuccessProgress(pct);
+      const pct = Math.min(target, (currentStep / steps) * target);
+      setSuccessProgress(prev => (prev < pct ? pct : prev));
 
-      if (pct >= 100) {
-        window.clearInterval(interval);
+      if (pct >= target && progressIntervalRef.current !== null) {
+        window.clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+    }, stepMs);
+  };
+
+  const completeSuccessProgress = () => {
+    clearProgressInterval();
+
+    const start = successProgress;
+    const end = 100;
+    const duration = 800;
+    const stepMs = 50;
+    const steps = duration / stepMs;
+    let current = 0;
+
+    progressIntervalRef.current = window.setInterval(() => {
+      current += 1;
+      const progress = start + ((end - start) * current) / steps;
+      const clamped = progress >= end ? end : progress;
+      setSuccessProgress(clamped);
+
+      if (clamped >= end && progressIntervalRef.current !== null) {
+        window.clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
         setTimeout(() => {
           setSuccessVisible(false);
           setFinished(false);
@@ -54,7 +89,6 @@ const UploadCoupon = ({ onOcrParsed }: UploadCouponProps) => {
 
     console.log('[UI] OCR Dropzone - Selected file:', file.name, mime, file.size);
 
-    // Pasek startuje od razu przy wysyłaniu
     startSuccessProgress();
 
     try {
@@ -65,11 +99,12 @@ const UploadCoupon = ({ onOcrParsed }: UploadCouponProps) => {
         onOcrParsed(result);
       }
 
-      // Dopiero przy sukcesie pokazujemy tekst "Kupon został dodany"
       setFinished(true);
+      setShowDropzone(false);
+      completeSuccessProgress();
     } catch (err) {
       console.error('[UI] OCR Dropzone - Error calling OCR API:', err);
-      // Przy błędzie chowamy pasek
+      clearProgressInterval();
       setSuccessVisible(false);
       setFinished(false);
     }
@@ -107,7 +142,6 @@ const UploadCoupon = ({ onOcrParsed }: UploadCouponProps) => {
 
     void handleFile(file);
 
-    // allow selecting the same file again
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -149,7 +183,6 @@ const UploadCoupon = ({ onOcrParsed }: UploadCouponProps) => {
             Upload Coupon (OCR)
           </h3>
 
-          {/* Dropzone */}
           <div
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}

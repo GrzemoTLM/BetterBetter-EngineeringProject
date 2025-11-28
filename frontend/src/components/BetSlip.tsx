@@ -52,6 +52,8 @@ const BetSlip = ({
   const [couponId, setCouponId] = useState<number | null>(initialCouponId ?? null);
   const [multiplier, setMultiplier] = useState<number>(1);
   const [potentialPayout, setPotentialPayout] = useState<number>(0);
+  const [showOcrDropzone, setShowOcrDropzone] = useState(false);
+  const [ocrSuccessVisible, setOcrSuccessVisible] = useState(false);
   const ocrFileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Fetch bookmaker accounts, bet types, disciplines and user favourites on component mount
@@ -431,7 +433,9 @@ const BetSlip = ({
     return () => clearTimeout(timeout);
   }, [favoriteDisciplines, favoriteBetTypes]);
 
+
   const handleOpenOCRPicker = () => {
+    // zamiast paska progresu po prostu otwieramy file picker
     ocrFileInputRef.current?.click();
   };
 
@@ -442,10 +446,11 @@ const BetSlip = ({
       console.log('[UI] OCR - Selected file:', file.name, file.type, file.size);
       const result = await api.extractCouponViaOCR(file);
       console.log('[UI] OCR - Server response:', result);
+      // po sukcesie chowamy ewentualny dropzone i pokażemy modal sukcesu po sparsowaniu
+      setShowOcrDropzone(false);
     } catch (err) {
       console.error('[UI] OCR - Error:', err);
     } finally {
-      // reset input to allow selecting the same file again
       if (ocrFileInputRef.current) {
         ocrFileInputRef.current.value = '' as unknown as string;
       }
@@ -457,7 +462,6 @@ const BetSlip = ({
 
     console.log('[UI] BetSlip - received coupon from OCR:', initialCouponFromOcr);
 
-    // Wypełnij lokalne bety do tabeli (nie potwierdzone)
     const mappedBets: Bet[] = (initialCouponFromOcr.bets || []).map((b, idx) => ({
       id: Date.now() + idx,
       event_name: String(b.event_name ?? ''),
@@ -471,9 +475,10 @@ const BetSlip = ({
 
     if (mappedBets.length > 0) {
       setBets(mappedBets);
+      setOcrSuccessVisible(true);
+      setShowOcrDropzone(false);
     }
 
-    // Ustaw stawkę, jeśli mamy wartość z OCR
     if (initialCouponFromOcr.bet_stake) {
       const stakeStr = String(initialCouponFromOcr.bet_stake);
       setActiveStake(stakeStr);
@@ -491,36 +496,93 @@ const BetSlip = ({
         onChange={handleOCRFileSelected}
       />
       {/* Top Controls */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div>
-          <label className="block text-sm font-medium text-text-secondary mb-2">Bookmaker</label>
-          <div className="w-full px-4 py-2 border border-default rounded-lg text-sm text-text-primary bg-gray-50">
-            {(() => {
-              const acc = bookmakerAccounts.find(a => a.id === couponBookmakerAccountId);
-              if (acc) {
-                return (
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{acc.bookmaker}</span>
-                    <span className="text-text-secondary text-xs">{acc.external_username}</span>
-                  </div>
-                );
-              }
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-4">
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-2">Bookmaker</label>
+            <div className="w-full px-4 py-2 border border-default rounded-lg text-sm text-text-primary bg-gray-50">
+              {(() => {
+                const acc = bookmakerAccounts.find(a => a.id === couponBookmakerAccountId);
+                if (acc) {
+                  return (
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">{acc.bookmaker}</span>
+                      <span className="text-text-secondary text-xs">{acc.external_username}</span>
+                    </div>
+                  );
+                }
 
-              if (couponBookmakerName) return <span className="font-medium">{couponBookmakerName}</span>;
+                if (couponBookmakerName) return <span className="font-medium">{couponBookmakerName}</span>;
 
-               return <span className="text-text-secondary">Loading...</span>;
-            })()}
+                return <span className="text-text-secondary">Loading...</span>;
+              })()}
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-2">Strategy</label>
+            <select
+              value={strategy}
+              onChange={(e) => handleStrategyChange(e.target.value)}
+              className="w-full px-4 py-2 border border-default rounded-lg text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-main focus:border-transparent bg-white"
+            >
+              {strategies.length > 0 ? (
+                strategies.map((s) => (
+                  <option key={s.id} value={s.name}>
+                    {s.name}
+                  </option>
+                ))
+              ) : (
+                <option value="">No strategies available</option>
+              )}
+            </select>
           </div>
         </div>
+        <div className="flex gap-3 items-center">
+          <button
+            onClick={handleAddBet}
+            className="border border-primary-main text-primary-main rounded-lg px-4 py-2 text-sm hover:bg-blue-50 transition-colors flex items-center gap-2"
+          >
+            <Plus size={16} />
+            Add new bet
+          </button>
+        </div>
       </div>
-      <div className="mb-6 flex justify-end">
-        <button
-          onClick={handleAddBet}
-          className="border border-primary-main text-primary-main rounded-lg px-4 py-2 text-sm hover:bg-blue-50 transition-colors flex items-center gap-2">
-          <Plus size={16} />
-          Add new bet
-        </button>
-      </div>
+
+      {ocrSuccessVisible && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-lg max-w-sm w-full mx-4 p-6">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
+                  <Check size={18} className="text-emerald-600" />
+                </div>
+                <h3 className="text-sm font-semibold text-gray-900">
+                  OCR parsing finished
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOcrSuccessVisible(false)}
+                className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <X size={16} className="text-gray-500" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-700 mb-4">
+              Bets were filled from the ticket. Please check all bets and accept them using the green check icons.
+            </p>
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setOcrSuccessVisible(false)}
+                className="px-4 py-2 text-sm font-medium rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 transition-colors"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Betting Table */}
       <div className="flex flex-col mb-6">
@@ -634,13 +696,13 @@ const BetSlip = ({
                     {!bet.confirmed ? (
                       <button
                         onClick={() => handleConfirmBet(bet.id)}
-                        className="p-1 hover:bg-green-50 rounded transition-colors"
+                        className="p-1 rounded-full bg-green-50 border border-green-300 shadow-sm animate-pulse hover:bg-green-100 transition-colors"
                         title="Confirm bet"
                       >
-                        <Check size={16} className="text-green-600" />
+                        <Check size={16} className="text-green-700" />
                       </button>
                     ) : (
-                      <div className="p-1">
+                      <div className="p-1 rounded-full bg-green-50 border border-green-200">
                         <Check size={16} className="text-green-600" />
                       </div>
                     )}
