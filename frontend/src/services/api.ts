@@ -9,6 +9,23 @@ import type { Coupon, CreateCouponRequest, BetType, OcrExtractResponse } from '.
 import type { Bet } from '../types/coupons';
 import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
 
+export interface SystemMetrics {
+  cpu_usage: number;
+  memory: {
+    total: number;
+    used: number;
+    percent: number;
+  };
+  disk: {
+    total: number;
+    used: number;
+    percent: number;
+  };
+  db_latency_ms: number;
+  error_rate: number;
+  queue_length: number;
+}
+
 class ApiService {
   private axiosInstance: AxiosInstance;
 
@@ -203,6 +220,17 @@ class ApiService {
     }
   }
 
+  async getSystemMetrics(): Promise<SystemMetrics> {
+    try {
+      const response = await this.axiosInstance.get<SystemMetrics>(API_ENDPOINTS.MONITORING.SYSTEM_METRICS);
+      console.log('[API] getSystemMetrics - status:', response.status);
+      console.log('[API] getSystemMetrics - data:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('[API] getSystemMetrics - error raw:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
 
   async getCurrentUser(): Promise<UserProfile> {
     try {

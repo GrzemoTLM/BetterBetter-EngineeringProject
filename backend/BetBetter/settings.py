@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     'two_factor',
     'django_otp.plugins.otp_email',
     'django_filters',
+    "monitoring",
 ]
 
 DRF_YASG_AVAILABLE = importlib.util.find_spec("drf_yasg") is not None
@@ -186,4 +187,3 @@ CORS_EXPOSE_HEADERS = [
 ]
 
 CORS_PREFLIGHT_MAX_AGE = 86400
-

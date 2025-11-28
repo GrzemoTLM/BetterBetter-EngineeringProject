@@ -13,3 +13,4 @@ paddleocr>=2.8.0
 pillow>=10.1.0
 setuptools<81
 mailersend>=2.0.0
+psutil==6.0.0
