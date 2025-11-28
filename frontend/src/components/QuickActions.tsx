@@ -26,7 +26,6 @@ const QuickActions = ({ onTransactionSuccess }: QuickActionsProps) => {
           Quick Actions
         </h3>
         <div className="flex flex-col gap-3">
-          {/* Add bookmaker */}
           <button
             onClick={() => setShowAddBookmakerModal(true)}
             className="px-5 py-2.5 rounded-md font-medium text-base cursor-pointer border border-primary-main text-primary-main hover:bg-[rgba(42,75,141,0.05)] transition-all duration-200 flex items-center justify-center gap-2"
@@ -35,7 +34,6 @@ const QuickActions = ({ onTransactionSuccess }: QuickActionsProps) => {
             Add bookmaker
           </button>
 
-          {/* Deposit */}
           <button
             onClick={() => setShowDepositModal(true)}
             className="px-5 py-2.5 rounded-md font-medium text-base cursor-pointer border-none bg-secondary-main text-secondary-contrast shadow-button hover:bg-secondary-dark transition-all duration-200 flex items-center justify-center gap-2"
@@ -44,7 +42,6 @@ const QuickActions = ({ onTransactionSuccess }: QuickActionsProps) => {
             Deposit
           </button>
 
-          {/* Withdraw */}
           <button
             onClick={() => setShowWithdrawModal(true)}
             className="px-5 py-2.5 rounded-md font-medium text-base cursor-pointer border-none bg-secondary-main text-secondary-contrast shadow-button hover:bg-secondary-dark transition-all duration-200 flex items-center justify-center gap-2"
@@ -54,8 +51,6 @@ const QuickActions = ({ onTransactionSuccess }: QuickActionsProps) => {
           </button>
         </div>
       </div>
-
-      {/* Modals */}
       {showDepositModal && (
         <DepositModal
           onClose={() => setShowDepositModal(false)}
@@ -74,26 +69,6 @@ const QuickActions = ({ onTransactionSuccess }: QuickActionsProps) => {
           onSuccess={handleSuccess}
         />
       )}
-
-      <div className="bg-background-paper rounded-md p-6 shadow-card">
-        <h3 className="text-xl font-medium text-text-primary mb-4">Alerts</h3>
-        <div className="space-y-2">
-          <div className="text-sm text-text-secondary">
-            No pending alerts at this time.
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-background-paper rounded-md p-6 shadow-card">
-        <h3 className="text-xl font-medium text-text-primary mb-4">
-          Reconciliation
-        </h3>
-        <div className="space-y-2">
-          <div className="text-sm text-text-secondary">
-            All transactions reconciled.
-          </div>
-        </div>
-      </div>
     </div>
   );
 };
