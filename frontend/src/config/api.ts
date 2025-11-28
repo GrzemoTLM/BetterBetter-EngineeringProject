@@ -52,4 +52,8 @@ export const API_ENDPOINTS = {
     FORCE_WIN: (id: number) => `/api/coupons/coupons/${id}/force-win/`,
     BET_SETTLE: (couponId: number, betId: number | string) => `/api/coupons/coupons/${couponId}/bets/${betId}/`,
   },
+  MONITORING: {
+    SYSTEM_METRICS: '/api/monitoring/system-metrics/',
+    LOGGED_IN_USERS: '/api/monitoring/logged-in-users/',
+  },
 };

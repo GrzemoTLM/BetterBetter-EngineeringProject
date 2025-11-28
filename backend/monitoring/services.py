@@ -1,8 +1,14 @@
-from typing import Any, Dict
+from typing import Any, Dict, List
 import time
+import json
 
 import psutil
+from django.conf import settings
+from django.contrib.sessions.models import Session
 from django.db import connection
+from django.utils import timezone
+
+from users.models.user import User
 
 
 def get_system_metrics() -> Dict[str, Any]:
@@ -54,3 +60,52 @@ def get_system_metrics() -> Dict[str, Any]:
         "error_rate": 0.0,
         "queue_length": 0,
     }
+
+
+def get_logged_in_users() -> List[Dict[str, Any]]:
+    """Zwraca liste aktualnie zalogowanych uzytkownikow na podstawie sesji.
+
+    Uwaga: dotyczy tylko sesji opartych o mechanizm Django (SessionMiddleware),
+    nie samego JWT. Poniewaz u Ciebie i tak jest wlaczona aplikacja sessions,
+    to jest sensowny przyblizony widok "online users".
+    """
+
+    logged_in_users: List[Dict[str, Any]] = []
+
+    # Bierzemy tylko niewygasle sesje
+    sessions = Session.objects.filter(expire_date__gt=timezone.now())
+
+    user_model = User
+    session_key = getattr(settings, "SESSION_COOKIE_NAME", "sessionid")
+
+    for sess in sessions:
+        try:
+            data = sess.get_decoded()
+        except Exception:
+            # jesli nie udalo sie zdekodowac sesji, pomijamy
+            continue
+
+        user_id = data.get("_auth_user_id")
+        if not user_id:
+            continue
+
+        try:
+            user = user_model.objects.get(pk=user_id)
+        except user_model.DoesNotExist:
+            continue
+
+        logged_in_users.append(
+            {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "is_staff": user.is_staff,
+                "is_superuser": user.is_superuser,
+                "status": getattr(user, "status", None),
+                "last_login": user.last_login,
+                "session_key": sess.session_key,
+                "session_expire_date": sess.expire_date,
+            }
+        )
+
+    return logged_in_users

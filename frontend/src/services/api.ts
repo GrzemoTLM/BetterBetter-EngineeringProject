@@ -26,6 +26,18 @@ export interface SystemMetrics {
   queue_length: number;
 }
 
+export interface LoggedInUser {
+  id: number;
+  username: string;
+  email: string;
+  is_staff: boolean;
+  is_superuser: boolean;
+  status: string;
+  last_login: string | null;
+  session_key: string;
+  session_expire_date: string;
+}
+
 class ApiService {
   private axiosInstance: AxiosInstance;
 
@@ -228,6 +240,30 @@ class ApiService {
       return response.data;
     } catch (error) {
       console.error('[API] getSystemMetrics - error raw:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async getLoggedInUsers(): Promise<LoggedInUser[]> {
+    try {
+      const response = await this.axiosInstance.get<LoggedInUser[]>(API_ENDPOINTS.MONITORING.LOGGED_IN_USERS);
+      console.log('[API] getLoggedInUsers - status:', response.status);
+      console.log('[API] getLoggedInUsers - data:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('[API] getLoggedInUsers - error raw:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async getAllUsers(): Promise<UserProfile[]> {
+    try {
+      const response = await this.axiosInstance.get<UserProfile[]>('/api/users/');
+      console.log('[API] getAllUsers - status:', response.status);
+      console.log('[API] getAllUsers - data:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('[API] getAllUsers - error raw:', error);
       throw new Error(this.getErrorMessage(error));
     }
   }

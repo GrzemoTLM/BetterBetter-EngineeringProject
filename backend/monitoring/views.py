@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import BasePermission
 
-from .services import get_system_metrics
+from .services import get_system_metrics, get_logged_in_users
 
 
 class IsAdminOrSuperuser(BasePermission):
@@ -28,3 +28,13 @@ class SystemMetricsView(APIView):
     def get(self, request, *args, **kwargs):  # type: ignore[override]
         data = get_system_metrics()
         return Response(data)
+
+
+class LoggedInUsersView(APIView):
+    """Zwraca liste aktualnie zalogowanych uzytkownikow (na podstawie sesji)."""
+
+    permission_classes = [IsAdminOrSuperuser]
+
+    def get(self, request, *args, **kwargs):  # type: ignore[override]
+        users = get_logged_in_users()
+        return Response(users)

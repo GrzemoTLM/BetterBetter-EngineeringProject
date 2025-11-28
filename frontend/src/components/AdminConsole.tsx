@@ -1,6 +1,6 @@
 import { User } from 'lucide-react';
 import UsersTable from './UsersTable';
-import ActivityLog from './ActivityLog';
+import ActiveUsers from './ActiveUsers';
 import UserQuickView from './UserQuickView';
 import Snapshots from './Snapshots';
 import TicketsAdminPage from './TicketsAdminPage';
@@ -25,10 +25,10 @@ const AdminConsole = () => {
 
       {/* 3-Column Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Left Column - Users & Activity Log (Span 6) */}
+        {/* Left Column - Users & Active Users (Span 6) */}
         <div className="lg:col-span-6 flex flex-col gap-4">
           <UsersTable />
-          <ActivityLog />
+          <ActiveUsers />
         </div>
 
         {/* Middle Column - User Quick View & Snapshots (Span 3) */}
@@ -49,4 +49,3 @@ const AdminConsole = () => {
 };
 
 export default AdminConsole;
-
