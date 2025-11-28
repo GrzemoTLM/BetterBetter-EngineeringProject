@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../services/api';
 import type { Ticket } from '../types/tickets';
 import {
@@ -8,17 +8,22 @@ import {
   XCircle,
   Send,
   ArrowLeft,
+  X,
 } from 'lucide-react';
 
 const TicketsAdminPage = () => {
-  const [showTickets, setShowTickets] = useState(false);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [commentContent, setCommentContent] = useState('');
   const [loadingComment, setLoadingComment] = useState(false);
+
+  useEffect(() => {
+    fetchTickets();
+  }, []);
 
   const fetchTickets = async () => {
     try {
@@ -33,14 +38,10 @@ const TicketsAdminPage = () => {
     }
   };
 
-  const handleShowTickets = () => {
-    setShowTickets(true);
-    fetchTickets();
-  };
-
   const handleSelectTicket = async (ticket: Ticket) => {
     try {
       setLoadingDetail(true);
+      setShowModal(true);
       const detailedTicket = await api.getTicketDetail(ticket.id.toString());
       setSelectedTicket(detailedTicket);
     } catch {
@@ -162,35 +163,83 @@ const TicketsAdminPage = () => {
     });
   };
   
-  if (!showTickets) {
-    return (
+  return (
+    <>
       <div className="bg-background-paper rounded-lg shadow-sm border border-gray-200 p-4">
         <h3 className="text-sm font-semibold text-text-primary mb-3">
           Support Tickets
         </h3>
-        <button
-          onClick={handleShowTickets}
-          className="w-full bg-primary-main text-primary-contrast rounded-lg px-4 py-2 text-sm hover:bg-primary-main/90 transition-colors font-medium"
-        >
-          Show Tickets
-        </button>
-      </div>
-    );
-  }
-  
-  return (
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black bg-opacity-50 z-40"
-        onClick={() => {
-          setShowTickets(false);
-          setSelectedTicket(null);
-        }}
-      />
+        
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded p-2 text-xs text-red-700 mb-3">
+            {error}
+          </div>
+        )}
 
-      {/* Modal */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        {loading ? (
+          <div className="text-center py-4 text-text-secondary text-sm">
+            Loading tickets...
+          </div>
+        ) : tickets.length === 0 ? (
+          <div className="text-center py-4 text-text-secondary text-sm">
+            No tickets yet
+          </div>
+        ) : (
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {tickets
+              .sort((a, b) => {
+                if (a.status === 'resolved' && b.status !== 'resolved') return 1;
+                if (a.status !== 'resolved' && b.status === 'resolved') return -1;
+                if (a.status === 'closed' && b.status !== 'closed') return 1;
+                if (a.status !== 'closed' && b.status === 'closed') return -1;
+                return 0;
+              })
+              .map((ticket) => {
+                const StatusIcon = getStatusIcon(ticket.status);
+                return (
+                  <div
+                    key={ticket.id}
+                    onClick={() => handleSelectTicket(ticket)}
+                    className="p-3 border border-gray-200 rounded hover:bg-gray-50 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-sm font-semibold text-text-primary truncate">
+                            {ticket.title}
+                          </p>
+                          <span
+                            className={`px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap ${getStatusColor(
+                              ticket.status
+                            )}`}
+                          >
+                            {ticket.status_display}
+                          </span>
+                        </div>
+                        <p className="text-xs text-text-secondary line-clamp-2">
+                          {ticket.description}
+                        </p>
+                      </div>
+                      <StatusIcon size={16} className="text-gray-400 flex-shrink-0 mt-1" />
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        )}
+      </div>
+
+      {showModal && (
+        <>
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-40"
+            onClick={() => {
+              setShowModal(false);
+              setSelectedTicket(null);
+            }}
+          />
+
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div className="bg-background-paper rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-gray-200 p-4">
@@ -207,12 +256,12 @@ const TicketsAdminPage = () => {
             )}
             <button
               onClick={() => {
-                setShowTickets(false);
+                setShowModal(false);
                 setSelectedTicket(null);
               }}
               className="text-text-secondary hover:text-text-primary transition-colors text-xl"
             >
-              ✕
+              <X size={20} />
             </button>
           </div>
 
@@ -367,6 +416,8 @@ const TicketsAdminPage = () => {
           </div>
         </div>
       </div>
+        </>
+      )}
     </>
   );
 };

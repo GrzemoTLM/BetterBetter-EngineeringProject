@@ -8,8 +8,8 @@ interface UserProfileWithStatus extends UserProfile {
 }
 
 const UsersTable = () => {
-  const [statusFilter, setStatusFilter] = useState('All');
-  const [roleFilter, setRoleFilter] = useState('All');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [users, setUsers] = useState<UserProfileWithStatus[]>([]);
   const [loading, setLoading] = useState(false);
@@ -144,7 +144,7 @@ const UsersTable = () => {
           onChange={(e) => setStatusFilter(e.target.value)}
           className="bg-background-paper border border-default rounded-sm px-3 py-1.5 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-main"
         >
-          <option>All</option>
+          <option value="" disabled className="text-text-secondary">Status</option>
           <option>Active</option>
           <option>Blocked</option>
         </select>
@@ -153,29 +153,13 @@ const UsersTable = () => {
           onChange={(e) => setRoleFilter(e.target.value)}
           className="bg-background-paper border border-default rounded-sm px-3 py-1.5 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-main"
         >
-          <option>All</option>
+          <option value="" disabled className="text-text-secondary">Role</option>
           <option>Admin</option>
           <option>User</option>
           <option>Moderator</option>
         </select>
         <button className="bg-primary-main text-primary-contrast px-4 py-1.5 rounded-sm text-sm hover:bg-primary-hover transition-colors">
           Apply filters
-        </button>
-      </div>
-
-      {/* Actions */}
-      <div className="flex flex-wrap gap-2 mb-4">
-        <button className="border border-default text-text-primary rounded-sm px-3 py-1 text-sm hover:bg-gray-50 transition-colors">
-          Activate
-        </button>
-        <button className="border border-default text-text-primary rounded-sm px-3 py-1 text-sm hover:bg-gray-50 transition-colors">
-          Block
-        </button>
-        <button className="border border-default text-text-primary rounded-sm px-3 py-1 text-sm hover:bg-gray-50 transition-colors">
-          Force 2FA
-        </button>
-        <button className="border border-default text-text-primary rounded-sm px-3 py-1 text-sm hover:bg-gray-50 transition-colors">
-          Export
         </button>
       </div>
 
