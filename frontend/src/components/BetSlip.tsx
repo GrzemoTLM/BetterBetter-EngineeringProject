@@ -1,5 +1,5 @@
 import { Plus, Trash2, Search, Check, X } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import type { Strategy } from '../types/strategies';
 import type { Bet as BetData, BetType as BetTypeOption, Discipline as DisciplineOption } from '../types/coupons';
@@ -19,6 +19,7 @@ interface BetSlipProps {
   onCouponCreated?: () => void;
   initialCouponId?: number;
   initialBookmakerAccountId?: number;
+  initialCouponFromOcr?: OcrExtractResponse | null;
 }
 
 const BetSlip = ({
@@ -29,6 +30,7 @@ const BetSlip = ({
   onCouponCreated,
   initialCouponId,
   initialBookmakerAccountId,
+  initialCouponFromOcr,
 }: BetSlipProps) => {
   const [bookmakerAccounts, setBookmakerAccounts] = useState<BookmakerAccountCreateResponse[]>([]);
   const [betTypes, setBetTypes] = useState<BetTypeOption[]>([]);
@@ -50,6 +52,7 @@ const BetSlip = ({
   const [couponId, setCouponId] = useState<number | null>(initialCouponId ?? null);
   const [multiplier, setMultiplier] = useState<number>(1);
   const [potentialPayout, setPotentialPayout] = useState<number>(0);
+  const ocrFileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Fetch bookmaker accounts, bet types, disciplines and user favourites on component mount
   useEffect(() => {
@@ -428,8 +431,65 @@ const BetSlip = ({
     return () => clearTimeout(timeout);
   }, [favoriteDisciplines, favoriteBetTypes]);
 
+  const handleOpenOCRPicker = () => {
+    ocrFileInputRef.current?.click();
+  };
+
+  const handleOCRFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      console.log('[UI] OCR - Selected file:', file.name, file.type, file.size);
+      const result = await api.extractCouponViaOCR(file);
+      console.log('[UI] OCR - Server response:', result);
+    } catch (err) {
+      console.error('[UI] OCR - Error:', err);
+    } finally {
+      // reset input to allow selecting the same file again
+      if (ocrFileInputRef.current) {
+        ocrFileInputRef.current.value = '' as unknown as string;
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (!initialCouponFromOcr) return;
+
+    console.log('[UI] BetSlip - received coupon from OCR:', initialCouponFromOcr);
+
+    // Wypełnij lokalne bety do tabeli (nie potwierdzone)
+    const mappedBets: Bet[] = (initialCouponFromOcr.bets || []).map((b, idx) => ({
+      id: Date.now() + idx,
+      event_name: String(b.event_name ?? ''),
+      bet_type: b.bet_type,
+      line: b.line,
+      odds: b.odds,
+      start_time: b.start_time ?? new Date().toISOString(),
+      discipline: b.discipline ?? null,
+      confirmed: false,
+    }));
+
+    if (mappedBets.length > 0) {
+      setBets(mappedBets);
+    }
+
+    // Ustaw stawkę, jeśli mamy wartość z OCR
+    if (initialCouponFromOcr.bet_stake) {
+      const stakeStr = String(initialCouponFromOcr.bet_stake);
+      setActiveStake(stakeStr);
+    }
+  }, [initialCouponFromOcr]);
+
   return (
     <div className="bg-background-paper rounded-xl shadow-sm p-6 flex flex-col">
+      {/* Hidden file input for OCR */}
+      <input
+        ref={ocrFileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleOCRFileSelected}
+      />
       {/* Top Controls */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div>
@@ -451,26 +511,6 @@ const BetSlip = ({
                return <span className="text-text-secondary">Loading...</span>;
             })()}
           </div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-text-secondary mb-2">
-            Strategy
-          </label>
-          <select
-            value={strategy}
-            onChange={(e) => handleStrategyChange(e.target.value)}
-            className="w-full px-4 py-2 border border-default rounded-lg text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-main focus:border-transparent"
-          >
-            {strategies.length > 0 ? (
-              strategies.map((s) => (
-                <option key={s.id} value={s.name}>
-                  {s.name}
-                </option>
-              ))
-            ) : (
-              <option value="">No strategies available</option>
-            )}
-          </select>
         </div>
       </div>
       <div className="mb-6 flex justify-end">

@@ -21,6 +21,14 @@ export interface Discipline {
   name?: string;
 }
 
+export interface OcrExtractResponse {
+  bookmaker_account: number;
+  coupon_type: 'SOLO' | 'AKO' | 'SYSTEM';
+  bet_stake: string | number;
+  placed_at: string;
+  bets: Bet[];
+}
+
 export interface CreateCouponRequest {
   bookmaker_account: number;
   coupon_type?: 'SOLO' | 'AKO' | 'SYSTEM';

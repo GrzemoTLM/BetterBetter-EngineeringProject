@@ -5,7 +5,7 @@ import type { UserSettings, UpdateSettingsRequest, TwoFactorStartRequest, TwoFac
 import type { TransactionCreateRequest, TransactionCreateResponse, BookmakerAccountCreateRequest, BookmakerAccountCreateResponse, AvailableBookmaker, Transaction, TransactionSummary } from '../types/finances';
 import type { TicketCategory, CreateTicketRequest, Ticket, CreateCommentRequest, TicketComment } from '../types/tickets';
 import type { Strategy, CreateStrategyRequest } from '../types/strategies';
-import type { Coupon, CreateCouponRequest, BetType } from '../types/coupons';
+import type { Coupon, CreateCouponRequest, BetType, OcrExtractResponse } from '../types/coupons';
 import type { Bet } from '../types/coupons';
 import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
 
@@ -709,6 +709,27 @@ class ApiService {
       return response.data;
     } catch (error) {
       console.error('[API] updateCoupon - Error:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  // OCR: upload image and parse coupon data
+  async extractCouponViaOCR(file: File): Promise<OcrExtractResponse> {
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      formData.append('image_name', file.name);
+      const url = `${API_BASE_URL}/api/coupons/coupons/ocr/parse/`;
+      console.log('[API] OCR parse - URL:', url);
+      console.log('[API] OCR parse - File name:', file.name, 'size:', file.size);
+      const response = await this.axiosInstance.post<OcrExtractResponse>(url, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      console.log('[API] OCR parse - Status:', response.status);
+      console.log('[API] OCR parse - Data:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('[API] OCR parse - Error:', error);
       throw new Error(this.getErrorMessage(error));
     }
   }

@@ -4,6 +4,7 @@ import UploadCoupon from './UploadCoupon';
 import BetSlip from './BetSlip';
 import api from '../services/api';
 import type { Strategy } from '../types/strategies';
+import type { OcrExtractResponse } from '../types/coupons';
 
 interface AddCouponProps {
   onClose: () => void;
@@ -15,6 +16,7 @@ interface AddCouponProps {
 
 const AddCoupon = ({ onClose, strategies = [], onCouponCreated, initialCouponId, initialBookmakerAccountId }: AddCouponProps) => {
   const [fetchedStrategies, setFetchedStrategies] = useState<Strategy[]>(strategies);
+  const [ocrCoupon, setOcrCoupon] = useState<OcrExtractResponse | null>(null);
 
   useEffect(() => {
     const fetchStrategies = async () => {
@@ -53,7 +55,7 @@ const AddCoupon = ({ onClose, strategies = [], onCouponCreated, initialCouponId,
         <div className="flex-1 flex justify-center p-6 overflow-y-auto">
           <div className="w-full max-w-3xl mx-auto flex flex-col gap-6">
             {/* Upload Coupon Section */}
-            <UploadCoupon />
+            <UploadCoupon onOcrParsed={setOcrCoupon} />
 
             {/* Bet Slip Section */}
             <BetSlip
@@ -61,7 +63,8 @@ const AddCoupon = ({ onClose, strategies = [], onCouponCreated, initialCouponId,
               onCouponCreated={onCouponCreated}
               onClose={onClose}
               initialCouponId={initialCouponId}
-              initialBookmakerAccountId={initialBookmakerAccountId}
+              initialBookmakerAccountId={initialBookmakerAccountId ?? ocrCoupon?.bookmaker_account}
+              initialCouponFromOcr={ocrCoupon}
             />
           </div>
         </div>
