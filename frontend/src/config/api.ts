@@ -36,4 +36,20 @@ export const API_ENDPOINTS = {
     ADD_COMMENT: (id: string) => `/api/tickets/tickets/${id}/add_comment/`,
     COMMENTS: '/api/tickets/comments/',
   },
+  STRATEGIES: {
+    LIST: '/api/analytics/strategies/',
+    CREATE: '/api/analytics/strategies/',
+    DETAIL: (id: number) => `/api/analytics/strategies/${id}/`,
+    UPDATE: (id: number) => `/api/analytics/strategies/${id}/`,
+    DELETE: (id: number) => `/api/analytics/strategies/${id}/`,
+  },
+  COUPONS: {
+    LIST: '/api/coupons/coupons/',
+    CREATE: '/api/coupons/coupons/',
+    BET_TYPES: '/api/coupons/bet-types/',
+    DISCIPLINES: '/api/coupons/disciplines/',
+    DISCIPLINE_DETAIL: (id: number | string) => `/api/coupons/disciplines/${id}/`,
+    FORCE_WIN: (id: number) => `/api/coupons/coupons/${id}/force-win/`,
+    BET_SETTLE: (couponId: number, betId: number | string) => `/api/coupons/coupons/${couponId}/bets/${betId}/`,
+  },
 };

@@ -11,7 +11,7 @@ class DisciplineSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Discipline
-        fields = ['code', 'name', 'category', 'slug', 'is_active']
+        fields = ['id', 'code', 'name', 'category', 'slug', 'is_active']
 
     def validate_code(self, value):
         return value.upper()

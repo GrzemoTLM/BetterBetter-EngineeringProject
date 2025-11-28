@@ -18,9 +18,9 @@ import ResetPassword from './components/ResetPassword';
 import KPICards from './components/KPICards';
 import FilterBar from './components/FilterBar';
 import SummaryStats from './components/SummaryStats';
-import BalanceChart from './components/BalanceChart';
 import QuickActions from './components/QuickActions';
 import TransactionTable from './components/TransactionTable';
+import MoneyFlowBarChart from './components/MoneyFlowBarChart';
 import apiService from './services/api';
 import type { Transaction, TransactionSummary } from './types/finances';
 import './App.css';
@@ -39,12 +39,10 @@ function AppContent() {
   const isSuperuser = user?.is_superuser === true;
 
   // Money Flow state
-  const [moneyFlowFilters, setMoneyFlowFilters] = useState<{
-    date_from?: string;
-    date_to?: string;
-    bookmaker?: string;
-    transaction_type?: string;
-  }>({});
+  type MoneyFlowFilters = Record<string, string>;
+  const [moneyFlowFilters, setMoneyFlowFilters] = useState<MoneyFlowFilters>({});
+  const [chartMode, setChartMode] = useState<'value' | 'count'>('value');
+
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [summary, setSummary] = useState<TransactionSummary | null>(null);
   const [filteredSummary, setFilteredSummary] = useState<TransactionSummary | null>(null);
@@ -163,7 +161,7 @@ function AppContent() {
   };
 
   // Money Flow data fetching
-  const fetchMoneyFlowData = async (filters?: typeof moneyFlowFilters) => {
+  const fetchMoneyFlowData = async (filters?: MoneyFlowFilters) => {
     if (!isAuthenticated) return;
 
     setMoneyFlowLoading(true);
@@ -178,10 +176,9 @@ function AppContent() {
       setTransactions(transactionsData);
 
       // Calculate filtered summary from transaction data
-      let filteredSummary = summaryData;
+      let filtered = summaryData;
 
       if (filters && Object.keys(filters).length > 0) {
-        // Calculate totals from filtered transactions
         const totalDeposited = transactionsData
           .filter((t) => t.transaction_type === 'DEPOSIT')
           .reduce((sum, t) => sum + parseFloat(t.amount || '0'), 0);
@@ -190,14 +187,14 @@ function AppContent() {
           .filter((t) => t.transaction_type === 'WITHDRAWAL')
           .reduce((sum, t) => sum + parseFloat(t.amount || '0'), 0);
 
-        filteredSummary = {
+        filtered = {
           total_deposited: totalDeposited,
           total_withdrawn: totalWithdrawn,
           net_deposits: totalDeposited - totalWithdrawn,
           total_transactions: transactionsData.length,
         };
 
-        setFilteredSummary(filteredSummary);
+        setFilteredSummary(filtered);
       } else {
         setSummary({
           ...summaryData,
@@ -213,15 +210,14 @@ function AppContent() {
     }
   };
 
-
   // Money Flow filter handlers
-  const handleApplyFilters = (filters: typeof moneyFlowFilters) => {
+  const handleApplyFilters = (filters: MoneyFlowFilters) => {
     setMoneyFlowFilters(filters);
     fetchMoneyFlowData(filters);
   };
 
   const handleClearFilters = () => {
-    const emptyFilters = {};
+    const emptyFilters: MoneyFlowFilters = {};
     setMoneyFlowFilters(emptyFilters);
     fetchMoneyFlowData(emptyFilters);
   };
@@ -230,8 +226,7 @@ function AppContent() {
     fetchMoneyFlowData(moneyFlowFilters);
   };
 
-  const handleLanguageChange = async (locale: string) => {
-
+  const handleLanguageChange = async () => {
     try {
       const settings = await apiService.getSettings();
       console.log('Settings refreshed after language change:', settings);
@@ -284,27 +279,84 @@ function AppContent() {
               />
             </div>
 
-            {/* Main Dashboard Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6">
-              {/* Left Column - Summary Stats */}
+            <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6 mb-6">
               <div className="flex flex-col gap-6">
                 <SummaryStats summary={filteredSummary || summary} />
-                <BalanceChart summary={filteredSummary || summary} />
               </div>
 
-              {/* Right Column - Quick Actions */}
               <div>
                 <QuickActions onTransactionSuccess={handleTransactionSuccess} />
               </div>
             </div>
+            <div className="bg-background-paper rounded-md shadow-card p-4 flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-sm font-semibold text-text-primary mb-1">
+                  Money Flow chart mode
+                </h2>
+                <p className="text-xs text-text-secondary">
+                  Switch between total value and transaction count
+                </p>
+              </div>
+              <div className="inline-flex rounded-full bg-background-table-header p-1 text-xs font-medium">
+                <button
+                  type="button"
+                  onClick={() => setChartMode('value')}
+                  className={`px-3 py-1 rounded-full transition-colors ${
+                    chartMode === 'value'
+                      ? 'bg-primary-main text-primary-contrast shadow-sm'
+                      : 'text-text-secondary'
+                  }`}
+                >
+                  Value
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setChartMode('count')}
+                  className={`px-3 py-1 rounded-full transition-colors ${
+                    chartMode === 'count'
+                      ? 'bg-primary-main text-primary-contrast shadow-sm'
+                      : 'text-text-secondary'
+                  }`}
+                >
+                  Count
+                </button>
+              </div>
+            </div>
 
-            {/* Data Table */}
-            <div>
+            <div className="mb-6">
+              <MoneyFlowBarChart
+                transactions={transactions}
+                mode={chartMode}
+              />
+            </div>
+
+            <div className="mb-6">
               <TransactionTable
                 transactions={transactions}
                 loading={moneyFlowLoading}
                 error={moneyFlowError}
               />
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              <div className="bg-background-paper rounded-md p-6 shadow-card">
+                <h3 className="text-xl font-medium text-text-primary mb-4">Alerts</h3>
+                <div className="space-y-2">
+                  <div className="text-sm text-text-secondary">
+                    No pending alerts at this time.
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-background-paper rounded-md p-6 shadow-card">
+                <h3 className="text-xl font-medium text-text-primary mb-4">
+                  Reconciliation
+                </h3>
+                <div className="space-y-2">
+                  <div className="text-sm text-text-secondary">
+                    All transactions reconciled.
+                  </div>
+                </div>
+              </div>
             </div>
           </>
         )}

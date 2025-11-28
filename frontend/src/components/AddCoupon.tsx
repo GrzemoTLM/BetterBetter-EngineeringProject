@@ -1,13 +1,40 @@
 import { X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import UploadCoupon from './UploadCoupon';
 import BetSlip from './BetSlip';
+import api from '../services/api';
+import type { Strategy } from '../types/strategies';
+import type { OcrExtractResponse } from '../types/coupons';
 
 interface AddCouponProps {
   onClose: () => void;
-  strategies?: string[];
+  strategies?: Strategy[];
+  onCouponCreated?: () => void;
+  initialCouponId?: number;
+  initialBookmakerAccountId?: number;
 }
 
-const AddCoupon = ({ onClose, strategies = [] }: AddCouponProps) => {
+const AddCoupon = ({ onClose, strategies = [], onCouponCreated, initialCouponId, initialBookmakerAccountId }: AddCouponProps) => {
+  const [fetchedStrategies, setFetchedStrategies] = useState<Strategy[]>(strategies);
+  const [ocrCoupon, setOcrCoupon] = useState<OcrExtractResponse | null>(null);
+
+  useEffect(() => {
+    const fetchStrategies = async () => {
+      try {
+        const data = await api.getStrategies();
+        setFetchedStrategies(data);
+      } catch {
+        setFetchedStrategies([]);
+      }
+    };
+
+    if (strategies.length === 0) {
+      fetchStrategies();
+    } else {
+      setFetchedStrategies(strategies);
+    }
+  }, [strategies]);
+
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div className="bg-background-page w-full max-w-[1400px] h-[90vh] rounded-xl shadow-2xl flex flex-col mx-auto">
@@ -28,10 +55,17 @@ const AddCoupon = ({ onClose, strategies = [] }: AddCouponProps) => {
         <div className="flex-1 flex justify-center p-6 overflow-y-auto">
           <div className="w-full max-w-3xl mx-auto flex flex-col gap-6">
             {/* Upload Coupon Section */}
-            <UploadCoupon />
+            <UploadCoupon onOcrParsed={setOcrCoupon} />
 
             {/* Bet Slip Section */}
-            <BetSlip strategies={strategies} />
+            <BetSlip
+              strategies={fetchedStrategies}
+              onCouponCreated={onCouponCreated}
+              onClose={onClose}
+              initialCouponId={initialCouponId}
+              initialBookmakerAccountId={initialBookmakerAccountId ?? ocrCoupon?.bookmaker_account}
+              initialCouponFromOcr={ocrCoupon}
+            />
           </div>
         </div>
       </div>
@@ -40,4 +74,3 @@ const AddCoupon = ({ onClose, strategies = [] }: AddCouponProps) => {
 };
 
 export default AddCoupon;
-

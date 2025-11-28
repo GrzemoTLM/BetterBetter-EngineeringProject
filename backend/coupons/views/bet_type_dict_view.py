@@ -1,8 +1,9 @@
 from rest_framework import viewsets, status, permissions
 from rest_framework.response import Response
+from django_filters.rest_framework import DjangoFilterBackend
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from ..models import BetTypeDict
+from ..models import BetTypeDict, Discipline
 from ..serializers.bet_type_dict_serializer import BetTypeDictSerializer
 from ..services.bet_type_dict_service import get_or_create_bet_type
 
@@ -11,6 +12,8 @@ class BetTypeDictViewSet(viewsets.ModelViewSet):
     queryset = BetTypeDict.objects.all()
     serializer_class = BetTypeDictSerializer
     permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['discipline']
 
     @swagger_auto_schema(
         operation_summary='List bet types',
@@ -26,23 +29,37 @@ class BetTypeDictViewSet(viewsets.ModelViewSet):
     @swagger_auto_schema(
         operation_summary='Create or get bet type',
         operation_description='Create a new bet type or get existing one',
-        manual_parameters=[
-            openapi.Parameter('code', openapi.IN_QUERY, type=openapi.TYPE_STRING, required=True, description='Bet type code'),
-            openapi.Parameter('description', openapi.IN_QUERY, type=openapi.TYPE_STRING, required=True, description='Bet type description'),
-        ],
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'discipline': openapi.Schema(type=openapi.TYPE_INTEGER, description='Discipline ID'),
+                'code': openapi.Schema(type=openapi.TYPE_STRING, description='Bet type code (without sport prefix)'),
+                'description': openapi.Schema(type=openapi.TYPE_STRING, description='Bet type description'),
+            },
+            required=['discipline', 'code', 'description']
+        ),
         responses={
             200: openapi.Response('Bet type exists', BetTypeDictSerializer),
             201: openapi.Response('Bet type created', BetTypeDictSerializer),
-            400: openapi.Response('Code and description are required'),
+            400: openapi.Response('discipline, code and description are required'),
             401: openapi.Response('Unauthorized'),
         }
     )
     def post(self, request, *args, **kwargs):
+        discipline_id = request.data.get('discipline')
         code = request.data.get('code')
         description = request.data.get('description')
-        if not code or not description:
-            return Response({'error': 'Code and description are required'}, status=status.HTTP_400_BAD_REQUEST)
-        obj, created = get_or_create_bet_type(code, description)
+        if not (discipline_id and code and description):
+            return Response({'error': 'discipline, code and description are required'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            discipline = Discipline.objects.get(pk=discipline_id)
+        except Discipline.DoesNotExist:
+            return Response({'error': 'Discipline not found'}, status=status.HTTP_400_BAD_REQUEST)
+        obj, created = BetTypeDict.objects.update_or_create(
+            code=code,
+            discipline=discipline,
+            defaults={'description': description}
+        )
         serializer = self.get_serializer(obj)
         return Response(serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
@@ -90,11 +107,10 @@ class BetTypeDictViewSet(viewsets.ModelViewSet):
         operation_summary='Delete bet type',
         operation_description='Delete a bet type',
         responses={
-            204: openapi.Response('Bet type deleted'),
+            204: openapi.Response('Discipline deleted'),
             401: openapi.Response('Unauthorized'),
-            404: openapi.Response('Bet type not found'),
+            404: openapi.Response('Discipline not found'),
         }
     )
     def destroy(self, request, *args, **kwargs):
         return super().destroy(request, *args, **kwargs)
-

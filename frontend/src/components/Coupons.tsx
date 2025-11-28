@@ -1,21 +1,84 @@
-import { Bell, Calendar, Search, Plus } from 'lucide-react';
-import { useState } from 'react';
-import CouponsTable from './CouponsTable';
+import { Bell, Search, Plus } from 'lucide-react';
+import { useState, useRef } from 'react';
+import CouponsTable, { type CouponsTableRef } from './CouponsTable';
 import ActionBar from './ActionBar';
 import AddCoupon from './AddCoupon';
 import ManageStrategiesModal from './ManageStrategiesModal';
+import type { Strategy } from '../types/strategies';
+import api from '../services/api';
+import { SelectBookmakerModal } from '.';
 
 const Coupons = () => {
-  const [dateRange, setDateRange] = useState('03/03/2024 - 05/04/2024');
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddCoupon, setShowAddCoupon] = useState(false);
   const [showManageStrategies, setShowManageStrategies] = useState(false);
-  const [strategies, setStrategies] = useState([
-    'Progression',
-    'Value Betting',
-    'Arbitrage',
-    'Martingale',
-  ]);
+  const [strategies, setStrategies] = useState<Strategy[]>([]);
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [newCouponId, setNewCouponId] = useState<number | null>(null);
+  const [selectedBookmakerAccountId, setSelectedBookmakerAccountId] = useState<number | null>(null);
+  const [showSelectBookmaker, setShowSelectBookmaker] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const couponsTableRef = useRef<CouponsTableRef>(null);
+
+  const handleCouponCreated = () => {
+    if (couponsTableRef.current) {
+      couponsTableRef.current.refetch();
+    }
+  };
+
+  const handleOpenAddCoupon = () => {
+    setShowSelectBookmaker(true);
+  };
+
+  const handleSelectBookmaker = async (accountId: number) => {
+    setShowSelectBookmaker(false);
+    try {
+      setCreating(true);
+      const accounts = await api.getBookmakerAccounts();
+      if (!accounts || accounts.length === 0) {
+        alert('No bookmaker accounts available');
+        return;
+      }
+
+      const created = await api.createEmptyCoupon(accountId, '50');
+      setNewCouponId(created.id);
+      setSelectedBookmakerAccountId(accountId);
+      setShowAddCoupon(true);
+    } catch (err) {
+      console.error('Failed to create coupon for selected bookmaker:', err);
+      alert('Failed to create coupon');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleToggleBulk = () => {
+    if (!bulkMode) {
+      setBulkMode(true);
+      return;
+    }
+
+    if (bulkMode && selectedIds.size === 0) {
+      setBulkMode(false);
+      return;
+    }
+
+    const proceed = window.confirm(`Usunąć ${selectedIds.size} kuponów?`);
+    if (!proceed) return;
+
+    (async () => {
+      for (const id of selectedIds) {
+        await api.deleteCoupon(id);
+      }
+
+      setSelectedIds(new Set());
+      setBulkMode(false);
+      if (couponsTableRef.current) {
+        await couponsTableRef.current.refetch();
+      }
+    })();
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -24,8 +87,9 @@ const Coupons = () => {
         <h1 className="text-4xl font-bold text-text-primary">Coupons</h1>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setShowAddCoupon(true)}
+            onClick={handleOpenAddCoupon}
             className="bg-primary-main text-primary-contrast rounded-lg px-6 py-2 shadow-sm hover:bg-primary-hover transition-colors flex items-center gap-2 font-medium"
+            disabled={creating}
           >
             <Plus size={18} />
             Add new coupon
@@ -44,12 +108,6 @@ const Coupons = () => {
             ALL COUPONS
           </h2>
           <div className="flex flex-wrap items-center gap-4">
-            {/* Date Picker */}
-            <div className="flex items-center gap-2 border border-default rounded-md px-3 py-2 text-sm text-text-secondary bg-background-input">
-              <Calendar size={16} />
-              <span>{dateRange}</span>
-            </div>
-
             {/* Search */}
             <div className="relative flex-1 min-w-[200px]">
               <Search
@@ -68,19 +126,51 @@ const Coupons = () => {
         </div>
 
         {/* Table */}
-        <CouponsTable />
+        <CouponsTable
+          ref={couponsTableRef}
+          bulkMode={bulkMode}
+          selectedIds={selectedIds}
+          onToggleSelect={(id) => {
+            setSelectedIds((prev) => {
+              const next = new Set(prev);
+              if (next.has(id)) next.delete(id);
+              else next.add(id);
+              return next;
+            });
+          }}
+        />
 
         {/* Action Bar */}
         <div className="p-6 border-t border-default">
-          <ActionBar onManageStrategies={() => setShowManageStrategies(true)} />
+          <ActionBar
+            onManageStrategies={() => setShowManageStrategies(true)}
+            onBulkDelete={handleToggleBulk}
+            bulkMode={bulkMode}
+            selectedCount={selectedIds.size}
+          />
         </div>
       </div>
 
       {/* Add Coupon Modal */}
       {showAddCoupon && (
         <AddCoupon
-          onClose={() => setShowAddCoupon(false)}
+          onClose={() => {
+            setShowAddCoupon(false);
+            setNewCouponId(null);
+            setSelectedBookmakerAccountId(null);
+          }}
           strategies={strategies}
+          onCouponCreated={handleCouponCreated}
+          initialCouponId={newCouponId ?? undefined}
+          initialBookmakerAccountId={selectedBookmakerAccountId ?? undefined}
+        />
+      )}
+
+      {/* Select Bookmaker Modal */}
+      {showSelectBookmaker && (
+        <SelectBookmakerModal
+          onClose={() => setShowSelectBookmaker(false)}
+          onSelect={handleSelectBookmaker}
         />
       )}
 
@@ -88,7 +178,6 @@ const Coupons = () => {
       {showManageStrategies && (
         <ManageStrategiesModal
           onClose={() => setShowManageStrategies(false)}
-          strategies={strategies}
           onStrategiesChange={setStrategies}
         />
       )}
@@ -97,4 +186,3 @@ const Coupons = () => {
 };
 
 export default Coupons;
-

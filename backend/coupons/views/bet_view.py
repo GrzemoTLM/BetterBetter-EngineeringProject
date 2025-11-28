@@ -127,13 +127,16 @@ class BetDetailsView(generics.RetrieveUpdateAPIView):
         }
     )
     def put(self, request, *args, **kwargs):
+        in_serializer = BetUpdateSerializer(data=request.data, context={'request': request})
+        in_serializer.is_valid(raise_exception=True)
+
         updated = update_bet(
             user=request.user,
             bet_id=self.kwargs.get('pk'),
-            data=request.data
+            data=in_serializer.validated_data
         )
-        serializer = self.get_serializer(instance=updated)
-        return Response(serializer.data)
+        out_serializer = BetSerializer(instance=updated, context={'request': request})
+        return Response(out_serializer.data)
 
     @swagger_auto_schema(
         operation_summary='Partial update bet',
@@ -147,13 +150,16 @@ class BetDetailsView(generics.RetrieveUpdateAPIView):
         }
     )
     def patch(self, request, *args, **kwargs):
+        in_serializer = BetUpdateSerializer(data=request.data, partial=True, context={'request': request})
+        in_serializer.is_valid(raise_exception=True)
+
         updated = update_bet(
             user=request.user,
             bet_id=self.kwargs.get('pk'),
-            data=request.data
+            data=in_serializer.validated_data
         )
-        serializer = self.get_serializer(instance=updated)
-        return Response(serializer.data)
+        out_serializer = BetSerializer(instance=updated, context={'request': request})
+        return Response(out_serializer.data)
 
     @swagger_auto_schema(
         operation_summary='Delete bet',

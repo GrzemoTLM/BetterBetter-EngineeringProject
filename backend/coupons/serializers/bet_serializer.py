@@ -13,9 +13,12 @@ class BetSerializer(serializers.ModelSerializer):
 
 
 class BetCreateSerializer(serializers.ModelSerializer):
+
     bet_type = serializers.SlugRelatedField(
         slug_field='code',
-        queryset=BetTypeDict.objects.all()
+        queryset=BetTypeDict.objects.all(),
+        required=False,
+        allow_null=True
     )
     discipline = serializers.SlugRelatedField(
         slug_field='code',
@@ -26,11 +29,33 @@ class BetCreateSerializer(serializers.ModelSerializer):
     event = serializers.PrimaryKeyRelatedField(
         queryset=Event.objects.all(), allow_null=True, required=False
     )
+    event_name = serializers.CharField(required=False, allow_blank=True)
+    line = serializers.CharField(required=False, allow_blank=True)
+    odds = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
     start_time = serializers.DateTimeField(required=False, allow_null=True)
 
     class Meta:
         model = Bet
         fields = ['event', 'event_name', 'bet_type', 'discipline', 'line', 'odds', 'start_time']
+
+
+class ResultChoiceField(serializers.ChoiceField):
+    def to_internal_value(self, data):
+        if isinstance(data, str):
+            normalized = data.strip().lower()
+            alias_map = {
+                'won': 'win',
+                'win': 'win',
+                'lose': 'lost',
+                'lost': 'lost',
+                'cancel': 'canceled',
+                'canceled': 'canceled',
+                'cancelled': 'canceled',
+                'void': 'canceled',
+                'push': 'canceled',
+            }
+            data = alias_map.get(normalized, normalized)
+        return super().to_internal_value(data)
 
 
 class BetUpdateSerializer(serializers.ModelSerializer):
@@ -49,7 +74,7 @@ class BetUpdateSerializer(serializers.ModelSerializer):
         queryset=Event.objects.all(), allow_null=True, required=False
     )
     start_time = serializers.DateTimeField(required=False, allow_null=True)
-    result = serializers.ChoiceField(choices=Bet.BetResult.choices, required=False, allow_null=True)
+    result = ResultChoiceField(choices=Bet.BetResult.choices, required=False, allow_null=True)
 
     class Meta:
         model = Bet
