@@ -258,12 +258,32 @@ class ApiService {
 
   async getAllUsers(): Promise<UserProfile[]> {
     try {
-      const response = await this.axiosInstance.get<UserProfile[]>('/api/users/');
+      const response = await this.axiosInstance.get<UserProfile[] | { results: UserProfile[] }>('/api/users/users/');
       console.log('[API] getAllUsers - status:', response.status);
       console.log('[API] getAllUsers - data:', response.data);
-      return response.data;
+      
+      if (Array.isArray(response.data)) {
+        return response.data;
+      } else if (response.data && typeof response.data === 'object' && 'results' in response.data) {
+        return (response.data as { results: UserProfile[] }).results;
+      } else {
+        throw new Error('Unexpected users data format');
+      }
     } catch (error) {
       console.error('[API] getAllUsers - error raw:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async toggleUserStatus(userId: number, isActive: boolean): Promise<void> {
+    try {
+      const response = await this.axiosInstance.patch(`/api/users/users/${userId}/`, {
+        is_active: isActive,
+      });
+      console.log('[API] toggleUserStatus - status:', response.status);
+      return response.data;
+    } catch (error) {
+      console.error('[API] toggleUserStatus - error:', error);
       throw new Error(this.getErrorMessage(error));
     }
   }
