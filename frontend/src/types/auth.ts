@@ -44,6 +44,8 @@ export interface UserProfile {
   email: string;
   registered_at: string;
   is_superuser?: boolean;
+  is_staff?: boolean;
+  last_login?: string | null;
 }
 
 export interface AuthContextType {
@@ -57,4 +59,3 @@ export interface AuthContextType {
   logout: () => void;
   error: string | null;
 }
-

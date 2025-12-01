@@ -20,7 +20,8 @@ const Snapshots = () => {
 
   return (
     <div className="bg-background-paper rounded-lg shadow-sm border border-gray-200 p-4">
-      <h3 className="text-lg font-semibold text-text-primary mb-4">Snapshots</h3>
+      <h3 className="text-lg font-semibold text-text-primary mb-1">Snapshots</h3>
+      <p className="text-xs text-text-secondary mb-3">Work in progress</p>
 
       {/* Info */}
       <div className="mb-4 space-y-2 text-sm">
@@ -64,4 +65,3 @@ const Snapshots = () => {
 };
 
 export default Snapshots;
-

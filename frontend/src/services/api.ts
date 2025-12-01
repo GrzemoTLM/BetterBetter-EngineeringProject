@@ -9,6 +9,35 @@ import type { Coupon, CreateCouponRequest, BetType, OcrExtractResponse } from '.
 import type { Bet } from '../types/coupons';
 import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
 
+export interface SystemMetrics {
+  cpu_usage: number;
+  memory: {
+    total: number;
+    used: number;
+    percent: number;
+  };
+  disk: {
+    total: number;
+    used: number;
+    percent: number;
+  };
+  db_latency_ms: number;
+  error_rate: number;
+  queue_length: number;
+}
+
+export interface LoggedInUser {
+  id: number;
+  username: string;
+  email: string;
+  is_staff: boolean;
+  is_superuser: boolean;
+  status: string;
+  last_login: string | null;
+  session_key: string;
+  session_expire_date: string;
+}
+
 class ApiService {
   private axiosInstance: AxiosInstance;
 
@@ -203,6 +232,61 @@ class ApiService {
     }
   }
 
+  async getSystemMetrics(): Promise<SystemMetrics> {
+    try {
+      const response = await this.axiosInstance.get<SystemMetrics>(API_ENDPOINTS.MONITORING.SYSTEM_METRICS);
+      console.log('[API] getSystemMetrics - status:', response.status);
+      console.log('[API] getSystemMetrics - data:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('[API] getSystemMetrics - error raw:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async getLoggedInUsers(): Promise<LoggedInUser[]> {
+    try {
+      const response = await this.axiosInstance.get<LoggedInUser[]>(API_ENDPOINTS.MONITORING.LOGGED_IN_USERS);
+      console.log('[API] getLoggedInUsers - status:', response.status);
+      console.log('[API] getLoggedInUsers - data:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('[API] getLoggedInUsers - error raw:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async getAllUsers(): Promise<UserProfile[]> {
+    try {
+      const response = await this.axiosInstance.get<UserProfile[] | { results: UserProfile[] }>('/api/users/users/');
+      console.log('[API] getAllUsers - status:', response.status);
+      console.log('[API] getAllUsers - data:', response.data);
+      
+      if (Array.isArray(response.data)) {
+        return response.data;
+      } else if (response.data && typeof response.data === 'object' && 'results' in response.data) {
+        return (response.data as { results: UserProfile[] }).results;
+      } else {
+        throw new Error('Unexpected users data format');
+      }
+    } catch (error) {
+      console.error('[API] getAllUsers - error raw:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async toggleUserStatus(userId: number, isActive: boolean): Promise<void> {
+    try {
+      const response = await this.axiosInstance.patch(`/api/users/users/${userId}/`, {
+        is_active: isActive,
+      });
+      console.log('[API] toggleUserStatus - status:', response.status);
+      return response.data;
+    } catch (error) {
+      console.error('[API] toggleUserStatus - error:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
 
   async getCurrentUser(): Promise<UserProfile> {
     try {

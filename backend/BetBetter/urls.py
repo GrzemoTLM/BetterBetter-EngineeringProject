@@ -21,6 +21,7 @@ except Exception:
     schema_view = None
 
 from users.views import google_login_succes
+from monitoring.views import SystemMetricsView, LoggedInUsersView
 
 urlpatterns = [
     path('api/users/', include('users.urls')),
@@ -30,6 +31,8 @@ urlpatterns = [
     path('api/tickets/', include('tickets.urls')),
     path('auth/', include('social_django.urls', namespace='social')),
     path('api/auth/google/success/', google_login_succes, name='google-success'),
+    path("api/monitoring/system-metrics/", SystemMetricsView.as_view(), name="system-metrics"),
+    path("api/monitoring/logged-in-users/", LoggedInUsersView.as_view(), name="logged-in-users"),
 ]
 
 if schema_view is not None:

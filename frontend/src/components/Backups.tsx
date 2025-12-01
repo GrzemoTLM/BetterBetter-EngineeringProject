@@ -29,7 +29,8 @@ const Backups = () => {
 
   return (
     <div className="bg-background-paper rounded-lg shadow-sm border border-gray-200 p-4">
-      <h3 className="text-lg font-semibold text-text-primary mb-4">Backups</h3>
+      <h3 className="text-lg font-semibold text-text-primary mb-1">Backups</h3>
+      <p className="text-xs text-text-secondary mb-3">Work in progress</p>
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
@@ -84,4 +85,3 @@ const Backups = () => {
 };
 
 export default Backups;
-
