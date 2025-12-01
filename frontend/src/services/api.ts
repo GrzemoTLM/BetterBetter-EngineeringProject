@@ -38,6 +38,11 @@ export interface LoggedInUser {
   session_expire_date: string;
 }
 
+export interface CouponSummary {
+  // shape will be clarified from backend response; keep it generic for now
+  [key: string]: unknown;
+}
+
 class ApiService {
   private axiosInstance: AxiosInstance;
 
@@ -814,6 +819,18 @@ class ApiService {
       return response.data;
     } catch (error) {
       console.error('[API] OCR parse - Error:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async getCouponSummary(): Promise<CouponSummary> {
+    try {
+      const response = await this.axiosInstance.get<CouponSummary>('/api/analytics/coupons/summary/');
+      console.log('[API] getCouponSummary - status:', response.status);
+      console.log('[API] getCouponSummary - data:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('[API] getCouponSummary - error raw:', error);
       throw new Error(this.getErrorMessage(error));
     }
   }

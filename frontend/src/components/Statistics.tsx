@@ -1,5 +1,5 @@
-import { Bell, Calendar, Filter, AlertTriangle, DollarSign, CheckCircle2, BellPlus } from 'lucide-react';
-import { useState } from 'react';
+import { Bell, Calendar, Filter, BellPlus } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import StatisticsKPIs from './StatisticsKPIs';
 import StatisticsCharts from './StatisticsCharts';
 import StatisticsTable from './StatisticsTable';
@@ -9,6 +9,7 @@ import CustomFilterBuilder from './CustomFilterBuilder';
 import TopPerformers from './TopPerformers';
 import ActiveNotifications from './ActiveNotifications';
 import PerformanceInsights from './PerformanceInsights';
+import api from '../services/api';
 
 const Statistics = () => {
   const [startDate, setStartDate] = useState('2024-01-01');
@@ -18,6 +19,21 @@ const Statistics = () => {
   const [betType, setBetType] = useState('All');
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [showCustomFilter, setShowCustomFilter] = useState(false);
+  const [couponSummary, setCouponSummary] = useState<import('../services/api').CouponSummary | null>(null);
+
+  useEffect(() => {
+    const fetchSummary = async () => {
+      try {
+        const summary = await api.getCouponSummary();
+        console.log('[Statistics] Coupon summary from /api/analytics/coupons/summary/:', summary);
+        setCouponSummary(summary);
+      } catch (error) {
+        console.error('[Statistics] Failed to fetch coupon summary:', error);
+      }
+    };
+
+    fetchSummary();
+  }, []);
 
   return (
     <div className="flex flex-col gap-5">
@@ -130,7 +146,7 @@ const Statistics = () => {
       </div>
 
       {/* Section B: KPIs */}
-      <StatisticsKPIs />
+      <StatisticsKPIs summary={couponSummary} />
 
       {/* Section C: Charts Area */}
       <StatisticsCharts />
@@ -170,4 +186,3 @@ const Statistics = () => {
 };
 
 export default Statistics;
-
