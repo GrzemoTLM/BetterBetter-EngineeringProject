@@ -53,7 +53,6 @@ class UserSettingsService:
 
         settings.save()
 
-        # Zaktualizuj ManyToMany relacje
         if favourite_disciplines is not None:
             settings.favourite_disciplines.set(favourite_disciplines)
         if favourite_bet_types is not None:

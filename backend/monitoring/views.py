@@ -6,7 +6,6 @@ from .services import get_system_metrics, get_logged_in_users
 
 
 class IsAdminOrSuperuser(BasePermission):
-    """Pozwala na dostep tylko uzytkownikom staff lub superuserom."""
 
     def has_permission(self, request, view) -> bool:  # type: ignore[override]
         user = request.user
@@ -18,11 +17,6 @@ class IsAdminOrSuperuser(BasePermission):
 
 
 class SystemMetricsView(APIView):
-    """Prosty endpoint do odczytu metryk systemowych.
-
-    Dostepny tylko dla admina/superusera – zeby nie wystawiac tego wszystkim.
-    """
-
     permission_classes = [IsAdminOrSuperuser]
 
     def get(self, request, *args, **kwargs):  # type: ignore[override]
@@ -31,8 +25,6 @@ class SystemMetricsView(APIView):
 
 
 class LoggedInUsersView(APIView):
-    """Zwraca liste aktualnie zalogowanych uzytkownikow (na podstawie sesji)."""
-
     permission_classes = [IsAdminOrSuperuser]
 
     def get(self, request, *args, **kwargs):  # type: ignore[override]
