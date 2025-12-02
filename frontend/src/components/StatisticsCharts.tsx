@@ -25,6 +25,13 @@ const StatisticsCharts = () => {
   const [balanceLoading, setBalanceLoading] = useState(false);
   const [balanceError, setBalanceError] = useState<string | null>(null);
 
+  const [pieData, setPieData] = useState<Array<{ name: string; value: number; count: number; color: string }>>([
+    { name: 'Won', value: 0, count: 0, color: '#10B981' },
+    { name: 'Lost', value: 0, count: 0, color: '#EF4444' },
+  ]);
+  const [pieLoading, setPieLoading] = useState(false);
+  const [pieError, setPieError] = useState<string | null>(null);
+
   useEffect(() => {
     const fetchProfitTrend = async () => {
       try {
@@ -76,15 +83,44 @@ const StatisticsCharts = () => {
       }
     };
 
+    const fetchWinLossRatio = async () => {
+      try {
+        setPieLoading(true);
+        setPieError(null);
+
+        const summary = await api.getCouponSummary();
+
+        const wonCount = Number(summary.won_count) || 0;
+        const lostCount = Number(summary.lost_count) || 0;
+        const totalFinished = wonCount + lostCount;
+
+        if (totalFinished > 0) {
+          const wonPercentage = Math.round((wonCount / totalFinished) * 100);
+          const lostPercentage = 100 - wonPercentage;
+
+          setPieData([
+            { name: 'Won', value: wonPercentage, count: wonCount, color: '#10B981' },
+            { name: 'Lost', value: lostPercentage, count: lostCount, color: '#EF4444' },
+          ]);
+        } else {
+          setPieData([
+            { name: 'Won', value: 0, count: 0, color: '#10B981' },
+            { name: 'Lost', value: 0, count: 0, color: '#EF4444' },
+          ]);
+        }
+      } catch (error) {
+        console.error('[StatisticsCharts] Error fetching win/loss ratio:', error);
+        setPieError(error instanceof Error ? error.message : 'Failed to load win/loss ratio');
+      } finally {
+        setPieLoading(false);
+      }
+    };
+
     fetchProfitTrend();
     fetchBalanceTrend();
+    fetchWinLossRatio();
   }, []);
 
-  // Win/Loss pie data
-  const pieData = [
-    { name: 'Won', value: 63, color: '#10B981' },
-    { name: 'Lost', value: 37, color: '#EF4444' },
-  ];
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
@@ -186,29 +222,54 @@ const StatisticsCharts = () => {
           <h3 className="text-base font-semibold text-text-primary mb-4">
             Win/Loss Ratio
           </h3>
-          <ResponsiveContainer width="100%" height={140}>
-            <PieChart>
-              <Pie
-                data={pieData}
-                cx="50%"
-                cy="50%"
-                innerRadius={30}
-                outerRadius={50}
-                paddingAngle={2}
-                dataKey="value"
-              >
-                {pieData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip />
-              <Legend
-                verticalAlign="bottom"
-                height={36}
-                formatter={(value) => `${value}%`}
-              />
-            </PieChart>
-          </ResponsiveContainer>
+          {pieLoading ? (
+            <div className="flex items-center justify-center h-[140px]">
+              <div className="text-sm text-text-secondary">Loading...</div>
+            </div>
+          ) : pieError ? (
+            <div className="flex items-center justify-center h-[140px]">
+              <div className="text-sm text-red-500">{pieError}</div>
+            </div>
+          ) : pieData[0].value === 0 && pieData[1].value === 0 ? (
+            <div className="flex items-center justify-center h-[140px]">
+              <div className="text-sm text-text-secondary">No settled coupons yet</div>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={140}>
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={30}
+                  outerRadius={50}
+                  paddingAngle={2}
+                  dataKey="value"
+                >
+                  {pieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(value: number, name: string, props: { payload: { count: number } }) => {
+                    const count = props.payload.count;
+                    return [`${value}% (${count} coupons)`, name];
+                  }}
+                  contentStyle={{
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                  }}
+                />
+                <Legend
+                  verticalAlign="bottom"
+                  height={36}
+                  formatter={(value) => `${value}%`}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
     </div>
