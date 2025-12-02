@@ -11,6 +11,8 @@ from coupon_analytics.api.alert_views import (
 from coupon_analytics.api.strategy_views import (
     UserStrategyListCreateView,
     UserStrategyDetailView,
+    UserStrategySummaryView,
+    UserStrategiesSummaryView,
 )
 
 __all__ = [
@@ -22,4 +24,6 @@ __all__ = [
     'AlertEventListView',
     'UserStrategyListCreateView',
     'UserStrategyDetailView',
+    'UserStrategySummaryView',
+    'UserStrategiesSummaryView',
 ]

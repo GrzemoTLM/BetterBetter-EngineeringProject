@@ -2,7 +2,7 @@ import axios, { AxiosError } from 'axios';
 import type { AxiosInstance } from 'axios';
 import type { LoginRequest, RegisterRequest, AuthResponse, UserProfile, TwoFactorRequest, PasswordResetRequestRequest, PasswordResetConfirmRequest, PasswordResetResponse } from '../types/auth';
 import type { UserSettings, UpdateSettingsRequest, TwoFactorStartRequest, TwoFactorStartResponse, TwoFactorVerifyRequest, TelegramAuthResponse, TelegramConnectionStatus } from '../types/settings';
-import type { TransactionCreateRequest, TransactionCreateResponse, BookmakerAccountCreateRequest, BookmakerAccountCreateResponse, AvailableBookmaker, Transaction, TransactionSummary } from '../types/finances';
+import type { TransactionCreateRequest, TransactionCreateResponse, BookmakerAccountCreateRequest, BookmakerAccountCreateResponse, Transaction, TransactionSummary } from '../types/finances';
 import type { TicketCategory, CreateTicketRequest, Ticket, CreateCommentRequest, TicketComment } from '../types/tickets';
 import type { Strategy, CreateStrategyRequest } from '../types/strategies';
 import type { Coupon, CreateCouponRequest, BetType, OcrExtractResponse } from '../types/coupons';
@@ -37,6 +37,59 @@ export interface LoggedInUser {
   session_key: string;
   session_expire_date: string;
 }
+
+export interface CouponSummary {
+  // shape will be clarified from backend response; keep it generic for now
+  [key: string]: unknown;
+}
+
+export interface BalanceTrendPoint {
+  date: string;
+  balance: number;
+}
+
+export interface BalanceTrendResponse {
+  points: BalanceTrendPoint[];
+}
+
+export interface MonthlyBalanceTrendPoint {
+  date: string;
+  balance: string;
+  monthly_profit: string;
+  coupon_count: number;
+}
+
+export interface MonthlyBalanceTrendResponse {
+  points: MonthlyBalanceTrendPoint[];
+}
+
+// New: summary per bookmaker accounts
+export type BookmakerAccountsSummaryItem = {
+  account_id: number;
+  bookmaker: string;
+  external_username: string;
+  balance?: string | number;
+  deposited_total?: string | number;
+  withdrawn_total?: string | number;
+  net_cashflow?: string | number;
+  currency?: string;
+};
+
+export type BookmakerAccountsSummary = BookmakerAccountsSummaryItem[];
+
+// Strategies - Summary types
+export type StrategySummaryItem = {
+  strategy_id: number;
+  strategy_name: string;
+  description?: string;
+  coupon_balance: number | string;
+  won_profit: number | string;
+  won_count: number | string;
+  lost_profit: number | string;
+  lost_count: number | string;
+};
+export type StrategySummaryResponse = StrategySummaryItem[];
+export type StrategySummaryDetail = StrategySummaryItem;
 
 class ApiService {
   private axiosInstance: AxiosInstance;
@@ -420,11 +473,18 @@ class ApiService {
     }
   }
 
-  async getAvailableBookmakers(): Promise<AvailableBookmaker[]> {
+  // New: fetch bookmaker accounts summary
+  async getBookmakerAccountsSummary(params?: Record<string, string>): Promise<BookmakerAccountsSummary> {
     try {
-      const response = await this.axiosInstance.get<AvailableBookmaker[]>(API_ENDPOINTS.FINANCES.BOOKMAKERS_LIST);
+      const response = await this.axiosInstance.get<BookmakerAccountsSummary>(API_ENDPOINTS.FINANCES.BOOKMAKER_ACCOUNTS_SUMMARY, {
+        params,
+      });
+      console.log('[API] getBookmakerAccountsSummary - status:', response.status);
+      console.log('[API] getBookmakerAccountsSummary - params:', params);
+      console.log('[API] getBookmakerAccountsSummary - data sample:', Array.isArray(response.data) ? response.data.slice(0, 3) : response.data);
       return response.data;
     } catch (error) {
+      console.error('[API] getBookmakerAccountsSummary - error raw:', error);
       throw new Error(this.getErrorMessage(error));
     }
   }
@@ -573,6 +633,25 @@ class ApiService {
     }
   }
 
+  // Strategies - Summary
+  async getStrategiesSummary(params?: Record<string, string>): Promise<StrategySummaryResponse> {
+    try {
+      const response = await this.axiosInstance.get<StrategySummaryResponse>(API_ENDPOINTS.STRATEGIES.SUMMARY_LIST, { params });
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async getStrategySummary(id: number | string): Promise<StrategySummaryDetail> {
+    try {
+      const response = await this.axiosInstance.get<StrategySummaryDetail>(API_ENDPOINTS.STRATEGIES.SUMMARY_DETAIL(id));
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
   // Coupons
   async createCoupon(data: CreateCouponRequest): Promise<Coupon> {
     try {
@@ -709,14 +788,14 @@ class ApiService {
     }
   }
 
-  async getCoupons(): Promise<Coupon[]> {
+  async getCoupons(params?: Record<string, string>): Promise<Coupon[]> {
     try {
       const token = this.getToken();
       if (!token) {
         throw new Error('Not authenticated');
       }
 
-      const response = await this.axiosInstance.get<Coupon[]>(API_ENDPOINTS.COUPONS.LIST);
+      const response = await this.axiosInstance.get<Coupon[]>(API_ENDPOINTS.COUPONS.LIST, { params });
       return response.data;
     } catch (error) {
       throw new Error(this.getErrorMessage(error));
@@ -814,6 +893,53 @@ class ApiService {
       return response.data;
     } catch (error) {
       console.error('[API] OCR parse - Error:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async getCouponSummary(params?: Record<string, string>): Promise<CouponSummary> {
+    try {
+      const response = await this.axiosInstance.get<CouponSummary>(API_ENDPOINTS.COUPONS.SUMMARY, {
+        params,
+      });
+      console.log('[API] getCouponSummary - status:', response.status);
+      console.log('[API] getCouponSummary - params:', params);
+      console.log('[API] getCouponSummary - data:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('[API] getCouponSummary - error raw:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async getBalanceTrend(params?: { days?: number }): Promise<BalanceTrendPoint[]> {
+    try {
+      const response = await this.axiosInstance.get<BalanceTrendResponse>(
+        API_ENDPOINTS.COUPONS.BALANCE_TREND,
+        { params }
+      );
+      console.log('[API] getBalanceTrend - status:', response.status);
+      console.log('[API] getBalanceTrend - params:', params);
+      console.log('[API] getBalanceTrend - data:', response.data);
+      return response.data.points || [];
+    } catch (error) {
+      console.error('[API] getBalanceTrend - error raw:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async getMonthlyBalanceTrend(params?: { months?: number }): Promise<MonthlyBalanceTrendPoint[]> {
+    try {
+      const response = await this.axiosInstance.get<MonthlyBalanceTrendResponse>(
+        API_ENDPOINTS.COUPONS.MONTHLY_BALANCE_TREND,
+        { params }
+      );
+      console.log('[API] getMonthlyBalanceTrend - status:', response.status);
+      console.log('[API] getMonthlyBalanceTrend - params:', params);
+      console.log('[API] getMonthlyBalanceTrend - data:', response.data);
+      return response.data.points || [];
+    } catch (error) {
+      console.error('[API] getMonthlyBalanceTrend - error raw:', error);
       throw new Error(this.getErrorMessage(error));
     }
   }

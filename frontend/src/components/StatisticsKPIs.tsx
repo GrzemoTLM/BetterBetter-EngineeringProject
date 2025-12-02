@@ -6,58 +6,104 @@ import {
   BarChart3,
   Coins,
 } from 'lucide-react';
+import type { CouponSummary } from '../services/api';
 
-const StatisticsKPIs = () => {
+interface StatisticsKPIsProps {
+  summary: CouponSummary | null;
+}
+
+const toNumber = (v: unknown): number | undefined => {
+  if (v == null) return undefined;
+  if (typeof v === 'number' && !Number.isNaN(v)) return v;
+  if (typeof v === 'string' && v.trim() !== '') {
+    const n = parseFloat(v);
+    return Number.isNaN(n) ? undefined : n;
+  }
+
+  return undefined;
+};
+
+const StatisticsKPIs = ({ summary }: StatisticsKPIsProps) => {
+  const s = (summary as Record<string, unknown>) || {};
+
+  // Totals
+  const totalCoupons = toNumber(s.total_coupons) ?? toNumber(s.count) ?? 0;
+  const wonCoupons = toNumber(s.won_coupons) ?? toNumber(s.won_count) ?? 0;
+  const lostCoupons = toNumber(s.lost_coupons) ?? toNumber(s.lost_count) ?? 0;
+
+  // Win rate can be fraction (0..1) or percent (0..100)
+  const winRateField = toNumber(s.win_rate) ?? 0;
+  const winRatePercent = winRateField > 1 ? winRateField : winRateField * 100;
+
+  // Money-related values (strings or numbers)
+  const totalStake = toNumber(s.total_stake) ?? 0;
+  const realizedProfit = toNumber(s.realized_profit) ?? toNumber(s.profit) ?? 0;
+
+  // Yield (prefer explicit yield, then roi, then derive from profit/totalStake)
+  const yieldFromSummary = toNumber(s.yield);
+  const roiMaybe = toNumber(s.roi);
+  const derivedYield = totalStake ? (realizedProfit / totalStake) * 100 : 0;
+  const yieldPercent = yieldFromSummary ?? roiMaybe ?? derivedYield;
+
+  // Avg odds / multiplier (check avg_coupon_odds first, then avg_multiplier, then avg_odds)
+  const avgMultiplier = toNumber(s.avg_coupon_odds) ?? toNumber(s.avg_multiplier) ?? toNumber(s.avg_odds) ?? 0;
+
+  const formatMoney = (value: number) =>
+    value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const formatPercent = (value: number) =>
+    value.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+  const hasSummary = !!summary;
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-      {/* Balance Card */}
+      {/* Realized Profit / Balance Card */}
       <div className="bg-background-paper rounded-xl shadow-sm p-4 flex items-center justify-between border-l-4 border-primary-main">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-primary-main/10 rounded-full flex items-center justify-center">
             <DollarSign size={20} className="text-primary-main" />
           </div>
           <div>
-            <div className="text-sm text-text-secondary">Balance</div>
-            <div className="text-xl font-bold text-status-roi-positive">
-              +540 USD
+            <div className="text-sm text-text-secondary">Realized Profit</div>
+            <div className={`text-xl font-bold ${realizedProfit >= 0 ? 'text-status-roi-positive' : 'text-status-error'}`}>
+              {hasSummary ? `${realizedProfit >= 0 ? '+' : ''}${formatMoney(realizedProfit)}` : '—'}
             </div>
-            <div className="text-xs text-status-roi-positive flex items-center gap-1 mt-1">
-              <TrendingUp size={12} />
-              +12% vs last month
+            <div className="text-xs text-text-secondary mt-1">
+              Based on finished coupons
             </div>
           </div>
         </div>
       </div>
 
-      {/* ROI Hit Card */}
+      {/* Yield Card (replaces ROI) */}
       <div className="bg-background-paper rounded-xl shadow-sm p-4 flex items-center justify-between border-l-4 border-secondary-main">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-secondary-main/10 rounded-full flex items-center justify-center">
             <CheckCircle2 size={20} className="text-secondary-main" />
           </div>
           <div>
-            <div className="text-sm text-text-secondary">ROI Hit</div>
-            <div className="text-xl font-bold text-text-primary">63%</div>
-            <div className="text-xs text-status-roi-positive flex items-center gap-1 mt-1">
-              <TrendingUp size={12} />
-              +5% vs last month
+            <div className="text-sm text-text-secondary">Yield</div>
+            <div className="text-xl font-bold text-text-primary">
+              {hasSummary ? `${formatPercent(yieldPercent)}%` : '—'}
+            </div>
+            <div className="text-xs text-text-secondary mt-1">
+              Profit / Total Stake
             </div>
           </div>
         </div>
       </div>
 
-      {/* Total Bets Card */}
+      {/* Total Coupons Card */}
       <div className="bg-background-paper rounded-xl shadow-sm p-4 flex items-center justify-between border-l-4 border-chart-series-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-chart-series-3/10 rounded-full flex items-center justify-center">
             <BarChart3 size={20} className="text-chart-series-3" />
           </div>
           <div>
-            <div className="text-sm text-text-secondary">Total Bets</div>
-            <div className="text-xl font-bold text-text-primary">247</div>
-            <div className="text-xs text-text-secondary mt-1">
-              This period
-            </div>
+            <div className="text-sm text-text-secondary">Total Coupons</div>
+            <div className="text-xl font-bold text-text-primary">{hasSummary ? totalCoupons : '—'}</div>
+            <div className="text-xs text-text-secondary mt-1">This period</div>
           </div>
         </div>
       </div>
@@ -71,16 +117,16 @@ const StatisticsKPIs = () => {
           <div>
             <div className="text-sm text-text-secondary">Win Rate</div>
             <div className="text-xl font-bold text-status-roi-positive">
-              63.2%
+              {hasSummary ? `${formatPercent(winRatePercent)}%` : '—'}
             </div>
             <div className="text-xs text-text-secondary mt-1">
-              156 won / 91 lost
+              {hasSummary ? `${wonCoupons} won / ${lostCoupons} lost` : '—'}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Average Odds Card */}
+      {/* Average Odds Card (Avg Multiplier) */}
       <div className="bg-background-paper rounded-xl shadow-sm p-4 flex items-center justify-between border-l-4 border-primary-main">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-primary-main/10 rounded-full flex items-center justify-center">
@@ -88,10 +134,10 @@ const StatisticsKPIs = () => {
           </div>
           <div>
             <div className="text-sm text-text-secondary">Avg Odds</div>
-            <div className="text-xl font-bold text-text-primary">2.45</div>
-            <div className="text-xs text-text-secondary mt-1">
-              Across all bets
+            <div className="text-xl font-bold text-text-primary">
+              {hasSummary ? avgMultiplier.toFixed(2) : '—'}
             </div>
+            <div className="text-xs text-text-secondary mt-1">Across all coupons</div>
           </div>
         </div>
       </div>
@@ -104,10 +150,10 @@ const StatisticsKPIs = () => {
           </div>
           <div>
             <div className="text-sm text-text-secondary">Total Staked</div>
-            <div className="text-xl font-bold text-text-primary">$12,350</div>
-            <div className="text-xs text-text-secondary mt-1">
-              This period
+            <div className="text-xl font-bold text-text-primary">
+              {hasSummary ? formatMoney(totalStake) : '—'}
             </div>
+            <div className="text-xs text-text-secondary mt-1">This period</div>
           </div>
         </div>
       </div>
@@ -116,4 +162,3 @@ const StatisticsKPIs = () => {
 };
 
 export default StatisticsKPIs;
-

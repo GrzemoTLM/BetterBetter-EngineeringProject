@@ -1,6 +1,9 @@
 from typing import List, Dict, Optional, Any
 from django.db import transaction
-from django.db.models import QuerySet, F
+from django.db.models import QuerySet, F, Sum
+from django.db.models.functions import TruncDate, TruncMonth
+from django.utils import timezone
+from datetime import timedelta
 from ..models import Coupon, Bet, Event, Discipline
 from decimal import Decimal, ROUND_HALF_UP
 from common.choices import CouponType
@@ -272,6 +275,82 @@ class CouponService:
         notify_yield_alerts_on_coupon_settle(locked_coupon.user)
         return locked_coupon
 
+    def get_balance_trend(self, *, user, days: int = 7) -> List[Dict[str, Decimal]]:
+        days = max(1, days)
+        today = timezone.localdate()
+        start_date = today - timedelta(days=days - 1)
+        final_statuses = [Coupon.CouponStatus.WON, Coupon.CouponStatus.LOST]
+        coupons_qs = Coupon.objects.filter(user=user, status__in=final_statuses)
+
+        base_balance = coupons_qs.filter(created_at__date__lt=start_date).aggregate(total=Sum('balance'))
+        running_balance = Decimal(base_balance.get('total') or Decimal('0.00'))
+
+        daily_deltas = (
+            coupons_qs
+            .filter(created_at__date__gte=start_date)
+            .annotate(day=TruncDate('created_at'))
+            .values('day')
+            .annotate(delta=Sum('balance'))
+        )
+        delta_map = {
+            entry['day']: Decimal(entry['delta'] or Decimal('0.00'))
+            for entry in daily_deltas
+        }
+
+        points: List[Dict[str, Decimal]] = []
+        quant = Decimal('0.01')
+        for offset in range(days):
+            current_day = start_date + timedelta(days=offset)
+            running_balance = (running_balance + delta_map.get(current_day, Decimal('0.00'))).quantize(quant)
+            points.append({'date': current_day.isoformat(), 'balance': running_balance})
+
+        return points
+
+    def get_monthly_balance_trend(self, *, user, months: int = 12) -> List[Dict[str, Any]]:
+        months = max(1, min(months, 120))
+        today = timezone.localdate()
+        start_date = today.replace(day=1) - timedelta(days=(months - 1) * 30)
+        start_date = start_date.replace(day=1)
+
+        final_statuses = [Coupon.CouponStatus.WON, Coupon.CouponStatus.LOST]
+        coupons_qs = Coupon.objects.filter(user=user, status__in=final_statuses)
+
+        base_balance = coupons_qs.filter(created_at__date__lt=start_date).aggregate(total=Sum('balance'))
+        running_balance = Decimal(base_balance.get('total') or Decimal('0.00'))
+
+        monthly_deltas = (
+            coupons_qs
+            .filter(created_at__date__gte=start_date)
+            .annotate(month=TruncMonth('created_at'))
+            .values('month')
+            .annotate(delta=Sum('balance'), count=Sum(1))
+        )
+        delta_map = {
+            entry['month'].date(): {
+                'delta': Decimal(entry['delta'] or Decimal('0.00')),
+                'count': entry['count']
+            }
+            for entry in monthly_deltas
+        }
+
+        points: List[Dict[str, Any]] = []
+        quant = Decimal('0.01')
+        current_month = start_date.replace(day=1)
+        for offset in range(months):
+            month_key = current_month
+            month_delta = delta_map.get(month_key, {'delta': Decimal('0.00'), 'count': 0})
+            running_balance = (running_balance + month_delta['delta']).quantize(quant)
+            points.append({
+                'date': current_month.isoformat(),
+                'balance': running_balance,
+                'monthly_profit': month_delta['delta'],
+                'coupon_count': month_delta['count'],
+            })
+            current_month = current_month.replace(day=1) + timedelta(days=32)
+            current_month = current_month.replace(day=1)
+
+        return points
+
 _service = CouponService()
 
 
@@ -309,3 +388,12 @@ def recalc_and_evaluate_coupon(coupon: Coupon) -> Coupon:
 
 def force_settle_coupon_won(coupon: Coupon) -> Coupon:
     return _service.force_settle_coupon_won(coupon)
+
+
+def get_balance_trend(user, days: int = 7):
+    return _service.get_balance_trend(user=user, days=days)
+
+
+def get_monthly_balance_trend(user, months: int = 12):
+    return _service.get_monthly_balance_trend(user=user, months=months)
+
