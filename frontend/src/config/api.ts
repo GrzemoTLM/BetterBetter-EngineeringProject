@@ -27,6 +27,7 @@ export const API_ENDPOINTS = {
     BOOKMAKERS_LIST: '/api/finances/bookmakers/',
     BOOKMAKER_ACCOUNT_CREATE: '/api/finances/bookmakers/accounts/create/',
     BOOKMAKER_ACCOUNTS_LIST: '/api/finances/bookmakers/accounts/',
+    BOOKMAKER_ACCOUNTS_SUMMARY: '/api/finances/bookmakers/accounts/summary/',
   },
   TICKETS: {
     CATEGORIES: '/api/tickets/categories/',
@@ -51,6 +52,7 @@ export const API_ENDPOINTS = {
     DISCIPLINE_DETAIL: (id: number | string) => `/api/coupons/disciplines/${id}/`,
     FORCE_WIN: (id: number) => `/api/coupons/coupons/${id}/force-win/`,
     BET_SETTLE: (couponId: number, betId: number | string) => `/api/coupons/coupons/${couponId}/bets/${betId}/`,
+    SUMMARY: '/api/coupons/summary/',
   },
   MONITORING: {
     SYSTEM_METRICS: '/api/monitoring/system-metrics/',

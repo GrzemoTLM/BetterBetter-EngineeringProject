@@ -2,7 +2,7 @@ import axios, { AxiosError } from 'axios';
 import type { AxiosInstance } from 'axios';
 import type { LoginRequest, RegisterRequest, AuthResponse, UserProfile, TwoFactorRequest, PasswordResetRequestRequest, PasswordResetConfirmRequest, PasswordResetResponse } from '../types/auth';
 import type { UserSettings, UpdateSettingsRequest, TwoFactorStartRequest, TwoFactorStartResponse, TwoFactorVerifyRequest, TelegramAuthResponse, TelegramConnectionStatus } from '../types/settings';
-import type { TransactionCreateRequest, TransactionCreateResponse, BookmakerAccountCreateRequest, BookmakerAccountCreateResponse, AvailableBookmaker, Transaction, TransactionSummary } from '../types/finances';
+import type { TransactionCreateRequest, TransactionCreateResponse, BookmakerAccountCreateRequest, BookmakerAccountCreateResponse, Transaction, TransactionSummary } from '../types/finances';
 import type { TicketCategory, CreateTicketRequest, Ticket, CreateCommentRequest, TicketComment } from '../types/tickets';
 import type { Strategy, CreateStrategyRequest } from '../types/strategies';
 import type { Coupon, CreateCouponRequest, BetType, OcrExtractResponse } from '../types/coupons';
@@ -42,6 +42,20 @@ export interface CouponSummary {
   // shape will be clarified from backend response; keep it generic for now
   [key: string]: unknown;
 }
+
+// New: summary per bookmaker accounts
+export type BookmakerAccountsSummaryItem = {
+  account_id: number;
+  bookmaker: string;
+  external_username: string;
+  balance?: string | number;
+  deposited_total?: string | number;
+  withdrawn_total?: string | number;
+  net_cashflow?: string | number;
+  currency?: string;
+};
+
+export type BookmakerAccountsSummary = BookmakerAccountsSummaryItem[];
 
 class ApiService {
   private axiosInstance: AxiosInstance;
@@ -425,11 +439,18 @@ class ApiService {
     }
   }
 
-  async getAvailableBookmakers(): Promise<AvailableBookmaker[]> {
+  // New: fetch bookmaker accounts summary
+  async getBookmakerAccountsSummary(params?: Record<string, string>): Promise<BookmakerAccountsSummary> {
     try {
-      const response = await this.axiosInstance.get<AvailableBookmaker[]>(API_ENDPOINTS.FINANCES.BOOKMAKERS_LIST);
+      const response = await this.axiosInstance.get<BookmakerAccountsSummary>(API_ENDPOINTS.FINANCES.BOOKMAKER_ACCOUNTS_SUMMARY, {
+        params,
+      });
+      console.log('[API] getBookmakerAccountsSummary - status:', response.status);
+      console.log('[API] getBookmakerAccountsSummary - params:', params);
+      console.log('[API] getBookmakerAccountsSummary - data sample:', Array.isArray(response.data) ? response.data.slice(0, 3) : response.data);
       return response.data;
     } catch (error) {
+      console.error('[API] getBookmakerAccountsSummary - error raw:', error);
       throw new Error(this.getErrorMessage(error));
     }
   }
@@ -823,10 +844,13 @@ class ApiService {
     }
   }
 
-  async getCouponSummary(): Promise<CouponSummary> {
+  async getCouponSummary(params?: Record<string, string>): Promise<CouponSummary> {
     try {
-      const response = await this.axiosInstance.get<CouponSummary>('/api/analytics/coupons/summary/');
+      const response = await this.axiosInstance.get<CouponSummary>(API_ENDPOINTS.COUPONS.SUMMARY, {
+        params,
+      });
       console.log('[API] getCouponSummary - status:', response.status);
+      console.log('[API] getCouponSummary - params:', params);
       console.log('[API] getCouponSummary - data:', response.data);
       return response.data;
     } catch (error) {
