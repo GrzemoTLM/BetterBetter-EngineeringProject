@@ -11,6 +11,7 @@ from ..serializers.coupon_serializer import (
     CouponSerializer,
     CouponCreateSerializer,
     CouponUpdateSerializer,
+    BalanceTrendPointSerializer,
 )
 from ..services.coupon_service import (
     list_coupons,
@@ -20,6 +21,8 @@ from ..services.coupon_service import (
     settle_coupon,
     recalc_and_evaluate_coupon,
     force_settle_coupon_won,
+    get_balance_trend,
+    get_monthly_balance_trend,
 )
 from .coupon_filter_view import CouponStatsMixin
 from rest_framework.views import APIView
@@ -297,8 +300,9 @@ class CouponSummaryView(APIView, CouponStatsMixin):
 
         from decimal import Decimal
         total_stake = sum((c.bet_stake for c in coupons_qs)) if total_count else Decimal('0.00')
-        total_won_amount = sum((c.balance for c in coupons_qs)) if total_count else Decimal('0.00')
-        profit = total_won_amount - total_stake
+        # balance = (wygrana - stawka) dla wygranych lub (-stawka) dla przegranych
+        # profit to suma wszystkich balance'y
+        profit = sum((c.balance for c in coupons_qs)) if total_count else Decimal('0.00')
         win_rate = round((won_count / total_count * 100), 2) if total_count > 0 else 0.0
         roi = round((profit / total_stake * 100), 2) if total_stake > 0 else 0.0
 
@@ -324,8 +328,76 @@ class CouponSummaryView(APIView, CouponStatsMixin):
             'canceled_count': canceled_count,
             'win_rate': win_rate,
             'total_stake': str(total_stake),
-            'total_won': str(total_won_amount),
             'profit': str(profit),
             'roi': roi,
             'avg_coupon_odds': avg_coupon_odds,
         }, status=status.HTTP_200_OK)
+
+
+class CouponBalanceTrendView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_summary='Coupon balance trend',
+        operation_description='Zwraca trend salda kuponów użytkownika dla ostatnich N dni (domyślnie 7).',
+        manual_parameters=[
+            openapi.Parameter(
+                'days',
+                openapi.IN_QUERY,
+                description='Liczba dni do tyłu (max 90, domyślnie 7)',
+                type=openapi.TYPE_INTEGER,
+            ),
+        ],
+        responses={
+            200: openapi.Response('Balance trend', BalanceTrendPointSerializer(many=True)),
+            400: openapi.Response('Błąd zapytania'),
+            401: openapi.Response('Unauthorized'),
+        }
+    )
+    def get(self, request):
+        days_param = request.query_params.get('days')
+        days = 7
+        if days_param:
+            try:
+                days = int(days_param)
+            except (TypeError, ValueError):
+                return Response({'error': 'days must be a positive integer.'}, status=status.HTTP_400_BAD_REQUEST)
+            if days <= 0 or days > 90:
+                return Response({'error': 'days must be between 1 and 90.'}, status=status.HTTP_400_BAD_REQUEST)
+        trend = get_balance_trend(user=request.user, days=days)
+        serializer = BalanceTrendPointSerializer(trend, many=True)
+        return Response({'points': serializer.data}, status=status.HTTP_200_OK)
+
+
+class CouponMonthlyBalanceTrendView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_summary='Coupon monthly balance trend',
+        operation_description='Zwraca trend salda kuponów użytkownika dla ostatnich N miesięcy (domyślnie 12) z podziałem na zysk miesięczny i liczbę kuponów.',
+        manual_parameters=[
+            openapi.Parameter(
+                'months',
+                openapi.IN_QUERY,
+                description='Liczba miesięcy do tyłu (max 120, domyślnie 12)',
+                type=openapi.TYPE_INTEGER,
+            ),
+        ],
+        responses={
+            200: openapi.Response('Monthly balance trend'),
+            400: openapi.Response('Błąd zapytania'),
+            401: openapi.Response('Unauthorized'),
+        }
+    )
+    def get(self, request):
+        months_param = request.query_params.get('months')
+        months = 12
+        if months_param:
+            try:
+                months = int(months_param)
+            except (TypeError, ValueError):
+                return Response({'error': 'months must be a positive integer.'}, status=status.HTTP_400_BAD_REQUEST)
+            if months <= 0 or months > 120:
+                return Response({'error': 'months must be between 1 and 120.'}, status=status.HTTP_400_BAD_REQUEST)
+        trend = get_monthly_balance_trend(user=request.user, months=months)
+        return Response({'points': trend}, status=status.HTTP_200_OK)

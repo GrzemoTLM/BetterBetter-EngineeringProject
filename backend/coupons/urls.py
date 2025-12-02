@@ -2,11 +2,25 @@ from django.urls import path, include
 from rest_framework import routers
 from .views.bet_type_dict_view import BetTypeDictViewSet
 from .views.discipline_view import DisciplineViewSet
-from .views.coupon_view import CouponListCreateView, CouponDetailsView, CouponRecalcView, CouponSettleView, CouponForceWinView, CouponCopyView, CouponSummaryView
-from .views.coupon_filter_view import CouponFilterByTeamView, CouponFilterByQueryBuilderView, CouponFilterUniversalView
+from .views.coupon_view import (
+    CouponListCreateView,
+    CouponDetailsView,
+    CouponRecalcView,
+    CouponSettleView,
+    CouponForceWinView,
+    CouponCopyView,
+    CouponSummaryView,
+    CouponBalanceTrendView,
+    CouponMonthlyBalanceTrendView,
+)
 from .views.bet_view import BetListCreateView, BetDetailsView
 from .views.event_view import EventViewSet
 from .views.ocr_view import OCRTestView, OCRParseView
+from .views.coupon_filter_view import (
+    CouponFilterByTeamView,
+    CouponFilterByQueryBuilderView,
+    CouponFilterUniversalView,
+)
 
 router = routers.DefaultRouter()
 router.register(r'bet-types', BetTypeDictViewSet, basename='bet-type')
@@ -29,6 +43,8 @@ urlpatterns = [
     path('coupons/<int:pk>/copy/', CouponCopyView.as_view(), name='coupon-copy'),
     path('summary/', CouponSummaryView.as_view(), name='coupon-summary'),
     path('coupons/summary/', CouponSummaryView.as_view(), name='coupon-summary-legacy'),
+    path('balance-trend/', CouponBalanceTrendView.as_view(), name='coupon-balance-trend'),
+    path('monthly-balance-trend/', CouponMonthlyBalanceTrendView.as_view(), name='coupon-monthly-balance-trend'),
     path('coupons/<int:coupon_id>/bets/', BetListCreateView.as_view(), name='bet-list-create'),
     path('coupons/<int:coupon_id>/bets/<int:pk>/', BetDetailsView.as_view(), name='bet-detail'),
     path('filter/team/', CouponFilterByTeamView.as_view(), name='coupon-filter-team'),

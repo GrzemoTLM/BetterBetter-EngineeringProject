@@ -43,6 +43,26 @@ export interface CouponSummary {
   [key: string]: unknown;
 }
 
+export interface BalanceTrendPoint {
+  date: string;
+  balance: number;
+}
+
+export interface BalanceTrendResponse {
+  points: BalanceTrendPoint[];
+}
+
+export interface MonthlyBalanceTrendPoint {
+  date: string;
+  balance: string;
+  monthly_profit: string;
+  coupon_count: number;
+}
+
+export interface MonthlyBalanceTrendResponse {
+  points: MonthlyBalanceTrendPoint[];
+}
+
 // New: summary per bookmaker accounts
 export type BookmakerAccountsSummaryItem = {
   account_id: number;
@@ -855,6 +875,38 @@ class ApiService {
       return response.data;
     } catch (error) {
       console.error('[API] getCouponSummary - error raw:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async getBalanceTrend(params?: { days?: number }): Promise<BalanceTrendPoint[]> {
+    try {
+      const response = await this.axiosInstance.get<BalanceTrendResponse>(
+        API_ENDPOINTS.COUPONS.BALANCE_TREND,
+        { params }
+      );
+      console.log('[API] getBalanceTrend - status:', response.status);
+      console.log('[API] getBalanceTrend - params:', params);
+      console.log('[API] getBalanceTrend - data:', response.data);
+      return response.data.points || [];
+    } catch (error) {
+      console.error('[API] getBalanceTrend - error raw:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async getMonthlyBalanceTrend(params?: { months?: number }): Promise<MonthlyBalanceTrendPoint[]> {
+    try {
+      const response = await this.axiosInstance.get<MonthlyBalanceTrendResponse>(
+        API_ENDPOINTS.COUPONS.MONTHLY_BALANCE_TREND,
+        { params }
+      );
+      console.log('[API] getMonthlyBalanceTrend - status:', response.status);
+      console.log('[API] getMonthlyBalanceTrend - params:', params);
+      console.log('[API] getMonthlyBalanceTrend - data:', response.data);
+      return response.data.points || [];
+    } catch (error) {
+      console.error('[API] getMonthlyBalanceTrend - error raw:', error);
       throw new Error(this.getErrorMessage(error));
     }
   }

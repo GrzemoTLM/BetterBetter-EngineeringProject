@@ -167,3 +167,7 @@ class CouponCopySerializer(serializers.Serializer):
             'bet_stake',
             'bets',
         ]
+
+class BalanceTrendPointSerializer(serializers.Serializer):
+    date = serializers.DateField()
+    balance = serializers.DecimalField(max_digits=12, decimal_places=2)
