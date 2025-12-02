@@ -43,6 +43,8 @@ export const API_ENDPOINTS = {
     DETAIL: (id: number) => `/api/analytics/strategies/${id}/`,
     UPDATE: (id: number) => `/api/analytics/strategies/${id}/`,
     DELETE: (id: number) => `/api/analytics/strategies/${id}/`,
+    SUMMARY_LIST: '/api/analytics/strategies/summary/',
+    SUMMARY_DETAIL: (id: number | string) => `/api/analytics/strategies/${id}/summary/`,
   },
   COUPONS: {
     LIST: '/api/coupons/coupons/',

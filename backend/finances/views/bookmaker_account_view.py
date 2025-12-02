@@ -178,10 +178,10 @@ class BookmakerAccountSummaryView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     @swagger_auto_schema(
-        operation_summary='Get bookmaker account summary',
-        operation_description='Get summary statistics for a specific bookmaker account',
+        operation_summary='Get bookmaker account coupon summary',
+        operation_description='Get coupon balance statistics for a specific bookmaker account. coupon_balance = suma profitów (wygrana - stawka dla wygranych, -stawka dla przegranych)',
         responses={
-            200: openapi.Response('Account summary'),
+            200: openapi.Response('Account coupon summary'),
             403: openapi.Response('Not authorized'),
             404: openapi.Response('Account not found'),
         }
@@ -191,21 +191,43 @@ class BookmakerAccountSummaryView(APIView):
             account = get_bookmaker_account(pk)
             if account.user != request.user:
                 return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
-            agg = Transaction.objects.filter(bookmaker_account=account).aggregate(
-                deposited=Sum('amount', filter=Q(transaction_type=TransactionType.DEPOSIT)),
-                withdrawn=Sum('amount', filter=Q(transaction_type=TransactionType.WITHDRAWAL)),
+
+            # Balans kuponów = suma balance (profit po odjęciu stawek)
+            from coupons.models import Coupon
+
+            won_agg = Coupon.objects.filter(
+                user=request.user,
+                bookmaker_account=account,
+                status=Coupon.CouponStatus.WON
+            ).aggregate(
+                profit=Sum('balance'),
+                count=Sum(1)
             )
-            deposited = agg['deposited'] or Decimal('0.00')
-            withdrawn = agg['withdrawn'] or Decimal('0.00')
-            net = deposited - withdrawn
+
+            lost_agg = Coupon.objects.filter(
+                user=request.user,
+                bookmaker_account=account,
+                status=Coupon.CouponStatus.LOST
+            ).aggregate(
+                profit=Sum('balance'),
+                count=Sum(1)
+            )
+
+            won_profit = won_agg['profit'] or Decimal('0.00')
+            won_count = won_agg['count'] or 0
+            lost_profit = lost_agg['profit'] or Decimal('0.00')
+            lost_count = lost_agg['count'] or 0
+            total_profit = won_profit + lost_profit
+
             return Response({
                 'bookmaker_account': account.id,
                 'bookmaker': account.bookmaker.name,
                 'currency': account.currency.code,
-                'total_deposited': float(deposited),
-                'total_withdrawn': float(withdrawn),
-                'net_deposits': float(net),
-                'current_balance': float(account.balance),
+                'coupon_balance': float(total_profit),  # Suma profitów (po odjęciu stawek)
+                'won_profit': float(won_profit),  # Suma profitów z wygranych
+                'won_count': won_count,
+                'lost_profit': float(lost_profit),  # Suma strat z przegranych
+                'lost_count': lost_count,
             })
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
@@ -217,38 +239,59 @@ class BookmakerAccountsSummaryView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     @swagger_auto_schema(
-        operation_summary='Get all bookmaker accounts summary',
-        operation_description='Get summary statistics for all bookmaker accounts',
+        operation_summary='Get all bookmaker accounts coupon summary',
+        operation_description='Get coupon balance statistics for all bookmaker accounts. coupon_balance = suma profitów (wygrana - stawka dla wygranych, -stawka dla przegranych)',
         responses={
-            200: openapi.Response('Accounts summary'),
+            200: openapi.Response('Accounts coupon summary'),
             400: openapi.Response('Error calculating summary'),
         }
     )
     def get(self, request):
         try:
+            from coupons.models import Coupon
+
             qs = (
                 BookmakerAccountModel.objects
                 .filter(user=request.user)
                 .select_related('bookmaker', 'currency')
-                .annotate(
-                    deposited=Sum('transactions__amount', filter=Q(transactions__transaction_type=TransactionType.DEPOSIT)),
-                    withdrawn=Sum('transactions__amount', filter=Q(transactions__transaction_type=TransactionType.WITHDRAWAL)),
-                )
             )
             results = []
             for acc in qs:
-                deposited = acc.deposited or Decimal('0.00')
-                withdrawn = acc.withdrawn or Decimal('0.00')
-                net = deposited - withdrawn
+                # Balans kuponów = suma balance (profit po odjęciu stawek)
+                won_agg = Coupon.objects.filter(
+                    user=request.user,
+                    bookmaker_account=acc,
+                    status=Coupon.CouponStatus.WON
+                ).aggregate(
+                    profit=Sum('balance'),
+                    count=Sum(1)
+                )
+
+                lost_agg = Coupon.objects.filter(
+                    user=request.user,
+                    bookmaker_account=acc,
+                    status=Coupon.CouponStatus.LOST
+                ).aggregate(
+                    profit=Sum('balance'),
+                    count=Sum(1)
+                )
+
+                won_profit = won_agg['profit'] or Decimal('0.00')
+                won_count = won_agg['count'] or 0
+                lost_profit = lost_agg['profit'] or Decimal('0.00')
+                lost_count = lost_agg['count'] or 0
+                total_profit = won_profit + lost_profit
+
                 results.append({
                     'id': acc.id,
                     'bookmaker': acc.bookmaker.name,
                     'alias': acc.alias,
                     'currency': acc.currency.code,
-                    'current_balance': float(acc.balance),
-                    'total_deposited': float(deposited),
-                    'total_withdrawn': float(withdrawn),
-                    'net_deposits': float(net),
+                    'coupon_balance': float(total_profit),  # Suma profitów (po odjęciu stawek)
+                    'won_profit': float(won_profit),  # Suma profitów z wygranych
+                    'won_count': won_count,
+                    'lost_profit': float(lost_profit),  # Suma strat z przegranych
+                    'lost_count': lost_count,
                 })
             return Response(results)
         except Exception as e:

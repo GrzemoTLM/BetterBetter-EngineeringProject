@@ -1,9 +1,14 @@
-from rest_framework import generics, permissions
+from rest_framework import generics, permissions, status
+from rest_framework.response import Response
+from rest_framework.views import APIView
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from django.db.models import Sum
+from decimal import Decimal
 
 from coupon_analytics.models import UserStrategy
 from coupon_analytics.serializers.user_strategy_serializer import UserStrategySerializer
+from coupons.models import Coupon
 
 
 class UserStrategyListCreateView(generics.ListCreateAPIView):
@@ -110,3 +115,115 @@ class UserStrategyDetailView(generics.RetrieveUpdateDestroyAPIView):
     def delete(self, request, *args, **kwargs):
         return super().delete(request, *args, **kwargs)
 
+
+class UserStrategySummaryView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_summary='Get strategy coupon summary',
+        operation_description='Get coupon profit statistics for a specific betting strategy. coupon_balance = suma profitów (wygrana - stawka dla wygranych, -stawka dla przegranych)',
+        responses={
+            200: openapi.Response('Strategy coupon summary'),
+            403: openapi.Response('Not authorized'),
+            404: openapi.Response('Strategy not found'),
+        }
+    )
+    def get(self, request, pk):
+        try:
+            strategy = UserStrategy.objects.get(id=pk, user=request.user)
+        except UserStrategy.DoesNotExist:
+            return Response({"error": "Strategy not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Balans kuponów = suma balance (profit po odjęciu stawek)
+        won_agg = Coupon.objects.filter(
+            user=request.user,
+            strategy=strategy,
+            status=Coupon.CouponStatus.WON
+        ).aggregate(
+            profit=Sum('balance'),
+            count=Sum(1)
+        )
+
+        lost_agg = Coupon.objects.filter(
+            user=request.user,
+            strategy=strategy,
+            status=Coupon.CouponStatus.LOST
+        ).aggregate(
+            profit=Sum('balance'),
+            count=Sum(1)
+        )
+
+        won_profit = won_agg['profit'] or Decimal('0.00')
+        won_count = won_agg['count'] or 0
+        lost_profit = lost_agg['profit'] or Decimal('0.00')
+        lost_count = lost_agg['count'] or 0
+        total_profit = won_profit + lost_profit
+
+        return Response({
+            'strategy_id': strategy.id,
+            'strategy_name': strategy.name,
+            'description': strategy.description,
+            'coupon_balance': float(total_profit),  # Suma profitów (po odjęciu stawek)
+            'won_profit': float(won_profit),  # Suma profitów z wygranych
+            'won_count': won_count,
+            'lost_profit': float(lost_profit),  # Suma strat z przegranych
+            'lost_count': lost_count,
+        }, status=status.HTTP_200_OK)
+
+
+class UserStrategiesSummaryView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_summary='Get all strategies coupon summary',
+        operation_description='Get coupon profit statistics for all betting strategies. coupon_balance = suma profitów (wygrana - stawka dla wygranych, -stawka dla przegranych)',
+        responses={
+            200: openapi.Response('Strategies coupon summary'),
+            400: openapi.Response('Error calculating summary'),
+        }
+    )
+    def get(self, request):
+        try:
+            strategies = UserStrategy.objects.filter(user=request.user).order_by('-created_at')
+            results = []
+
+            for strategy in strategies:
+                # Balans kuponów = suma balance (profit po odjęciu stawek)
+                won_agg = Coupon.objects.filter(
+                    user=request.user,
+                    strategy=strategy,
+                    status=Coupon.CouponStatus.WON
+                ).aggregate(
+                    profit=Sum('balance'),
+                    count=Sum(1)
+                )
+
+                lost_agg = Coupon.objects.filter(
+                    user=request.user,
+                    strategy=strategy,
+                    status=Coupon.CouponStatus.LOST
+                ).aggregate(
+                    profit=Sum('balance'),
+                    count=Sum(1)
+                )
+
+                won_profit = won_agg['profit'] or Decimal('0.00')
+                won_count = won_agg['count'] or 0
+                lost_profit = lost_agg['profit'] or Decimal('0.00')
+                lost_count = lost_agg['count'] or 0
+                total_profit = won_profit + lost_profit
+
+                results.append({
+                    'strategy_id': strategy.id,
+                    'strategy_name': strategy.name,
+                    'description': strategy.description,
+                    'coupon_balance': float(total_profit),  # Suma profitów (po odjęciu stawek)
+                    'won_profit': float(won_profit),  # Suma profitów z wygranych
+                    'won_count': won_count,
+                    'lost_profit': float(lost_profit),  # Suma strat z przegranych
+                    'lost_count': lost_count,
+                })
+
+            return Response(results, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)

@@ -8,6 +8,8 @@ from .views import (
     AlertEventListView,
     UserStrategyListCreateView,
     UserStrategyDetailView,
+    UserStrategySummaryView,
+    UserStrategiesSummaryView,
 )
 
 urlpatterns = [
@@ -20,4 +22,6 @@ urlpatterns = [
     # User Strategy endpoints
     path('strategies/', UserStrategyListCreateView.as_view(), name='user-strategy-list-create'),
     path('strategies/<int:pk>/', UserStrategyDetailView.as_view(), name='user-strategy-detail'),
+    path('strategies/<int:pk>/summary/', UserStrategySummaryView.as_view(), name='user-strategy-summary'),
+    path('strategies/summary/', UserStrategiesSummaryView.as_view(), name='user-strategies-summary'),
 ]

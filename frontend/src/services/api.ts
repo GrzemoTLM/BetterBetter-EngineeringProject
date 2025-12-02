@@ -77,6 +77,20 @@ export type BookmakerAccountsSummaryItem = {
 
 export type BookmakerAccountsSummary = BookmakerAccountsSummaryItem[];
 
+// Strategies - Summary types
+export type StrategySummaryItem = {
+  strategy_id: number;
+  strategy_name: string;
+  description?: string;
+  coupon_balance: number | string;
+  won_profit: number | string;
+  won_count: number | string;
+  lost_profit: number | string;
+  lost_count: number | string;
+};
+export type StrategySummaryResponse = StrategySummaryItem[];
+export type StrategySummaryDetail = StrategySummaryItem;
+
 class ApiService {
   private axiosInstance: AxiosInstance;
 
@@ -614,6 +628,25 @@ class ApiService {
   async deleteStrategy(id: number): Promise<void> {
     try {
       await this.axiosInstance.delete(API_ENDPOINTS.STRATEGIES.DELETE(id));
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  // Strategies - Summary
+  async getStrategiesSummary(params?: Record<string, string>): Promise<StrategySummaryResponse> {
+    try {
+      const response = await this.axiosInstance.get<StrategySummaryResponse>(API_ENDPOINTS.STRATEGIES.SUMMARY_LIST, { params });
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async getStrategySummary(id: number | string): Promise<StrategySummaryDetail> {
+    try {
+      const response = await this.axiosInstance.get<StrategySummaryDetail>(API_ENDPOINTS.STRATEGIES.SUMMARY_DETAIL(id));
+      return response.data;
     } catch (error) {
       throw new Error(this.getErrorMessage(error));
     }
