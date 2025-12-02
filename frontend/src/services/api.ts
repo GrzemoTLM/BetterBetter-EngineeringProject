@@ -755,14 +755,14 @@ class ApiService {
     }
   }
 
-  async getCoupons(): Promise<Coupon[]> {
+  async getCoupons(params?: Record<string, string>): Promise<Coupon[]> {
     try {
       const token = this.getToken();
       if (!token) {
         throw new Error('Not authenticated');
       }
 
-      const response = await this.axiosInstance.get<Coupon[]>(API_ENDPOINTS.COUPONS.LIST);
+      const response = await this.axiosInstance.get<Coupon[]>(API_ENDPOINTS.COUPONS.LIST, { params });
       return response.data;
     } catch (error) {
       throw new Error(this.getErrorMessage(error));

@@ -1,5 +1,5 @@
 import { Pencil, CheckCircle, XCircle, Circle } from 'lucide-react';
-import { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
+import { useState, useEffect, useImperativeHandle, forwardRef, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import api from '../services/api';
 import { useDateFormatter } from '../hooks/useDateFormatter';
@@ -11,6 +11,9 @@ interface CouponsTableProps {
   bulkMode?: boolean;
   selectedIds?: Set<number>;
   onToggleSelect?: (id: number) => void;
+  filters?: Record<string, string>;
+  hideEdit?: boolean;
+  showOnlySettled?: boolean;
 }
 
 export interface CouponsTableRef {
@@ -103,7 +106,7 @@ const renderStatusBadge = (derived: string): ReactNode => (
   </span>
 );
 
-const CouponsTable = forwardRef<CouponsTableRef, CouponsTableProps>(({ bulkMode = false, selectedIds = new Set(), onToggleSelect }, ref) => {
+const CouponsTable = forwardRef<CouponsTableRef, CouponsTableProps>(({ bulkMode = false, selectedIds = new Set(), onToggleSelect, filters, hideEdit = false, showOnlySettled = false }, ref) => {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -114,11 +117,20 @@ const CouponsTable = forwardRef<CouponsTableRef, CouponsTableProps>(({ bulkMode 
   const { formatDateWithoutTime } = useDateFormatter();
   const { formatCurrency } = useCurrency();
 
-  const fetchCoupons = async () => {
+  const fetchCoupons = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await api.getCoupons();
-      const sorted = [...data].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      const data = await api.getCoupons(filters);
+      let sorted = [...data].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+      // Filter only settled coupons if showOnlySettled is true
+      if (showOnlySettled) {
+        sorted = sorted.filter(coupon => {
+          const status = normalizeStatus(coupon.status);
+          return status.includes('won') || status.includes('lost') || status === 'win' || status === 'lose';
+        });
+      }
+
       setCoupons(sorted);
       setError(null);
       setPage(0);
@@ -129,11 +141,11 @@ const CouponsTable = forwardRef<CouponsTableRef, CouponsTableProps>(({ bulkMode 
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters, showOnlySettled]);
 
   useImperativeHandle(ref, () => ({ refetch: fetchCoupons }));
 
-  useEffect(() => { fetchCoupons(); }, []);
+  useEffect(() => { fetchCoupons(); }, [fetchCoupons]);
 
   // Pagination derivations
   const total = coupons.length;
@@ -228,7 +240,7 @@ const CouponsTable = forwardRef<CouponsTableRef, CouponsTableProps>(({ bulkMode 
             <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-table-header">Payout / Balance</th>
             <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-table-header">Date</th>
             <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-table-header">Status</th>
-            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-table-header w-12"></th>
+            {!hideEdit && <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-table-header w-12"></th>}
           </tr>
         </thead>
         <tbody className="divide-y divide-default">
@@ -271,16 +283,18 @@ const CouponsTable = forwardRef<CouponsTableRef, CouponsTableProps>(({ bulkMode 
                 </td>
                 <td className="px-4 py-4 text-sm text-text-secondary">{formatDateWithoutTime(coupon.created_at)}</td>
                 <td className="px-4 py-4 text-sm">{renderStatusBadge(derived)}</td>
-                <td className="px-4 py-4">
-                  {!bulkMode && (
-                    <button
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-blue-50 rounded"
-                      onClick={(e) => { e.stopPropagation(); setEditingCouponId(coupon.id); setIsEditOpen(true); }}
-                    >
-                      <Pencil size={16} className="text-primary-main" />
-                    </button>
-                  )}
-                </td>
+                {!hideEdit && (
+                  <td className="px-4 py-4">
+                    {!bulkMode && (
+                      <button
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-blue-50 rounded"
+                        onClick={(e) => { e.stopPropagation(); setEditingCouponId(coupon.id); setIsEditOpen(true); }}
+                      >
+                        <Pencil size={16} className="text-primary-main" />
+                      </button>
+                    )}
+                  </td>
+                )}
               </tr>
             );
           })}
