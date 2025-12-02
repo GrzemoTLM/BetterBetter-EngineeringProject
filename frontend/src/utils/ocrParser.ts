@@ -8,11 +8,11 @@ export interface ParsedOcrBet {
 }
 
 export function parseOcrToBets(ocr: OcrExtractResponse): ParsedOcrBet[] {
-  const text = ocr.detailed_result?.text ?? ocr.raw_text ?? '';
+  const text = (ocr as any).detailed_result?.text ?? (ocr as any).raw_text ?? '';
   const lines = text
     .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0);
+    .map((l: string) => l.trim())
+    .filter((l: string) => l.length > 0);
 
   const bets: ParsedOcrBet[] = [];
 

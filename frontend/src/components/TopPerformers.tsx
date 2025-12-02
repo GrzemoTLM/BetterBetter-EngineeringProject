@@ -153,7 +153,7 @@ const TopPerformers = ({ filters }: TopPerformersProps) => {
                       {bookmaker.name}
                     </div>
                     <div className="text-xs text-text-secondary">
-                      {bookmaker.couponCount ? `${bookmaker.couponCount} coupons` : '—'}
+                      —
                     </div>
                   </div>
                 </div>
