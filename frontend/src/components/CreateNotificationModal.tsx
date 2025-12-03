@@ -55,7 +55,7 @@ const CreateNotificationModal = ({ onClose }: CreateNotificationModalProps) => {
       rule_type: metric,
       metric,
       comparator,
-      threshold_value: thresholdValue,
+      threshold_value: Number(thresholdValue),
       window_days: Number(effectiveWindowDays),
       ...(message.trim() ? { message: message.trim() } : {}),
     };

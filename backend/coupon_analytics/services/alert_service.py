@@ -37,15 +37,31 @@ def _compute_metric_value(rule: AlertRule, *, user: User, start: datetime, end: 
         return _dec_or_none(summary.get(key))
 
     if metric == 'loss':
-        agg = Coupon.objects.filter(user=user, created_at__gte=start, created_at__lte=end, status=Coupon.CouponStatus.LOST).aggregate(total_loss=Sum('balance'))
-        total_loss = agg['total_loss']
-        if total_loss is None:
+        # Licz NETTO sumę balance WSZYSTKICH kuponów (wygrane i przegranym)
+        # balance może być ujemny (strata) lub dodatni (zysk)
+        agg = Coupon.objects.filter(
+            user=user,
+            created_at__gte=start,
+            created_at__lte=end,
+            status__in=[Coupon.CouponStatus.LOST, Coupon.CouponStatus.WON]  # ← Oba!
+        ).aggregate(total_balance=Sum('balance'))
+
+        total_balance = agg['total_balance']
+        if total_balance is None:
             return Decimal('0.00')
+
         try:
-            d = Decimal(str(total_loss))
+            d = Decimal(str(total_balance))
         except Exception:
             return None
-        return -d if d < 0 else Decimal('0.00')
+
+        # Zwróć wartość bezwzględną TYLKO jeśli ujemna (strata)
+        # Jeśli dodatnia (zysk), zwróć 0 (brak straty)
+        # np. -150 → 150, 100 → 0
+        if d < 0:
+            return abs(d)
+        else:
+            return Decimal('0.00')
 
     if metric == 'streak_loss':
         qs = Coupon.objects.filter(user=user).order_by('-created_at').values_list('status', flat=True)
@@ -80,32 +96,10 @@ def _render_message(rule: AlertRule, *, metric_value: Decimal | None, start: dat
 
 def _get_calendar_period(now: datetime, window_days: int) -> tuple[datetime, datetime]:
 
-    if window_days == 7:
+    end_dt = datetime.combine(now.date(), time.max, tzinfo=now.tzinfo)
 
-        current_weekday = now.isoweekday()
-        days_since_sunday = current_weekday % 7
-
-        start_date = (now - timedelta(days=days_since_sunday)).date()
-        end_date = start_date + timedelta(days=6)
-
-    elif window_days == 30:
-        start_date = now.date().replace(day=1)
-
-        if now.month == 12:
-            next_month_first = start_date.replace(year=now.year + 1, month=1)
-        else:
-            next_month_first = start_date.replace(month=now.month + 1)
-        end_date = next_month_first - timedelta(days=1)
-
-    elif window_days == 365:
-        start_date = now.date().replace(month=1, day=1)
-        end_date = now.date().replace(month=12, day=31)
-    else:
-        start_date = (now - timedelta(days=window_days)).date()
-        end_date = now.date()
-
+    start_date = (now.date() - timedelta(days=window_days - 1))
     start_dt = datetime.combine(start_date, time.min, tzinfo=now.tzinfo)
-    end_dt = datetime.combine(end_date, time.max, tzinfo=now.tzinfo)
 
     return start_dt, end_dt
 
@@ -129,24 +123,35 @@ def evaluate_alert_rules_for_user(user: User) -> None:
             continue
         threshold = _dec_or_none(rule.threshold_value)
 
-        if not comp(value, threshold):
-            continue
+        condition_met = comp(value, threshold)
+        existing_alert = AlertEvent.objects.filter(rule=rule, window_start=start_dt, window_end=end_dt).first()
 
-        if AlertEvent.objects.filter(rule=rule, window_start=start_dt, window_end=end_dt).exists():
-            continue
+        if condition_met:
+            if existing_alert:
+                if metric == 'loss':
+                    existing_alert.delete()
+                else:
+                    if Decimal(str(existing_alert.metric_value or 0)) != value:
+                        existing_alert.delete()
+                    else:
+                        continue
 
-        rendered = _render_message(rule, metric_value=value, start=start_dt, end=end_dt)
-        AlertEvent.objects.create(
-            rule=rule,
-            user=user,
-            metric=rule.metric,
-            comparator=rule.comparator,
-            threshold_value=rule.threshold_value,
-            metric_value=value,
-            window_start=start_dt,
-            window_end=end_dt,
-            message_rendered=rendered,
-        )
+            rendered = _render_message(rule, metric_value=value, start=start_dt, end=end_dt)
+            AlertEvent.objects.create(
+                rule=rule,
+                user=user,
+                metric=rule.metric,
+                comparator=rule.comparator,
+                threshold_value=rule.threshold_value,
+                metric_value=value,
+                window_start=start_dt,
+                window_end=end_dt,
+                message_rendered=rendered,
+                sent_at=None,
+            )
+        else:
+            if existing_alert:
+                existing_alert.delete()
 
 def notify_yield_alerts_on_coupon_settle(user: User) -> None:
     evaluate_alert_rules_for_user(user)

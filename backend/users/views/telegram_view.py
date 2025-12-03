@@ -88,3 +88,38 @@ class ConnectTelegramView(APIView):
             )
 
 
+class DisconnectTelegramView(APIView):
+    """
+    Disconnect Telegram account from BetBetter.
+
+    POST /api/users/telegram/disconnect/
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_summary='Disconnect Telegram account',
+        operation_description='Disconnect user account from Telegram',
+        responses={
+            200: openapi.Response('Telegram account disconnected'),
+            404: openapi.Response('Telegram account not connected'),
+            401: openapi.Response('Unauthorized'),
+        }
+    )
+    def post(self, request):
+        try:
+            success = TelegramService.disconnect_telegram(request.user)
+            if success:
+                return Response({
+                    "message": "Telegram account disconnected successfully",
+                    "telegram_connected": False
+                }, status=status.HTTP_200_OK)
+            else:
+                return Response(
+                    {"error": "Telegram account not connected"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
