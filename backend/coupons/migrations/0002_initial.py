@@ -25,9 +25,16 @@ class Migration(migrations.Migration):
             name='coupon',
             field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='bets', to='coupons.coupon'),
         ),
-        migrations.AddConstraint(
-            model_name='discipline',
-            constraint=models.CheckConstraint(check=models.Q(('code', ''), _negated=True), name='sport_code_not_blank'),
+        # Replace AddConstraint with raw SQL to ensure compatibility across Django versions
+        migrations.RunSQL(
+            sql=(
+                'ALTER TABLE "coupons_discipline" '
+                'ADD CONSTRAINT sport_code_not_blank CHECK (code <> \'\');'
+            ),
+            reverse_sql=(
+                'ALTER TABLE "coupons_discipline" '
+                'DROP CONSTRAINT IF EXISTS sport_code_not_blank;'
+            ),
         ),
         migrations.AddField(
             model_name='bet',

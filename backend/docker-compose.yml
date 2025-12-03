@@ -12,7 +12,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./pg_data:/var/lib/postgresql/data  # <--- Bezpieczniejszy zapis w folderze projektu
+      - ./pg_data:/var/lib/postgresql/data
 
   pgadmin:
     image: dpage/pgadmin4
