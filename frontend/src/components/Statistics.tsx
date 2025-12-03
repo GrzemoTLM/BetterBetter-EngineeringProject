@@ -9,7 +9,9 @@ import CustomFilterBuilder from './CustomFilterBuilder';
 import TopPerformers from './TopPerformers';
 import ActiveNotifications from './ActiveNotifications';
 import PerformanceInsights from './PerformanceInsights';
+import PeriodicReports from './PeriodicReports';
 import api from '../services/api';
+import type { UserSettings } from '../types/settings';
 
 const Statistics = () => {
   // Dates empty by default – only sent when provided
@@ -23,18 +25,23 @@ const Statistics = () => {
   const [bookmakerAccounts, setBookmakerAccounts] = useState<import('../types/finances').BookmakerAccountCreateResponse[]>([]);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
 
   useEffect(() => {
-    const fetchAccounts = async () => {
+    const fetchData = async () => {
       try {
-        const accounts = await api.getBookmakerAccounts();
+        const [accounts, settings] = await Promise.all([
+          api.getBookmakerAccounts(),
+          api.getSettings(),
+        ]);
         setBookmakerAccounts(accounts);
+        setUserSettings(settings);
       } catch (error) {
-        console.error('[Statistics] Failed to fetch bookmaker accounts:', error);
+        console.error('[Statistics] Failed to fetch data:', error);
       }
     };
 
-    fetchAccounts();
+    fetchData();
   }, []);
 
   const loadSummary = useCallback(async () => {
@@ -226,6 +233,7 @@ const Statistics = () => {
 
         {/* Right Column - Reports (1/3) */}
         <div className="lg:col-span-4 flex flex-col gap-5">
+          <PeriodicReports userSettings={userSettings} />
           <StatisticsReports />
           <PerformanceInsights />
         </div>

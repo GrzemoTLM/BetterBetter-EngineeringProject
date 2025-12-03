@@ -99,6 +99,28 @@ export type BookmakerAccountsSummaryItem = {
 
 export type BookmakerAccountsSummary = BookmakerAccountsSummaryItem[];
 
+export interface Report {
+  id: number;
+  query?: Record<string, unknown> | null;
+  frequency: 'DAILY' | 'WEEKLY' | 'MONTHLY';
+  delivery_method: string;
+  delivery_methods: string[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateReportRequest {
+  query?: Record<string, unknown> | null;
+  frequency: 'DAILY' | 'WEEKLY' | 'MONTHLY';
+  delivery_method?: string;
+  delivery_methods: string[];
+}
+
+export interface ReportToggleResponse {
+  is_active: boolean;
+}
+
 // Strategies - Summary types
 export type StrategySummaryItem = {
   strategy_id: number;
@@ -352,6 +374,41 @@ class ApiService {
   async deleteAlertRule(id: number | string): Promise<void> {
     try {
       await this.axiosInstance.delete(`${API_ENDPOINTS.ANALYTICS.ALERT_RULES}${id}/`);
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async getReports(): Promise<any[]> {
+    try {
+      const response = await this.axiosInstance.get('/api/analytics/reports/');
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async createReport(payload: any): Promise<any> {
+    try {
+      const response = await this.axiosInstance.post('/api/analytics/reports/', payload);
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async updateReport(id: number, payload: any): Promise<any> {
+    try {
+      const response = await this.axiosInstance.patch(`/api/analytics/reports/${id}/`, payload);
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async deleteReport(id: number): Promise<void> {
+    try {
+      await this.axiosInstance.delete(`/api/analytics/reports/${id}/`);
     } catch (error) {
       throw new Error(this.getErrorMessage(error));
     }

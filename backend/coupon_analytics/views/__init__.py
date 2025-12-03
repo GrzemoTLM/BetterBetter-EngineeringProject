@@ -11,6 +11,11 @@ from .strategy_views import (
     UserStrategySummaryView,
     UserStrategiesSummaryView,
 )
+from .report_views import (
+    ReportListCreateView,
+    ReportDetailView,
+    ReportToggleActiveView,
+)
 
 __all__ = [
     'CouponAnalyticsSummaryView',
@@ -23,5 +28,8 @@ __all__ = [
     'UserStrategyDetailView',
     'UserStrategySummaryView',
     'UserStrategiesSummaryView',
+    'ReportListCreateView',
+    'ReportDetailView',
+    'ReportToggleActiveView',
 ]
 

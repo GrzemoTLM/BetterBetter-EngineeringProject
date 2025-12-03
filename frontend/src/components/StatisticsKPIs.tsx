@@ -31,9 +31,9 @@ const StatisticsKPIs = ({ summary }: StatisticsKPIsProps) => {
   const wonCoupons = toNumber(s.won_coupons) ?? toNumber(s.won_count) ?? 0;
   const lostCoupons = toNumber(s.lost_coupons) ?? toNumber(s.lost_count) ?? 0;
 
-  // Win rate can be fraction (0..1) or percent (0..100)
-  const winRateField = toNumber(s.win_rate) ?? 0;
-  const winRatePercent = winRateField > 1 ? winRateField : winRateField * 100;
+  // Win rate calculated only from finished coupons (won + lost), excluding in_progress
+  const finishedCoupons = wonCoupons + lostCoupons;
+  const winRatePercent = finishedCoupons > 0 ? (wonCoupons / finishedCoupons) * 100 : 0;
 
   // Money-related values (strings or numbers)
   const totalStake = toNumber(s.total_stake) ?? 0;

@@ -40,6 +40,11 @@ class Report(models.Model):
         blank=True,
         verbose_name=_("Next Run Time"),
     )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name=_("Is Active"),
+        help_text=_("Enable/disable report generation"),
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created At"))
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated At"))
 
