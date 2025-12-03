@@ -26,8 +26,12 @@ class ReportListCreateView(generics.ListCreateAPIView):
         return Report.objects.filter(user=self.request.user).order_by('-created_at')
 
     def perform_create(self, serializer):
-        """Save report with current user."""
-        serializer.save(user=self.request.user)
+        from django.utils import timezone
+        from datetime import timedelta
+        now = timezone.now()
+        next_run = now + timedelta(minutes=1)
+
+        serializer.save(user=self.request.user, next_run=next_run)
 
     @swagger_auto_schema(
         operation_summary='List user reports',
@@ -149,4 +153,85 @@ class ReportToggleActiveView(APIView):
 
         serializer = ReportSerializer(report)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ReportSendNowView(APIView):
+    """
+    Wyślij raport natychmiast (na żądanie).
+
+    POST /api/analytics/reports/{id}/send/
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_summary='Send report now',
+        operation_description='Send a report immediately without waiting for next_run',
+        responses={
+            200: openapi.Response('Report sent successfully'),
+            404: openapi.Response('Report not found'),
+            401: openapi.Response('Unauthorized'),
+        }
+    )
+    def post(self, request, pk):
+        """Wyślij raport natychmiast."""
+        try:
+            report = Report.objects.get(pk=pk, user=request.user)
+        except Report.DoesNotExist:
+            return Response(
+                {'detail': 'Report not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        try:
+            from coupon_analytics.services.report_service import generate_report_data, calculate_next_run
+            from users.models import TelegramUser
+            from bot.notifications.reports import _format_report_message
+            from django.utils import timezone
+            import logging
+
+            logger = logging.getLogger(__name__)
+
+            # Sprawdzić czy user ma Telegram
+            try:
+                tg_profile = TelegramUser.objects.get(user=request.user)
+            except TelegramUser.DoesNotExist:
+                return Response(
+                    {'error': 'Telegram account not connected'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Wygeneruj dane raportu
+            report_data = generate_report_data(report)
+
+            # Formatuj wiadomość
+            message = _format_report_message(report_data)
+
+            logger.info(f"[REPORT SEND] Report {report.id} generated for user {request.user.id}")
+            logger.info(f"[REPORT SEND] Message will be queued for bot to send")
+
+            # Zaktualizuj next_run
+            now = timezone.now()
+            report.next_run = calculate_next_run(report, now)
+            report.save(update_fields=['next_run'])
+
+            # TODO: Bot wyśle to do Telegrama (patrz bot/notifications/alerts.py -> send_pending_reports)
+
+            return Response({
+                'message': 'Report queued for sending to Telegram',
+                'report_id': report.id,
+                'data': report_data,
+                'next_run': report.next_run.isoformat(),
+                'telegram_user_id': tg_profile.telegram_id,
+                'note': 'Telegram notification will be sent within 5 seconds by the bot'
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            import traceback
+            logger.error(f"Error sending report {pk}: {e}")
+            logger.error(traceback.format_exc())
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
 

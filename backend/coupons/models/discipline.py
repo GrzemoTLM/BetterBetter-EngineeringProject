@@ -38,12 +38,8 @@ class Discipline(models.Model):
 
     class Meta:
         ordering = ("name",)
-        constraints = [
-            models.CheckConstraint(
-                name="sport_code_not_blank",
-                check=~models.Q(code=""),
-            ),
-        ]
+        constraints = []
+        # CheckConstraint będzie dodana w migracji
 
     def save(self, *args, **kwargs):
         if self.code:

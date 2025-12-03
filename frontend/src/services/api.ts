@@ -414,6 +414,15 @@ class ApiService {
     }
   }
 
+  async sendTestReport(id: number): Promise<any> {
+    try {
+      const response = await this.axiosInstance.post(`/api/analytics/reports/${id}/send/`);
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
   async getAllUsers(): Promise<UserProfile[]> {
     try {
       const response = await this.axiosInstance.get<UserProfile[] | { results: UserProfile[] }>('/api/users/users/');

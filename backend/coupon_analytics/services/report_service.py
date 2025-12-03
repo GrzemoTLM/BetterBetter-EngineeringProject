@@ -182,3 +182,41 @@ def calculate_next_run(report, base_time=None):
 
     return next_run
 
+
+def send_pending_reports() -> None:
+    """
+    Sprawdź wszystkie raporty gdzie is_active=True i next_run <= teraz.
+    Wyślij report i ustaw następny next_run.
+    """
+    now = timezone.now()
+
+    # Pobierz raporty do wysłania
+    pending_reports = Report.objects.filter(
+        is_active=True,
+        next_run__lte=now
+    )
+
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"[REPORTS] Found {pending_reports.count()} pending reports to send")
+
+    for report in pending_reports:
+        try:
+            # Wygeneruj dane raportu
+            report_data = generate_report_data(report)
+
+            logger.info(f"[REPORTS] Generated report data: {report_data}")
+
+            # Wyślij raport (na razie tylko log, bo brak wysyłania Telegram z tutaj)
+            # TODO: Zintegrować z bot/notifications/
+
+            # Ustaw następny next_run
+            report.next_run = calculate_next_run(report, now)
+            report.save(update_fields=['next_run'])
+
+            logger.info(f"[REPORTS] Report ID {report.id} sent, next_run set to {report.next_run}")
+
+        except Exception as e:
+            logger.error(f"[REPORTS] Error sending report ID {report.id}: {e}", exc_info=True)
+
+

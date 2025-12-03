@@ -15,6 +15,7 @@ from .report_views import (
     ReportListCreateView,
     ReportDetailView,
     ReportToggleActiveView,
+    ReportSendNowView,
 )
 
 __all__ = [
@@ -31,5 +32,6 @@ __all__ = [
     'ReportListCreateView',
     'ReportDetailView',
     'ReportToggleActiveView',
+    'ReportSendNowView',
 ]
 

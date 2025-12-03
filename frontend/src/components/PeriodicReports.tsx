@@ -110,6 +110,19 @@ const PeriodicReports = ({ userSettings }: PeriodicReportsProps) => {
     }
   };
 
+  const handleTestReport = async (id: number) => {
+    try {
+      const response = await api.sendTestReport(id);
+      setError(null);
+      alert('Test report sent to Telegram! Check your messages.');
+      console.log('[PeriodicReports] Test report sent:', response);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to send test report';
+      setError(message);
+      alert('Error: ' + message);
+    }
+  };
+
   const frequencyLabel = (freq: string) => {
     switch (freq) {
       case 'DAILY':
@@ -216,13 +229,22 @@ const PeriodicReports = ({ userSettings }: PeriodicReportsProps) => {
                   </div>
                 </div>
               </div>
-              <button
-                onClick={() => handleDeleteReport(report.id)}
-                className="p-1 hover:bg-red-100 rounded transition-colors"
-                title="Delete report"
-              >
-                <Trash2 size={16} className="text-status-error" />
-              </button>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => handleTestReport(report.id)}
+                  className="p-1 hover:bg-blue-100 rounded transition-colors"
+                  title="Test send this report"
+                >
+                  <Bell size={16} className="text-primary-main" />
+                </button>
+                <button
+                  onClick={() => handleDeleteReport(report.id)}
+                  className="p-1 hover:bg-red-100 rounded transition-colors"
+                  title="Delete report"
+                >
+                  <Trash2 size={16} className="text-status-error" />
+                </button>
+              </div>
             </div>
           ))}
         </div>

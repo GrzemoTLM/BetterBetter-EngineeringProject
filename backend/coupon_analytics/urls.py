@@ -13,6 +13,7 @@ from .views import (
     ReportListCreateView,
     ReportDetailView,
     ReportToggleActiveView,
+    ReportSendNowView,
 )
 
 urlpatterns = [
@@ -31,4 +32,5 @@ urlpatterns = [
     path('reports/', ReportListCreateView.as_view(), name='report-list-create'),
     path('reports/<int:pk>/', ReportDetailView.as_view(), name='report-detail'),
     path('reports/<int:pk>/toggle/', ReportToggleActiveView.as_view(), name='report-toggle'),
+    path('reports/<int:pk>/send/', ReportSendNowView.as_view(), name='report-send-now'),
 ]

@@ -22,6 +22,7 @@ from bot.commands.utils import help_command, refresh
 from bot.commands.ingame import ingame
 from bot.notifications.alerts import send_pending_alert_events
 from bot.notifications.budget_monitor import check_budget_exceeded
+from bot.notifications.reports import send_pending_reports
 
 
 def main() -> None:
@@ -40,9 +41,10 @@ def main() -> None:
 
     application.job_queue.run_repeating(send_pending_alert_events, interval=5, first=2)
     application.job_queue.run_repeating(check_budget_exceeded, interval=30, first=5)
-    
-    logger.info("Bot started with JobQueue alert events and budget monitoring tasks...")
-    
+    application.job_queue.run_repeating(send_pending_reports, interval=60, first=3)  # Co minutę (60 sekund)
+
+    logger.info("Bot started with JobQueue alert events, budget monitoring, and reports tasks...")
+
     application.run_polling()
 
 
