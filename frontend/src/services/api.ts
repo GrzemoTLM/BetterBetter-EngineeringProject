@@ -7,6 +7,28 @@ import type { TicketCategory, CreateTicketRequest, Ticket, CreateCommentRequest,
 import type { Strategy, CreateStrategyRequest } from '../types/strategies';
 import type { Coupon, CreateCouponRequest, BetType, OcrExtractResponse } from '../types/coupons';
 import type { Bet } from '../types/coupons';
+export interface AlertRule {
+  id?: number | string;
+  rule_type: string;
+  metric: string;
+  comparator: string;
+  threshold_value: string | number;
+  window_days: number;
+  message: string;
+  is_active: boolean;
+  last_triggered_at?: string | null;
+  value?: string | number | null;
+}
+export interface AlertRulePayload {
+  rule_type: string;
+  metric: string;
+  comparator: 'lt' | 'lte' | 'gt' | 'gte' | 'eq';
+  threshold_value: string | number;
+  window_days: number;
+  message?: string;
+  is_active?: boolean;
+  filters?: Record<string, unknown>;
+}
 import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
 
 export interface SystemMetrics {
@@ -305,6 +327,32 @@ class ApiService {
       return response.data;
     } catch (error) {
       console.error('[API] getLoggedInUsers - error raw:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async getAlertRules(): Promise<AlertRule[]> {
+    try {
+      const response = await this.axiosInstance.get<AlertRule[]>(API_ENDPOINTS.ANALYTICS.ALERT_RULES);
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async createAlertRule(payload: AlertRulePayload): Promise<AlertRule> {
+    try {
+      const response = await this.axiosInstance.post<AlertRule>(API_ENDPOINTS.ANALYTICS.ALERT_RULE_CREATE, payload);
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async deleteAlertRule(id: number | string): Promise<void> {
+    try {
+      await this.axiosInstance.delete(`${API_ENDPOINTS.ANALYTICS.ALERT_RULES}${id}/`);
+    } catch (error) {
       throw new Error(this.getErrorMessage(error));
     }
   }

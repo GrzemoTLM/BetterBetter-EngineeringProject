@@ -24,15 +24,15 @@ from users.views import google_login_succes
 from monitoring.views import SystemMetricsView, LoggedInUsersView
 
 urlpatterns = [
-    path('views/users/', include('users.urls')),
-    path('views/coupons/', include('coupons.urls')),
-    path('views/finances/', include('finances.urls')),
-    path('views/analytics/', include('coupon_analytics.urls')),
-    path('views/tickets/', include('tickets.urls')),
+    path('api/users/', include('users.urls')),
+    path('api/coupons/', include('coupons.urls')),
+    path('api/finances/', include('finances.urls')),
+    path('api/analytics/', include('coupon_analytics.urls')),
+    path('api/tickets/', include('tickets.urls')),
     path('auth/', include('social_django.urls', namespace='social')),
-    path('views/auth/google/success/', google_login_succes, name='google-success'),
-    path("views/monitoring/system-metrics/", SystemMetricsView.as_view(), name="system-metrics"),
-    path("views/monitoring/logged-in-users/", LoggedInUsersView.as_view(), name="logged-in-users"),
+    path('api/auth/google/success/', google_login_succes, name='google-success'),
+    path("api/monitoring/system-metrics/", SystemMetricsView.as_view(), name="system-metrics"),
+    path("api/monitoring/logged-in-users/", LoggedInUsersView.as_view(), name="logged-in-users"),
 ]
 
 if schema_view is not None:

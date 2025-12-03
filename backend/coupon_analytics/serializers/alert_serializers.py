@@ -15,6 +15,10 @@ class AlertRuleSerializer(serializers.ModelSerializer):
         read_only_fields = ['last_triggered_at', 'created_at', 'updated_at']
 
     def validate(self, attrs):
+        # Konwertuj rule_type na małe litery
+        if 'rule_type' in attrs and attrs['rule_type']:
+            attrs['rule_type'] = attrs['rule_type'].lower()
+
         rule_type = attrs.get('rule_type') or getattr(self.instance, 'rule_type', None)
         metric = (attrs.get('metric') or getattr(self.instance, 'metric', '') or '').lower()
         mapping = {

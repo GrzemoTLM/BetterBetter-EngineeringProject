@@ -1,29 +1,74 @@
-import { X } from 'lucide-react';
+import { X, Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import api, { type AlertRulePayload } from '../services/api';
 
 interface CreateNotificationModalProps {
   onClose: () => void;
 }
 
 const CreateNotificationModal = ({ onClose }: CreateNotificationModalProps) => {
-  const [notificationType, setNotificationType] = useState<string>('');
-  const [value, setValue] = useState('');
+  const [metric, setMetric] = useState('roi');
+  const [comparator, setComparator] = useState<'lt' | 'lte' | 'gt' | 'gte' | 'eq'>('lt');
+  const [thresholdValue, setThresholdValue] = useState('');
+  const [windowDays, setWindowDays] = useState('30');
+  const [customWindowDays, setCustomWindowDays] = useState('');
+  const [message, setMessage] = useState('');
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const notificationTypes = [
-    { id: 'yield', label: 'Przekroczenie Yield', placeholder: 'Enter yield threshold (%)' },
-    { id: 'lose_streak', label: 'Lose Streak', placeholder: 'Enter number of losses' },
-    { id: 'roi', label: 'ROI Threshold', placeholder: 'Enter ROI threshold (%)' },
-    { id: 'balance', label: 'Balance Threshold', placeholder: 'Enter balance amount' },
+  const metrics = [
+    { id: 'roi', label: 'ROI' },
+    { id: 'yield', label: 'Yield' },
+    { id: 'loss', label: 'Loss amount' },
+    { id: 'streak_loss', label: 'Consecutive losses' },
+    { id: 'custom', label: 'Custom' },
   ];
 
-  const selectedType = notificationTypes.find((type) => type.id === notificationType);
+  const comparators = [
+    { id: 'lt', label: '< (less than)' },
+    { id: 'lte', label: '≤ (less or equal)' },
+    { id: 'gt', label: '> (greater than)' },
+    { id: 'gte', label: '≥ (greater or equal)' },
+    { id: 'eq', label: '= (equal)' },
+  ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const windowPresets = [
+    { id: '7', label: 'Last 7 days' },
+    { id: '30', label: 'Last 30 days' },
+    { id: '365', label: 'Last 365 days' },
+    { id: 'custom', label: 'Custom window' },
+  ];
+
+  const effectiveWindowDays = windowDays === 'custom' ? customWindowDays : windowDays;
+  const isCustomWindowSelected = windowDays === 'custom';
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (notificationType && value) {
-      // Handle notification creation logic here
-      console.log('Create notification:', { notificationType, value });
+    setSubmitError(null);
+
+    if (!thresholdValue || !effectiveWindowDays) {
+      setSubmitError('Threshold and window are required.');
+      return;
+    }
+
+    const payload: AlertRulePayload = {
+      rule_type: metric,
+      metric,
+      comparator,
+      threshold_value: thresholdValue,
+      window_days: Number(effectiveWindowDays),
+      ...(message.trim() ? { message: message.trim() } : {}),
+    };
+
+    try {
+      setSubmitting(true);
+      await api.createAlertRule(payload);
       onClose();
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to create notification';
+      setSubmitError(errorMsg);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -45,61 +90,109 @@ const CreateNotificationModal = ({ onClose }: CreateNotificationModalProps) => {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Notification Type */}
-          <div>
-            <label className="block text-sm font-medium text-text-secondary mb-2">
-              Notification Type
-            </label>
-            <select
-              value={notificationType}
-              onChange={(e) => {
-                setNotificationType(e.target.value);
-                setValue(''); // Reset value when type changes
-              }}
-              className="w-full px-4 py-2 border border-default rounded-lg text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-main focus:border-transparent"
-              required
-            >
-              <option value="">Select notification type</option>
-              {notificationTypes.map((type) => (
-                <option key={type.id} value={type.id}>
-                  {type.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Value Input */}
-          {selectedType && (
+          {/* Metric & Comparator */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-text-secondary mb-2">
-                Value
+                Metric
               </label>
+              <select
+                value={metric}
+                onChange={(e) => setMetric(e.target.value)}
+                className="w-full px-4 py-2 border border-default rounded-lg text-sm"
+              >
+                {metrics.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-2">
+                Comparator
+              </label>
+              <select
+                value={comparator}
+                onChange={(e) => setComparator(e.target.value as typeof comparator)}
+                className="w-full px-4 py-2 border border-default rounded-lg text-sm"
+              >
+                {comparators.map((comp) => (
+                  <option key={comp.id} value={comp.id}>
+                    {comp.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Threshold */}
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-2">
+              Threshold Value
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={thresholdValue}
+              onChange={(e) => setThresholdValue(e.target.value)}
+              className="w-full px-4 py-2 border border-default rounded-lg text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-main focus:border-transparent"
+              required
+            />
+          </div>
+
+          {/* Window */}
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-2">
+              Window (days)
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {windowPresets.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => setWindowDays(preset.id)}
+                  className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                    windowDays === preset.id
+                      ? 'bg-primary-main text-white border-transparent'
+                      : 'border-default text-text-primary hover:bg-gray-50'
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+            {isCustomWindowSelected && (
               <input
                 type="number"
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
-                placeholder={selectedType.placeholder}
-                className="w-full px-4 py-2 border border-default rounded-lg text-sm text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-main focus:border-transparent"
+                min="1"
+                className="mt-2 w-full px-4 py-2 border border-default rounded-lg text-sm"
+                placeholder="Enter custom window in days"
+                value={customWindowDays}
+                onChange={(e) => setCustomWindowDays(e.target.value)}
                 required
-                step={notificationType === 'lose_streak' ? '1' : '0.01'}
-                min="0"
               />
-            </div>
-          )}
+            )}
+          </div>
 
-          {/* Preview */}
-          {notificationType && value && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <p className="text-sm text-blue-800">
-                <span className="font-medium">Notification:</span> Alert when{' '}
-                <span className="font-semibold">{selectedType?.label}</span> reaches{' '}
-                <span className="font-semibold">{value}</span>
-                {notificationType === 'yield' || notificationType === 'roi'
-                  ? '%'
-                  : notificationType === 'balance'
-                  ? '$'
-                  : ''}
-              </p>
+          {/* Message */}
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-2">
+              Custom Message (optional)
+            </label>
+            <input
+              type="text"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="e.g. Seria porażek osiągnęła {value} kuponów"
+              className="w-full px-4 py-2 border border-default rounded-lg text-sm text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-main focus:border-transparent"
+            />
+          </div>
+
+          {submitError && (
+            <div className="text-sm text-status-error bg-red-50 border border-red-200 rounded px-3 py-2">
+              {submitError}
             </div>
           )}
 
@@ -114,10 +207,11 @@ const CreateNotificationModal = ({ onClose }: CreateNotificationModalProps) => {
             </button>
             <button
               type="submit"
-              disabled={!notificationType || !value}
-              className="flex-1 bg-primary-main text-primary-contrast rounded-lg px-6 py-3 hover:bg-primary-hover transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={submitting}
+              className="flex-1 bg-primary-main text-primary-contrast rounded-lg px-6 py-3 hover:bg-primary-hover transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              Create Notification
+              {submitting && <Loader2 size={18} className="animate-spin" />}
+              {submitting ? 'Creating...' : 'Create Notification'}
             </button>
           </div>
         </form>
@@ -127,4 +221,3 @@ const CreateNotificationModal = ({ onClose }: CreateNotificationModalProps) => {
 };
 
 export default CreateNotificationModal;
-
