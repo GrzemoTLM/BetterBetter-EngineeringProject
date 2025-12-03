@@ -29,7 +29,13 @@ const PeriodicReports = ({ userSettings }: PeriodicReportsProps) => {
   const [frequency, setFrequency] = useState<'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY'>('DAILY');
   const [creatingReport, setCreatingReport] = useState(false);
 
-  const telegramConnected = userSettings?.notification_gate === 'telegram' && !!userSettings?.notification_gate_ref;
+  const telegramConnected = userSettings?.telegram_connected === true;
+
+  useEffect(() => {
+    console.log('[PeriodicReports] userSettings:', userSettings);
+    console.log('[PeriodicReports] telegram_connected:', userSettings?.telegram_connected);
+    console.log('[PeriodicReports] telegramConnected state:', telegramConnected);
+  }, [userSettings, telegramConnected]);
 
   const fetchReports = async () => {
     try {

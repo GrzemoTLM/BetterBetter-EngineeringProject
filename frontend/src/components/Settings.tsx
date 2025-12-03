@@ -269,7 +269,7 @@ const Settings = () => {
     },
     {
       label: 'Notifications gate',
-      value: settings.notification_gate === 'telegram' && settings.notification_gate_ref
+      value: settings.telegram_connected === true
         ? `✓ Telegram Connected`
         : 'None',
       action: 'Update',
@@ -389,7 +389,7 @@ const Settings = () => {
       <TelegramConnectionModal
         isOpen={isTelegramModalOpen}
         onClose={() => setIsTelegramModalOpen(false)}
-        isConnected={settings.notification_gate === 'telegram' && !!settings.notification_gate_ref}
+        isConnected={settings.telegram_connected === true}
         onConnectionSuccess={() => {
           loadSettings();
         }}

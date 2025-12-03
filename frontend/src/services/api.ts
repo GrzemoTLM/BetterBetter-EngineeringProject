@@ -484,6 +484,40 @@ class ApiService {
     }
   }
 
+  async disconnectTelegram(): Promise<{ message: string; telegram_connected: boolean }> {
+    try {
+      const response = await this.axiosInstance.post<{ message: string; telegram_connected: boolean }>(
+        '/api/users/telegram/disconnect/'
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async connectTelegramGenerateCode(): Promise<{ message: string; data: { code: string; created_at: string; expires_at: string } }> {
+    try {
+      const response = await this.axiosInstance.post<{ message: string; data: { code: string; created_at: string; expires_at: string } }>(
+        '/api/users/telegram/auth-code/generate/'
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async checkTelegramConnection(): Promise<{ telegram_id: string; telegram_username: string; created_at: string }> {
+    try {
+      const response = await this.axiosInstance.get<{ telegram_id: string; telegram_username: string; created_at: string }>(
+        '/api/users/telegram/connect/'
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+
   async startTwoFactor(data: TwoFactorStartRequest): Promise<TwoFactorStartResponse> {
     try {
       const response = await this.axiosInstance.post<TwoFactorStartResponse>(API_ENDPOINTS.SETTINGS.TWO_FACTOR_START, data);

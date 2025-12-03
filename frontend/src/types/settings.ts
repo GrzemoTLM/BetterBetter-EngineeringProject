@@ -12,6 +12,7 @@ export interface UserSettings {
   notification_gate: 'email' | 'telegram' | 'none';
   notification_gate_ref: string | null;
   telegram_chat_id?: string | null;
+  telegram_connected?: boolean;
   two_factor_enabled: boolean;
   two_factor_method: 'sms' | 'email' | 'mobile_app' | 'totp' | 'none';
   telegram_auth_code: string | null;
