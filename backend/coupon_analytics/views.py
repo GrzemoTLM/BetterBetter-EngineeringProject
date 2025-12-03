@@ -1,14 +1,14 @@
-from coupon_analytics.api.analytics_views import (
+from coupon_analytics.views.analytics_views import (
     CouponAnalyticsSummaryView,
     CouponAnalyticsQuerySummaryView,
 )
-from coupon_analytics.api.alert_views import (
+from coupon_analytics.views.alert_views import (
     AlertRuleListCreateView,
     AlertRuleDetailView,
     AlertRuleEvaluateView,
     AlertEventListView,
 )
-from coupon_analytics.api.strategy_views import (
+from coupon_analytics.views.strategy_views import (
     UserStrategyListCreateView,
     UserStrategyDetailView,
     UserStrategySummaryView,

@@ -47,7 +47,7 @@ class AlertEventSerializer(serializers.ModelSerializer):
             'sent_at', 'message_rendered'
         ]
         read_only_fields = fields
-from .alert_serializers import AlertRuleSerializer, AlertEventSerializer
+
 
 __all__ = [
     'AlertRuleSerializer',
