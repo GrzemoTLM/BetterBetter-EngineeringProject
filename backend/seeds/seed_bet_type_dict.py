@@ -406,43 +406,61 @@ DISCIPLINE_BET_TYPES = {
     "RLKT": ESPORT_FIFA_BET_TYPES,
 }
 def seed_bet_type_dict():
-    """
-    Seed the database with bet types for each discipline.
-    Uses update_or_create to avoid duplicates.
-    """
     created_count = 0
     updated_count = 0
-    skipped_count = 0
 
+    all_bet_types = {}
+
+    for code, bet_types_list in [
+        ("UNIVERSAL", UNIVERSAL_BET_TYPES),
+        ("SOCCER", SOCCER_BET_TYPES),
+        ("BASKETBALL", BASKETBALL_BET_TYPES),
+        ("TENNIS", TENNIS_BET_TYPES),
+        ("VOLLEYBALL", VOLLEYBALL_BET_TYPES),
+        ("HOCKEY", HOCKEY_BET_TYPES),
+        ("HANDBALL", HANDBALL_BET_TYPES),
+        ("BOXING", BOXING_BET_TYPES),
+        ("MMA", MMA_BET_TYPES),
+        ("F1", F1_BET_TYPES),
+        ("SPEEDWAY", SPEEDWAY_BET_TYPES),
+        ("SNOOKER", SNOOKER_BET_TYPES),
+        ("DARTS", DARTS_BET_TYPES),
+        ("ESPORT_FPS", ESPORT_FPS_BET_TYPES),
+        ("ESPORT_MOBA", ESPORT_MOBA_BET_TYPES),
+        ("ESPORT_FIFA", ESPORT_FIFA_BET_TYPES),
+    ]:
+        for bet_type_data in bet_types_list:
+            bt_code = bet_type_data["code"]
+            if bt_code not in all_bet_types:
+                all_bet_types[bt_code] = bet_type_data["description"]
+
+    print("📦 Creating/updating bet types...")
+    for code, description in all_bet_types.items():
+        bet_type, created = BetTypeDict.objects.update_or_create(
+            code=code,
+            defaults={"description": description}
+        )
+        if created:
+            created_count += 1
+            print(f"   ✅ {code}: {description}")
+        else:
+            updated_count += 1
+
+    print(f"\n📂 Assigning bet types to disciplines...")
     disciplines = Discipline.objects.all()
-    
-    for discipline in disciplines:
-        # Pobierz typy zakładów dla danej dyscypliny
-        bet_types = DISCIPLINE_BET_TYPES.get(discipline.code, UNIVERSAL_BET_TYPES)
-        
-        print(f"\n📂 {discipline.code} - {discipline.name}:")
-        
-        for bet_type_data in bet_types:
-            bet_type, created = BetTypeDict.objects.update_or_create(
-                code=bet_type_data["code"],
-                discipline=discipline,
-                defaults={
-                    "description": bet_type_data["description"],
-                }
-            )
 
-            if created:
-                created_count += 1
-                print(f"   ✅ {bet_type.code}: {bet_type.description}")
-            else:
-                updated_count += 1
-                print(f"   🔄 {bet_type.code}: {bet_type.description}")
+    for discipline in disciplines:
+        bet_types_list = DISCIPLINE_BET_TYPES.get(discipline.code, UNIVERSAL_BET_TYPES)
+        codes = [bt["code"] for bt in bet_types_list]
+        bet_types = BetTypeDict.objects.filter(code__in=codes)
+        discipline.bet_types.set(bet_types)
+        print(f"   📂 {discipline.code}: {bet_types.count()} bet types")
 
     print(f"\n{'='*60}")
     print(f"📊 Summary:")
     print(f"   - Created: {created_count}")
     print(f"   - Updated: {updated_count}")
-    print(f"   - Total bet types: {BetTypeDict.objects.count()}")
+    print(f"   - Total unique bet types: {BetTypeDict.objects.count()}")
     print(f"   - Disciplines covered: {disciplines.count()}")
     print(f"{'='*60}")
 if __name__ == "__main__":

@@ -2,6 +2,21 @@ from rest_framework import serializers
 from ..models import Bet, BetTypeDict, Discipline, Event
 
 
+class FlexibleRelatedField(serializers.PrimaryKeyRelatedField):
+    """Field that accepts both ID (int) and code (string)"""
+    def __init__(self, slug_field='code', **kwargs):
+        self.slug_field = slug_field
+        super().__init__(**kwargs)
+
+    def to_internal_value(self, data):
+        if isinstance(data, str) and not data.isdigit():
+            try:
+                return self.get_queryset().get(**{self.slug_field: data.upper()})
+            except self.get_queryset().model.DoesNotExist:
+                self.fail('does_not_exist', pk_value=data)
+        return super().to_internal_value(data)
+
+
 class BetSerializer(serializers.ModelSerializer):
     bet_type = serializers.SlugRelatedField(read_only=True, slug_field='code')
     discipline = serializers.SlugRelatedField(read_only=True, slug_field='code')
@@ -14,15 +29,15 @@ class BetSerializer(serializers.ModelSerializer):
 
 class BetCreateSerializer(serializers.ModelSerializer):
 
-    bet_type = serializers.SlugRelatedField(
-        slug_field='code',
+    bet_type = FlexibleRelatedField(
         queryset=BetTypeDict.objects.all(),
+        slug_field='code',
         required=False,
         allow_null=True
     )
-    discipline = serializers.SlugRelatedField(
-        slug_field='code',
+    discipline = FlexibleRelatedField(
         queryset=Discipline.objects.all(),
+        slug_field='code',
         allow_null=True,
         required=False
     )
@@ -59,14 +74,14 @@ class ResultChoiceField(serializers.ChoiceField):
 
 
 class BetUpdateSerializer(serializers.ModelSerializer):
-    bet_type = serializers.SlugRelatedField(
-        slug_field='code',
+    bet_type = FlexibleRelatedField(
         queryset=BetTypeDict.objects.all(),
+        slug_field='code',
         required=False
     )
-    discipline = serializers.SlugRelatedField(
-        slug_field='code',
+    discipline = FlexibleRelatedField(
         queryset=Discipline.objects.all(),
+        slug_field='code',
         allow_null=True,
         required=False
     )

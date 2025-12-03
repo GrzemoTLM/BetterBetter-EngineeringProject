@@ -53,7 +53,7 @@ class FilterModeTestCase(TestCase):
         
         # Typ zakładu
         self.bet_type = BetTypeDict.objects.create(
-            name='1X2',
+            description='1X2',
             code='1X2'
         )
         
