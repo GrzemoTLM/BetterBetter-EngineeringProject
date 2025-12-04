@@ -1,4 +1,4 @@
-import { Bell, Calendar, Filter, BellPlus } from 'lucide-react';
+import { Bell, Calendar, Filter, BellPlus, X } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import StatisticsKPIs from './StatisticsKPIs';
 import StatisticsCharts from './StatisticsCharts';
@@ -12,6 +12,8 @@ import PerformanceInsights from './PerformanceInsights';
 import PeriodicReports from './PeriodicReports';
 import api from '../services/api';
 import type { UserSettings } from '../types/settings';
+import type { Coupon } from '../types/coupons';
+import type { FilterResult } from '../services/api';
 
 const Statistics = () => {
   // Dates empty by default – only sent when provided
@@ -26,6 +28,11 @@ const Statistics = () => {
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
+
+  // Custom filter results
+  const [customFilterResults, setCustomFilterResults] = useState<FilterResult | null>(null);
+  const [filteredCoupons, setFilteredCoupons] = useState<Coupon[] | null>(null);
+  const [customFilterActive, setCustomFilterActive] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -79,6 +86,24 @@ const Statistics = () => {
   }, [loadSummary]);
 
   const handleApplyFilters = () => {
+    // Clear custom filter when applying regular filters
+    setCustomFilterResults(null);
+    setFilteredCoupons(null);
+    setCustomFilterActive(false);
+    loadSummary();
+  };
+
+  const handleCustomFilterApply = (coupons: Coupon[], filterResult: FilterResult) => {
+    console.log('[Statistics] Custom filter applied:', { coupons: coupons.length, filterResult });
+    setFilteredCoupons(coupons);
+    setCustomFilterResults(filterResult);
+    setCustomFilterActive(true);
+  };
+
+  const clearCustomFilter = () => {
+    setCustomFilterResults(null);
+    setFilteredCoupons(null);
+    setCustomFilterActive(false);
     loadSummary();
   };
 
@@ -180,6 +205,7 @@ const Statistics = () => {
                 setEndDate('');
                 setBookmakerAccountId('All');
                 setBetType('All');
+                clearCustomFilter();
               }}
               className="border border-gray-300 text-text-primary rounded-md px-4 py-2 text-sm hover:bg-gray-50 transition-colors whitespace-nowrap"
             >
@@ -187,7 +213,11 @@ const Statistics = () => {
             </button>
             <button
               onClick={() => setShowCustomFilter(true)}
-              className="border border-gray-300 text-text-primary rounded-md px-4 py-2 text-sm hover:bg-gray-50 transition-colors whitespace-nowrap"
+              className={`border rounded-md px-4 py-2 text-sm transition-colors whitespace-nowrap ${
+                customFilterActive 
+                  ? 'border-primary-main bg-primary-main/10 text-primary-main' 
+                  : 'border-gray-300 text-text-primary hover:bg-gray-50'
+              }`}
             >
               Custom Filter
             </button>
@@ -195,15 +225,56 @@ const Statistics = () => {
         </div>
       </div>
 
+      {/* Custom Filter Active Indicator */}
+      {customFilterActive && customFilterResults && (
+        <div className="bg-primary-main/10 border border-primary-main rounded-lg p-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Filter size={18} className="text-primary-main" />
+            <span className="text-primary-main font-medium">
+              Custom Filter Active: {customFilterResults.count} coupons found
+            </span>
+          </div>
+          <button
+            onClick={clearCustomFilter}
+            className="flex items-center gap-1 px-3 py-1 bg-white rounded border border-primary-main text-primary-main text-sm hover:bg-gray-50"
+          >
+            <X size={14} />
+            Clear
+          </button>
+        </div>
+      )}
+
       {/* Section B: KPIs */}
       {summaryError && (
         <div className="bg-red-50 border border-red-200 text-red-700 rounded-md p-3 text-sm">{summaryError}</div>
       )}
-      <StatisticsKPIs summary={couponSummary} />
+      {customFilterActive && customFilterResults ? (
+        <StatisticsKPIs
+          summary={{
+            count: customFilterResults.count,
+            won_count: customFilterResults.won_count || 0,
+            lost_count: customFilterResults.lost_count || 0,
+            in_progress_count: 0,
+            canceled_count: 0,
+            win_rate: customFilterResults.win_rate || 0,
+            total_stake: customFilterResults.total_stake || '0',
+            total_won: customFilterResults.total_won || '0',
+            profit: customFilterResults.profit || '0',
+            roi: customFilterResults.roi || 0,
+            avg_coupon_odds: undefined,
+          }}
+        />
+      ) : (
+        <StatisticsKPIs summary={couponSummary} />
+      )}
 
 
       {/* Section C: Charts Area */}
-      <StatisticsCharts />
+      <StatisticsCharts
+        customFilterActive={customFilterActive}
+        customFilterResults={customFilterResults}
+        filteredCoupons={filteredCoupons}
+      />
 
 
       {/* Section D: Detailed Data & Reports */}
@@ -218,11 +289,14 @@ const Statistics = () => {
               if (bookmakerAccountId !== 'All') {
                 params.bookmaker_account = String(bookmakerAccountId);
               }
+
               if (betType !== 'All') {
                 params.coupon_type = betType;
               }
+
               return params;
             })()}
+            customFilteredCoupons={customFilterActive ? filteredCoupons : null}
           />
           {/* Top Performers and Active Notifications side by side under table */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -241,7 +315,10 @@ const Statistics = () => {
 
       {/* Custom Filter Builder Modal */}
       {showCustomFilter && (
-        <CustomFilterBuilder onClose={() => setShowCustomFilter(false)} />
+        <CustomFilterBuilder
+          onClose={() => setShowCustomFilter(false)}
+          onApplyFilter={handleCustomFilterApply}
+        />
       )}
 
       {/* Create Notification Modal */}

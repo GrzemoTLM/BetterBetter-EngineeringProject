@@ -14,6 +14,7 @@ interface CouponsTableProps {
   filters?: Record<string, string>;
   hideEdit?: boolean;
   showOnlySettled?: boolean;
+  customFilteredCoupons?: Coupon[] | null;
 }
 
 export interface CouponsTableRef {
@@ -23,16 +24,16 @@ export interface CouponsTableRef {
 type StrategyExtended = number | null | string | { id?: number; name?: string };
 type CouponWithStrategy = Omit<Coupon, 'strategy'> & { strategy?: StrategyExtended };
 
-// Helpers extracted to avoid duplication
 const normalizeStatus = (status?: string) => String(status ?? 'pending').trim().toLowerCase().replace(/[-\s]+/g, '_');
 
 const deriveStatusHelper = (coupon: Coupon): string => {
   const norm = normalizeStatus(coupon.status);
   if (norm.includes('won') || norm === 'win') return 'won';
   if (norm.includes('lost') || norm === 'lose') return 'lost';
-  const hasLost = coupon.bets.some(b => normalizeStatus(String(b.result)).includes('lost'));
+  const bets = coupon.bets || [];
+  const hasLost = bets.some(b => normalizeStatus(String(b.result)).includes('lost'));
   if (hasLost) return 'lost';
-  const allWon = coupon.bets.length > 0 && coupon.bets.every(b => {
+  const allWon = bets.length > 0 && bets.every(b => {
     const r = normalizeStatus(String(b.result));
     return r.includes('win') || r.includes('won');
   });
@@ -69,7 +70,8 @@ const calculateMultiplier = (odds: Array<string | number>): string => {
 };
 
 const computePayoutOrBalanceLabel = (coupon: Coupon, derived: string, formatCurrencyFn: (n: number) => string): string => {
-  const multiplier = Number(calculateMultiplier(coupon.bets.map(b => b.odds)));
+  const bets = coupon.bets || [];
+  const multiplier = Number(calculateMultiplier(bets.map(b => b.odds)));
   const stake = parseFloat(String(coupon.bet_stake)) || 0;
   const potential = coupon.potential_payout ?? (multiplier * stake);
   if (derived === 'won') return formatCurrencyFn((potential || 0) - stake);
@@ -80,7 +82,7 @@ const computePayoutOrBalanceLabel = (coupon: Coupon, derived: string, formatCurr
 
 const renderBetResultIcons = (coupon: Coupon): ReactNode => (
   <div className="flex items-center gap-1 flex-wrap">
-    {coupon.bets.map((b, idx) => {
+    {(coupon.bets || []).map((b, idx) => {
       const res = normalizeStatus(String(b.result));
       if (res.includes('win')) {
         return <CheckCircle key={b.id ?? idx} size={16} className="text-green-600" aria-label="Won" />;
@@ -106,7 +108,7 @@ const renderStatusBadge = (derived: string): ReactNode => (
   </span>
 );
 
-const CouponsTable = forwardRef<CouponsTableRef, CouponsTableProps>(({ bulkMode = false, selectedIds = new Set(), onToggleSelect, filters, hideEdit = false, showOnlySettled = false }, ref) => {
+const CouponsTable = forwardRef<CouponsTableRef, CouponsTableProps>(({ bulkMode = false, selectedIds = new Set(), onToggleSelect, filters, hideEdit = false, showOnlySettled = false, customFilteredCoupons }, ref) => {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -118,6 +120,26 @@ const CouponsTable = forwardRef<CouponsTableRef, CouponsTableProps>(({ bulkMode 
   const { formatCurrency } = useCurrency();
 
   const fetchCoupons = useCallback(async () => {
+    // If custom filtered coupons are provided, use them directly
+    if (customFilteredCoupons) {
+      let sorted = [...customFilteredCoupons].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+      if (showOnlySettled) {
+        sorted = sorted.filter(coupon => {
+          const status = normalizeStatus(coupon.status);
+
+          return status.includes('won') || status.includes('lost') || status === 'win' || status === 'lose';
+        });
+      }
+
+      setCoupons(sorted);
+      setLoading(false);
+      setError(null);
+      setPage(0);
+
+      return;
+    }
+
     try {
       setLoading(true);
       const data = await api.getCoupons(filters);
@@ -141,7 +163,7 @@ const CouponsTable = forwardRef<CouponsTableRef, CouponsTableProps>(({ bulkMode 
     } finally {
       setLoading(false);
     }
-  }, [filters, showOnlySettled]);
+  }, [filters, showOnlySettled, customFilteredCoupons]);
 
   useImperativeHandle(ref, () => ({ refetch: fetchCoupons }));
 
@@ -247,7 +269,7 @@ const CouponsTable = forwardRef<CouponsTableRef, CouponsTableProps>(({ bulkMode 
           {pageCoupons.map(coupon => {
             const derived = deriveStatusHelper(coupon);
             const payoutOrBalanceLabel = computePayoutOrBalanceLabel(coupon, derived, formatCurrency);
-            const multiplier = calculateMultiplier(coupon.bets.map(b => b.odds));
+            const multiplier = calculateMultiplier((coupon.bets || []).map(b => b.odds));
 
             return (
               <tr

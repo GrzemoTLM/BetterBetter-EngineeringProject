@@ -1,4 +1,10 @@
-from .analytics_views import CouponAnalyticsSummaryView, CouponAnalyticsQuerySummaryView
+from .analytics_views import (
+    CouponAnalyticsSummaryView,
+    CouponAnalyticsQuerySummaryView,
+    SavedFiltersListView,
+    SavedFilterDetailView,
+    SavedFilterPreviewView,
+)
 from .alert_views import (
     AlertRuleListCreateView,
     AlertRuleDetailView,
@@ -21,6 +27,9 @@ from .report_views import (
 __all__ = [
     'CouponAnalyticsSummaryView',
     'CouponAnalyticsQuerySummaryView',
+    'SavedFiltersListView',
+    'SavedFilterDetailView',
+    'SavedFilterPreviewView',
     'AlertRuleListCreateView',
     'AlertRuleDetailView',
     'AlertRuleEvaluateView',

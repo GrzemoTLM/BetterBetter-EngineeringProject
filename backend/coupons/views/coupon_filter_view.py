@@ -20,12 +20,12 @@ class CouponStatsMixin:
     def calculate_coupon_stats(coupons, use_decimal=False):
         if use_decimal:
             total_stake = sum(Decimal(str(c.bet_stake)) for c in coupons) if coupons else Decimal('0.00')
-            total_won = sum(Decimal(str(c.balance)) for c in coupons) if coupons else Decimal('0.00')
-            profit = total_won - total_stake
+            profit = sum(Decimal(str(c.balance)) for c in coupons) if coupons else Decimal('0.00')
+            total_won = total_stake + profit if profit > 0 else Decimal('0.00')
         else:
             total_stake = sum(c.bet_stake for c in coupons) if coupons else 0
-            total_won = sum(c.balance for c in coupons) if coupons else 0
-            profit = total_won - total_stake
+            profit = sum(c.balance for c in coupons) if coupons else 0
+            total_won = total_stake + profit if profit > 0 else 0
 
         win_count = coupons.filter(status='won').count()
         loss_count = coupons.filter(status='lost').count()
@@ -213,12 +213,12 @@ class CouponFilterUniversalView(APIView, CouponStatsMixin):
 
     @swagger_auto_schema(
         operation_summary='Universal coupon filter',
-        operation_description='Filter coupons with flexible options - team, position, bet type, and filter mode (all/won_coupons/won_bets)',
+        operation_description='Filter coupons with flexible options - team, position, bet type, and filter mode',
         manual_parameters=[
             openapi.Parameter('team_name', openapi.IN_QUERY, type=openapi.TYPE_STRING, description='Team name'),
             openapi.Parameter('position', openapi.IN_QUERY, type=openapi.TYPE_STRING, enum=['home', 'away', 'any'], default='any', description='Team position'),
             openapi.Parameter('bet_type_code', openapi.IN_QUERY, type=openapi.TYPE_STRING, description='Bet type code'),
-            openapi.Parameter('filter_mode', openapi.IN_QUERY, type=openapi.TYPE_STRING, enum=['all', 'won_coupons', 'won_bets'], default='all', description='Filter mode'),
+            openapi.Parameter('filter_mode', openapi.IN_QUERY, type=openapi.TYPE_STRING, enum=['all', 'won_coupons', 'won_bets', 'won_bets_lost_coupons', 'lost_bets', 'lost_bets_won_coupons'], default='all', description='Filter mode: all=wszystkie, won_coupons=wygrane kupony, won_bets=wygrane zakłady, won_bets_lost_coupons=wygrane zakłady na przegranych kuponach, lost_bets=przegrane zakłady, lost_bets_won_coupons=przegrane zakłady na wygranych kuponach'),
             openapi.Parameter('only_won', openapi.IN_QUERY, type=openapi.TYPE_BOOLEAN, default=False, description='Backward compatibility - maps to won_bets'),
         ],
         responses={
