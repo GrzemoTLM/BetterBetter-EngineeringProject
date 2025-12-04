@@ -10,6 +10,10 @@ from .views import (
     UserStrategyDetailView,
     UserStrategySummaryView,
     UserStrategiesSummaryView,
+    ReportListCreateView,
+    ReportDetailView,
+    ReportToggleActiveView,
+    ReportSendNowView,
 )
 
 urlpatterns = [
@@ -24,4 +28,9 @@ urlpatterns = [
     path('strategies/<int:pk>/', UserStrategyDetailView.as_view(), name='user-strategy-detail'),
     path('strategies/<int:pk>/summary/', UserStrategySummaryView.as_view(), name='user-strategy-summary'),
     path('strategies/summary/', UserStrategiesSummaryView.as_view(), name='user-strategies-summary'),
+    # Periodic Reports endpoints
+    path('reports/', ReportListCreateView.as_view(), name='report-list-create'),
+    path('reports/<int:pk>/', ReportDetailView.as_view(), name='report-detail'),
+    path('reports/<int:pk>/toggle/', ReportToggleActiveView.as_view(), name='report-toggle'),
+    path('reports/<int:pk>/send/', ReportSendNowView.as_view(), name='report-send-now'),
 ]

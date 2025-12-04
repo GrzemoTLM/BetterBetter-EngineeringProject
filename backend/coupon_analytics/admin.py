@@ -18,3 +18,5 @@ class UserStrategyAdmin(admin.ModelAdmin):
         }),
     )
 
+
+

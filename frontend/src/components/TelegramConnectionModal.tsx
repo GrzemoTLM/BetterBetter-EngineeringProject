@@ -25,7 +25,7 @@ const TelegramConnectionModal: React.FC<TelegramConnectionModalProps> = ({
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [pollingTimer, setPollingTimer] = useState<NodeJS.Timeout | null>(null);
 
-  const botUsername = (import.meta.env as any).VITE_TELEGRAM_BOT_USERNAME || 'BetterBetter_bot';
+  const botUsername = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || 'BetterBetter_bot';
 
   const handleCloseModal = () => {
     if (pollingTimer) {
@@ -55,7 +55,7 @@ const TelegramConnectionModal: React.FC<TelegramConnectionModalProps> = ({
       const expires = codeResp?.data?.expires_at || null;
 
       if (!code) {
-        throw new Error('Brak kodu autoryzacyjnego z serwera');
+        throw new Error('Failed to generate auth code from server');
       }
 
       setAuthCode(code);
@@ -117,8 +117,9 @@ const TelegramConnectionModal: React.FC<TelegramConnectionModalProps> = ({
     setMessage(null);
 
     try {
+      await apiService.disconnectTelegram();
       await apiService.updateSettings({ notification_gate: 'none' });
-      setMessage('Rozłączono Telegram');
+      setMessage('Rozłączono Telegram pomyślnie');
       setTimeout(() => {
         onDisconnectSuccess();
         onClose();

@@ -26,6 +26,7 @@ class UserSettingsSerializer(serializers.ModelSerializer):
         allow_empty=True,
     )
     telegram_auth_code = serializers.SerializerMethodField(read_only=True)
+    telegram_connected = serializers.SerializerMethodField(read_only=True)
     two_factor_enabled = serializers.BooleanField(required=False)
     favourite_disciplines = serializers.PrimaryKeyRelatedField(
         queryset=Discipline.objects.all(),
@@ -56,10 +57,11 @@ class UserSettingsSerializer(serializers.ModelSerializer):
             'two_factor_enabled',
             'two_factor_method',
             'telegram_auth_code',
+            'telegram_connected',
             'favourite_disciplines',
             'favourite_bet_types',
         ]
-        read_only_fields = ['two_factor_method', 'telegram_auth_code']
+        read_only_fields = ['two_factor_method', 'telegram_auth_code', 'telegram_connected']
 
     def validate_two_factor_enabled(self, value):
         if value:
@@ -75,17 +77,14 @@ class UserSettingsSerializer(serializers.ModelSerializer):
         return attrs
 
     def get_telegram_auth_code(self, obj):
-        if obj.notification_gate == 'telegram':
-            user = obj.user
-            code = TelegramAuthCode.generate_code(user)
-            return {
-                'code': code,
-                'message': 'Wyślij /login KOD do bota na Telegramie'
-            }
         return None
 
+    def get_telegram_connected(self, obj):
+        user = obj.user
+        telegram_connected = hasattr(user, 'telegram_profile') and user.telegram_profile is not None
+        return telegram_connected
+
     def to_representation(self, instance):
-        """Zwracaj favourite_* pola jako listy ID w GET"""
         ret = super().to_representation(instance)
         ret['favourite_disciplines'] = list(instance.favourite_disciplines.values_list('id', flat=True))
         ret['favourite_bet_types'] = list(instance.favourite_bet_types.values_list('id', flat=True))
@@ -98,7 +97,6 @@ class UserSettingsSerializer(serializers.ModelSerializer):
                 for v in validated_data['predefined_bet_values']
             ]
 
-        # Pobierz ManyToMany pola
         favourite_disciplines = validated_data.pop('favourite_disciplines', None)
         favourite_bet_types = validated_data.pop('favourite_bet_types', None)
 
@@ -117,7 +115,6 @@ class UserSettingsSerializer(serializers.ModelSerializer):
                 instance.two_factor_secret = None
         instance.save()
 
-        # Zaktualizuj ManyToMany relacje
         if favourite_disciplines is not None:
             instance.favourite_disciplines.set(favourite_disciplines)
         if favourite_bet_types is not None:

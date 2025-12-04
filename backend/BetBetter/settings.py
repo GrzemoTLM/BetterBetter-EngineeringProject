@@ -84,7 +84,7 @@ DATABASES = {
 }
 
 LOGIN_URL = 'user-login'
-LOGIN_REDIRECT_URL = '/api/auth/google/success/'
+LOGIN_REDIRECT_URL = '/views/auth/google/success/'
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},

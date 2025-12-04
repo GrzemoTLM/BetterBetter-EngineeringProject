@@ -55,24 +55,34 @@ def format_alert_event(ev: AlertEvent, lang: str | None = None) -> str:
 
 
 async def send_pending_alert_events(context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Wysyłaj pending alert events I raporty do Telegrama.
+    """
     try:
+        # 1. Wysyłaj Alert Events
         pending_events = await sync_to_async(
             lambda: list(AlertEvent.objects.filter(sent_at__isnull=True).select_related('user', 'rule'))
         )()
         
-        if not pending_events:
-            return
-        
-        for ev in pending_events:
-            try:
-                tg_profile = await sync_to_async(TelegramUser.objects.get)(user=ev.user)
-            except TelegramUser.DoesNotExist:
-                continue
-            
-            lang = TELEGRAM_LANG_CACHE.get(tg_profile.telegram_id, DEFAULT_LANG)
-            base_msg = format_alert_event(ev, lang)
-            await context.bot.send_message(chat_id=tg_profile.telegram_id, text=base_msg)
-            ev.sent_at = timezone.now()
-            await sync_to_async(ev.save)(update_fields=['sent_at'])
+        if pending_events:
+            logger.info(f"[ALERTS] Found {len(pending_events)} pending alert events")
+
+            for ev in pending_events:
+                try:
+                    tg_profile = await sync_to_async(TelegramUser.objects.get)(user=ev.user)
+                except TelegramUser.DoesNotExist:
+                    continue
+
+                lang = TELEGRAM_LANG_CACHE.get(tg_profile.telegram_id, DEFAULT_LANG)
+                base_msg = format_alert_event(ev, lang)
+                await context.bot.send_message(chat_id=tg_profile.telegram_id, text=base_msg)
+                ev.sent_at = timezone.now()
+                await sync_to_async(ev.save)(update_fields=['sent_at'])
+                logger.info(f"[ALERTS] Sent AlertEvent {ev.id} to user {ev.user.id}")
+
+        # 2. Wysyłaj Raporty (z bot.notifications.reports)
+        from bot.notifications.reports import send_pending_reports
+        await send_pending_reports(context)
+
     except Exception as e:
-        logger.error(f"Error sending pending alert events: {e}")
+        logger.error(f"Error in send_pending_alert_events: {e}", exc_info=True)

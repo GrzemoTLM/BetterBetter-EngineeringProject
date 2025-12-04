@@ -13,7 +13,7 @@ BOX_WIDTH = 60
 MESSAGES = {
     'pl': {
         'start_existing': "Cześć {first_name}! 👋\n\nJesteś już zalogowany.\n\nDostępne komendy:\n/balance - Saldo\n/budget - Budżet\n/ingame - Aktywne kupony\n/help - Pomoc",
-        'start_new': "Cześć {first_name}! 👋\n\nWitamy w BetBetter!\nAby się zalogować:\n1. Zaloguj się w aplikacji web.\n2. Wygeneruj kod: POST /api/users/telegram/auth-code/generate/\n3. Wyślij: /login KOD\n\nKomendy:\n/login KOD - Logowanie\n/help - Pomoc",
+        'start_new': "Cześć {first_name}! 👋\n\nWitamy w BetBetter!\nAby się zalogować:\n1. Zaloguj się w aplikacji web.\n2. Wygeneruj kod: POST /views/users/telegram/auth-code/generate/\n3. Wyślij: /login KOD\n\nKomendy:\n/login KOD - Logowanie\n/help - Pomoc",
         'login_usage': "❌ Użycie: /login KOD\nPrzykład: /login ABC123DEF456",
         'login_success': "✅ Logowanie udane!\nZalogowano jako: {username}\n\nKomendy:\n/balance - Saldo\n/budget - Budżet\n/ingame - Aktywne kupony\n/help - Pomoc",
         'login_expired': "❌ Kod wygasł lub został użyty!",
@@ -38,7 +38,7 @@ MESSAGES = {
     },
     'en': {
         'start_existing': "Hello {first_name}! 👋\n\nYou are already logged in.\n\nAvailable commands:\n/balance - Balance\n/budget - Budget\n/ingame - Active coupons\n/help - Help",
-        'start_new': "Hello {first_name}! 👋\n\nWelcome to BetBetter!\nTo log in:\n1. Sign in on the web app.\n2. Generate code: POST /api/users/telegram/auth-code/generate/\n3. Send: /login CODE\n\nCommands:\n/login CODE - Log in\n/help - Help",
+        'start_new': "Hello {first_name}! 👋\n\nWelcome to BetBetter!\nTo log in:\n1. Sign in on the web app.\n2. Generate code: POST /views/users/telegram/auth-code/generate/\n3. Send: /login CODE\n\nCommands:\n/login CODE - Log in\n/help - Help",
         'login_usage': "❌ Usage: /login CODE\nExample: /login ABC123DEF456",
         'login_success': "✅ Login successful!\nLogged in as: {username}\n\nCommands:\n/balance - Balance\n/budget - Budget\n/ingame - Active coupons\n/help - Help",
         'login_expired': "❌ Code expired or already used!",

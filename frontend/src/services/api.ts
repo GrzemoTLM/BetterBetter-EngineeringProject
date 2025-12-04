@@ -2,11 +2,33 @@ import axios, { AxiosError } from 'axios';
 import type { AxiosInstance } from 'axios';
 import type { LoginRequest, RegisterRequest, AuthResponse, UserProfile, TwoFactorRequest, PasswordResetRequestRequest, PasswordResetConfirmRequest, PasswordResetResponse } from '../types/auth';
 import type { UserSettings, UpdateSettingsRequest, TwoFactorStartRequest, TwoFactorStartResponse, TwoFactorVerifyRequest, TelegramAuthResponse, TelegramConnectionStatus } from '../types/settings';
-import type { TransactionCreateRequest, TransactionCreateResponse, BookmakerAccountCreateRequest, BookmakerAccountCreateResponse, Transaction, TransactionSummary } from '../types/finances';
+import type { TransactionCreateRequest, TransactionCreateResponse, BookmakerAccountCreateRequest, BookmakerAccountCreateResponse, Transaction, TransactionSummary, AvailableBookmaker } from '../types/finances';
 import type { TicketCategory, CreateTicketRequest, Ticket, CreateCommentRequest, TicketComment } from '../types/tickets';
 import type { Strategy, CreateStrategyRequest } from '../types/strategies';
 import type { Coupon, CreateCouponRequest, BetType, OcrExtractResponse } from '../types/coupons';
 import type { Bet } from '../types/coupons';
+export interface AlertRule {
+  id?: number | string;
+  rule_type: string;
+  metric: string;
+  comparator: string;
+  threshold_value: string | number;
+  window_days: number;
+  message: string;
+  is_active: boolean;
+  last_triggered_at?: string | null;
+  value?: string | number | null;
+}
+export interface AlertRulePayload {
+  rule_type: string;
+  metric: string;
+  comparator: 'lt' | 'lte' | 'gt' | 'gte' | 'eq';
+  threshold_value: string | number;
+  window_days: number;
+  message?: string;
+  is_active?: boolean;
+  filters?: Record<string, unknown>;
+}
 import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
 
 export interface SystemMetrics {
@@ -76,6 +98,28 @@ export type BookmakerAccountsSummaryItem = {
 };
 
 export type BookmakerAccountsSummary = BookmakerAccountsSummaryItem[];
+
+export interface Report {
+  id: number;
+  query?: Record<string, unknown> | null;
+  frequency: 'DAILY' | 'WEEKLY' | 'MONTHLY';
+  delivery_method: string;
+  delivery_methods: string[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateReportRequest {
+  query?: Record<string, unknown> | null;
+  frequency: 'DAILY' | 'WEEKLY' | 'MONTHLY';
+  delivery_method?: string;
+  delivery_methods: string[];
+}
+
+export interface ReportToggleResponse {
+  is_active: boolean;
+}
 
 // Strategies - Summary types
 export type StrategySummaryItem = {
@@ -309,6 +353,76 @@ class ApiService {
     }
   }
 
+  async getAlertRules(): Promise<AlertRule[]> {
+    try {
+      const response = await this.axiosInstance.get<AlertRule[]>(API_ENDPOINTS.ANALYTICS.ALERT_RULES);
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async createAlertRule(payload: AlertRulePayload): Promise<AlertRule> {
+    try {
+      const response = await this.axiosInstance.post<AlertRule>(API_ENDPOINTS.ANALYTICS.ALERT_RULE_CREATE, payload);
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async deleteAlertRule(id: number | string): Promise<void> {
+    try {
+      await this.axiosInstance.delete(`${API_ENDPOINTS.ANALYTICS.ALERT_RULES}${id}/`);
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async getReports(): Promise<any[]> {
+    try {
+      const response = await this.axiosInstance.get('/api/analytics/reports/');
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async createReport(payload: any): Promise<any> {
+    try {
+      const response = await this.axiosInstance.post('/api/analytics/reports/', payload);
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async updateReport(id: number, payload: any): Promise<any> {
+    try {
+      const response = await this.axiosInstance.patch(`/api/analytics/reports/${id}/`, payload);
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async deleteReport(id: number): Promise<void> {
+    try {
+      await this.axiosInstance.delete(`/api/analytics/reports/${id}/`);
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async sendTestReport(id: number): Promise<any> {
+    try {
+      const response = await this.axiosInstance.post(`/api/analytics/reports/${id}/send/`);
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
   async getAllUsers(): Promise<UserProfile[]> {
     try {
       const response = await this.axiosInstance.get<UserProfile[] | { results: UserProfile[] }>('/api/users/users/');
@@ -378,6 +492,40 @@ class ApiService {
       throw new Error(this.getErrorMessage(error));
     }
   }
+
+  async disconnectTelegram(): Promise<{ message: string; telegram_connected: boolean }> {
+    try {
+      const response = await this.axiosInstance.post<{ message: string; telegram_connected: boolean }>(
+        '/api/users/telegram/disconnect/'
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async connectTelegramGenerateCode(): Promise<{ message: string; data: { code: string; created_at: string; expires_at: string } }> {
+    try {
+      const response = await this.axiosInstance.post<{ message: string; data: { code: string; created_at: string; expires_at: string } }>(
+        '/api/users/telegram/auth-code/generate/'
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async checkTelegramConnection(): Promise<{ telegram_id: string; telegram_username: string; created_at: string }> {
+    try {
+      const response = await this.axiosInstance.get<{ telegram_id: string; telegram_username: string; created_at: string }>(
+        '/api/users/telegram/connect/'
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
 
   async startTwoFactor(data: TwoFactorStartRequest): Promise<TwoFactorStartResponse> {
     try {
@@ -458,6 +606,15 @@ class ApiService {
   async createBookmakerAccount(data: BookmakerAccountCreateRequest): Promise<BookmakerAccountCreateResponse> {
     try {
       const response = await this.axiosInstance.post<BookmakerAccountCreateResponse>(API_ENDPOINTS.FINANCES.BOOKMAKER_ACCOUNT_CREATE, data);
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async getAvailableBookmakers(): Promise<AvailableBookmaker[]> {
+    try {
+      const response = await this.axiosInstance.get<AvailableBookmaker[]>(API_ENDPOINTS.FINANCES.BOOKMAKERS_LIST);
       return response.data;
     } catch (error) {
       throw new Error(this.getErrorMessage(error));

@@ -46,6 +46,10 @@ export const API_ENDPOINTS = {
     SUMMARY_LIST: '/api/analytics/strategies/summary/',
     SUMMARY_DETAIL: (id: number | string) => `/api/analytics/strategies/${id}/summary/`,
   },
+  ANALYTICS: {
+    ALERT_RULES: '/api/analytics/alerts/rules/',
+    ALERT_RULE_CREATE: '/api/analytics/alerts/rules/',
+  },
   COUPONS: {
     LIST: '/api/coupons/coupons/',
     CREATE: '/api/coupons/coupons/',

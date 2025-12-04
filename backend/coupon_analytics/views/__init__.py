@@ -1,18 +1,21 @@
-from coupon_analytics.views.analytics_views import (
-    CouponAnalyticsSummaryView,
-    CouponAnalyticsQuerySummaryView,
-)
-from coupon_analytics.views.alert_views import (
+from .analytics_views import CouponAnalyticsSummaryView, CouponAnalyticsQuerySummaryView
+from .alert_views import (
     AlertRuleListCreateView,
     AlertRuleDetailView,
     AlertRuleEvaluateView,
     AlertEventListView,
 )
-from coupon_analytics.views.strategy_views import (
+from .strategy_views import (
     UserStrategyListCreateView,
     UserStrategyDetailView,
     UserStrategySummaryView,
     UserStrategiesSummaryView,
+)
+from .report_views import (
+    ReportListCreateView,
+    ReportDetailView,
+    ReportToggleActiveView,
+    ReportSendNowView,
 )
 
 __all__ = [
@@ -26,4 +29,9 @@ __all__ = [
     'UserStrategyDetailView',
     'UserStrategySummaryView',
     'UserStrategiesSummaryView',
+    'ReportListCreateView',
+    'ReportDetailView',
+    'ReportToggleActiveView',
+    'ReportSendNowView',
 ]
+
