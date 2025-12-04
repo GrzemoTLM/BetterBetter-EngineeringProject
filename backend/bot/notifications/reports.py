@@ -71,14 +71,12 @@ async def send_pending_reports(context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     try:
         now = timezone.now()
-        
-        # Pobierz raporty do wysłania
+
         pending_reports = await sync_to_async(
             lambda: list(Report.objects.filter(is_active=True, next_run__lte=now).select_related('user'))
         )()
-        
+
         if not pending_reports:
-            logger.debug("[REPORTS] No pending reports to send")
             return
         
         logger.info(f"[REPORTS] Found {len(pending_reports)} reports to send")

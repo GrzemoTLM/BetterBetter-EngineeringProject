@@ -1,11 +1,19 @@
 """
 Service for generating and managing periodic reports.
 """
+import logging
+import os
+import requests
 from datetime import datetime, timedelta
 from decimal import Decimal
+from django.conf import settings
 from django.utils import timezone
-from coupon_analytics.models import Report, AnalyticsQuery
+from coupon_analytics.models import Report
 from coupons.models import Coupon
+
+logger = logging.getLogger(__name__)
+
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN') or getattr(settings, 'TELEGRAM_BOT_TOKEN', None)
 
 
 def get_coupon_stats_for_period(user, start_date, end_date, query=None):
@@ -46,8 +54,8 @@ def get_coupon_stats_for_period(user, start_date, end_date, query=None):
     ) or Decimal('0')
 
     total_payout = sum(
-        c.realized_profit + c.bet_stake for c in coupons
-        if c.realized_profit is not None and c.bet_stake
+        c.balance for c in coupons
+        if c.balance is not None and c.status == 'won'
     ) or Decimal('0')
 
     profit = total_payout - total_stake
@@ -183,38 +191,110 @@ def calculate_next_run(report, base_time=None):
     return next_run
 
 
+def format_report_message(report_data: dict) -> str:
+    """Formatuj raport do wiadomości Telegram."""
+    frequency = report_data['frequency']
+    data = report_data['data']
+    generated_at = report_data['generated_at']
+
+    freq_emoji = {
+        'DAILY': '📅',
+        'WEEKLY': '📊',
+        'MONTHLY': '📈',
+        'YEARLY': '🏆',
+    }.get(frequency, '📋')
+
+    lines = [
+        f"{freq_emoji} <b>RAPORT {frequency}</b>",
+        "",
+        "📊 <b>Statystyki kuponów:</b>",
+        f"  Razem: {data['total_coupons']}",
+        f"  Wygrane: {data['won']} ✅",
+        f"  Przegrane: {data['lost']} ❌",
+        f"  W trakcie: {data['in_progress']} ⏳",
+        "",
+        "💰 <b>Finanse:</b>",
+        f"  Stawki: {data['total_stake']} PLN",
+        f"  Wygrane: {data['total_payout']} PLN",
+        f"  Zysk/Strata: {data['profit']} PLN",
+        "",
+        "📈 <b>Wskaźniki:</b>",
+        f"  Win rate: {data['win_rate']}%",
+        f"  ROI: {data['roi']}%",
+        "",
+        f"⏰ Wygenerowano: {generated_at[:19]}",
+    ]
+
+    return "\n".join(lines)
+
+
+def send_telegram_message(chat_id: int, text: str) -> bool:
+    """Wyślij wiadomość do Telegrama przez API."""
+    if not TELEGRAM_BOT_TOKEN:
+        logger.error("[REPORTS] TELEGRAM_BOT_TOKEN not configured")
+        return False
+
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    payload = {
+        'chat_id': chat_id,
+        'text': text,
+        'parse_mode': 'HTML',
+    }
+
+    try:
+        response = requests.post(url, json=payload, timeout=10)
+        if response.status_code == 200:
+            logger.info(f"[REPORTS] Message sent to chat_id {chat_id}")
+            return True
+        else:
+            logger.error(f"[REPORTS] Telegram API error: {response.status_code} - {response.text}")
+            return False
+    except Exception as e:
+        logger.error(f"[REPORTS] Error sending to Telegram: {e}")
+        return False
+
+
 def send_pending_reports() -> None:
     """
     Sprawdź wszystkie raporty gdzie is_active=True i next_run <= teraz.
-    Wyślij report i ustaw następny next_run.
+    Wyślij report do Telegrama i ustaw następny next_run.
     """
+    from users.models import TelegramUser
+
     now = timezone.now()
 
-    # Pobierz raporty do wysłania
     pending_reports = Report.objects.filter(
         is_active=True,
         next_run__lte=now
-    )
+    ).select_related('user')
 
-    import logging
-    logger = logging.getLogger(__name__)
     logger.info(f"[REPORTS] Found {pending_reports.count()} pending reports to send")
 
     for report in pending_reports:
         try:
+            # Sprawdź czy user ma Telegram
+            try:
+                tg_user = TelegramUser.objects.get(user=report.user)
+            except TelegramUser.DoesNotExist:
+                logger.warning(f"[REPORTS] User {report.user.id} has no Telegram profile, skipping")
+                continue
+
             # Wygeneruj dane raportu
             report_data = generate_report_data(report)
 
-            logger.info(f"[REPORTS] Generated report data: {report_data}")
+            # Formatuj wiadomość
+            message = format_report_message(report_data)
 
-            # Wyślij raport (na razie tylko log, bo brak wysyłania Telegram z tutaj)
-            # TODO: Zintegrować z bot/notifications/
+            # Wyślij do Telegrama
+            sent = send_telegram_message(tg_user.telegram_id, message)
 
-            # Ustaw następny next_run
-            report.next_run = calculate_next_run(report, now)
-            report.save(update_fields=['next_run'])
-
-            logger.info(f"[REPORTS] Report ID {report.id} sent, next_run set to {report.next_run}")
+            if sent:
+                # Ustaw następny next_run
+                report.next_run = calculate_next_run(report, now)
+                report.save(update_fields=['next_run'])
+                logger.info(f"[REPORTS] Report ID {report.id} sent, next_run set to {report.next_run}")
+            else:
+                logger.error(f"[REPORTS] Failed to send report ID {report.id}")
 
         except Exception as e:
             logger.error(f"[REPORTS] Error sending report ID {report.id}: {e}", exc_info=True)
