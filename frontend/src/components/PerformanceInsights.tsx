@@ -69,41 +69,51 @@ const PerformanceInsights = () => {
   };
 
   return (
-    <div className="bg-background-paper rounded-xl shadow-sm p-5">
-      <div className="flex items-center gap-2 mb-4">
-        <Lightbulb size={20} className="text-primary-main" />
-        <h3 className="text-lg font-semibold text-text-primary">
-          Performance Insights
-        </h3>
+    <div className="relative">
+      {/* Content */}
+      <div className="bg-background-paper rounded-xl shadow-sm p-5 opacity-40 pointer-events-none select-none">
+        <div className="flex items-center gap-2 mb-4">
+          <Lightbulb size={20} className="text-primary-main" />
+          <h3 className="text-lg font-semibold text-text-primary">
+            Performance Insights
+          </h3>
+        </div>
+
+        <div className="space-y-3">
+          {insights.map((insight, index) => {
+            const styles = getInsightStyles(insight.type);
+            const Icon = insight.icon;
+            return (
+              <div
+                key={index}
+                className={`${styles.bg} ${styles.border} border rounded-lg p-3 flex items-start gap-3`}
+              >
+                <div
+                  className={`${styles.iconBg} ${styles.iconColor} w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0`}
+                >
+                  <Icon size={16} />
+                </div>
+                <div className="flex-1">
+                  <div
+                    className={`${styles.titleColor} font-semibold text-sm mb-1`}
+                  >
+                    {insight.title}
+                  </div>
+                  <div className="text-xs text-text-secondary">
+                    {insight.description}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      <div className="space-y-3">
-        {insights.map((insight, index) => {
-          const styles = getInsightStyles(insight.type);
-          const Icon = insight.icon;
-          return (
-            <div
-              key={index}
-              className={`${styles.bg} ${styles.border} border rounded-lg p-3 flex items-start gap-3`}
-            >
-              <div
-                className={`${styles.iconBg} ${styles.iconColor} w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0`}
-              >
-                <Icon size={16} />
-              </div>
-              <div className="flex-1">
-                <div
-                  className={`${styles.titleColor} font-semibold text-sm mb-1`}
-                >
-                  {insight.title}
-                </div>
-                <div className="text-xs text-text-secondary">
-                  {insight.description}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+      {/* Overlay */}
+      <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] rounded-xl flex items-center justify-center">
+        <div className="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-lg">
+          🚧 In Development
+        </div>
       </div>
     </div>
   );
