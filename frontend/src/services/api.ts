@@ -37,6 +37,31 @@ export interface QueryBuilderRequest {
   limit?: number;
 }
 
+export interface SavedQuery {
+  id: number;
+  name: string;
+  description?: string;
+  query_type: 'simple' | 'advanced';
+  params?: UniversalFilterParams;
+  conditions?: QueryCondition[];
+  logic?: 'AND' | 'OR';
+  group_by?: string;
+  order_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SaveQueryRequest {
+  name: string;
+  description?: string;
+  query_type: 'simple' | 'advanced';
+  params?: UniversalFilterParams;
+  conditions?: QueryCondition[];
+  logic?: 'AND' | 'OR';
+  group_by?: string;
+  order_by?: string;
+}
+
 export interface FilterResult {
   coupons: Coupon[];
   results?: Coupon[];
@@ -1172,6 +1197,52 @@ class ApiService {
       );
       return response.data;
     } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async getSavedQueries(): Promise<SavedQuery[]> {
+    try {
+      const response = await this.axiosInstance.get<SavedQuery[]>('/api/analytics/filters/');
+      console.log('[API] getSavedQueries - data:', response.data);
+
+      return response.data;
+    } catch (error) {
+      console.error('[API] getSavedQueries - error:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async saveQuery(data: SaveQueryRequest): Promise<SavedQuery> {
+    try {
+      const response = await this.axiosInstance.post<SavedQuery>('/api/analytics/filters/', data);
+      console.log('[API] saveQuery - data:', response.data);
+
+      return response.data;
+    } catch (error) {
+      console.error('[API] saveQuery - error:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async deleteSavedQuery(id: number): Promise<void> {
+    try {
+      await this.axiosInstance.delete(`/api/analytics/filters/${id}/`);
+      console.log('[API] deleteSavedQuery - deleted:', id);
+    } catch (error) {
+      console.error('[API] deleteSavedQuery - error:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async getSavedQueryDetail(id: number): Promise<SavedQuery> {
+    try {
+      const response = await this.axiosInstance.get<SavedQuery>(`/api/analytics/filters/${id}/`);
+      console.log('[API] getSavedQueryDetail - data:', response.data);
+
+      return response.data;
+    } catch (error) {
+      console.error('[API] getSavedQueryDetail - error:', error);
       throw new Error(this.getErrorMessage(error));
     }
   }

@@ -1,12 +1,12 @@
-import { X, Play, Save, RotateCcw, Plus, Trash2, Filter, Search } from 'lucide-react';
+import { X, Play, Save, RotateCcw, Plus, Trash2, Filter, Search, FolderOpen, Bookmark } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import api from '../services/api';
-import type { UniversalFilterParams, QueryCondition, FilterResult } from '../services/api';
+import type { UniversalFilterParams, QueryCondition, FilterResult, SavedQuery } from '../services/api';
 import type { Coupon, BetType, Discipline } from '../types/coupons';
 
 interface CustomFilterBuilderProps {
   onClose: () => void;
-  onApplyFilter?: (results: Coupon[]) => void;
+  onApplyFilter?: (results: Coupon[], filterResult: FilterResult) => void;
 }
 
 type FilterMode = 'simple' | 'advanced';
@@ -54,12 +54,16 @@ const CustomFilterBuilder = ({ onClose, onApplyFilter }: CustomFilterBuilderProp
   const [betTypes, setBetTypes] = useState<BetType[]>([]);
   const [disciplines, setDisciplines] = useState<Discipline[]>([]);
 
-  // Simple filter state
+  const [savedQueries, setSavedQueries] = useState<SavedQuery[]>([]);
+  const [showLoadModal, setShowLoadModal] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [saveName, setSaveName] = useState('');
+  const [saveDescription, setSaveDescription] = useState('');
+
   const [simpleFilter, setSimpleFilter] = useState<UniversalFilterParams>({
     filter_mode: 'all',
   });
 
-  // Advanced filter state
   const [conditions, setConditions] = useState<QueryCondition[]>([]);
   const [logic, setLogic] = useState<'AND' | 'OR'>('AND');
   const [groupBy, setGroupBy] = useState('');
@@ -68,15 +72,18 @@ const CustomFilterBuilder = ({ onClose, onApplyFilter }: CustomFilterBuilderProp
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [types, discs] = await Promise.all([
+        const [types, discs, queries] = await Promise.all([
           api.getBetTypes(),
           api.getDisciplines(),
+          api.getSavedQueries().catch(() => []),
         ]);
 
         setBetTypes(types);
         setDisciplines(discs);
+        setSavedQueries(queries);
         console.log('[CustomFilter] Loaded bet types:', types.length);
         console.log('[CustomFilter] Loaded disciplines:', discs.length);
+        console.log('[CustomFilter] Loaded saved queries:', queries.length);
       } catch (error) {
         console.error('[CustomFilter] Error fetching data:', error);
       }
@@ -152,9 +159,74 @@ const CustomFilterBuilder = ({ onClose, onApplyFilter }: CustomFilterBuilderProp
 
   const handleApply = () => {
     const coupons = results?.coupons || results?.results;
-    if (coupons) {
-      onApplyFilter?.(coupons);
+    if (coupons && results) {
+      onApplyFilter?.(coupons, results);
       onClose();
+    }
+  };
+
+  const handleSaveQuery = async () => {
+    if (!saveName.trim()) {
+      alert('Please enter a name for the filter');
+
+      return;
+    }
+
+    try {
+      const queryData = {
+        name: saveName.trim(),
+        description: saveDescription.trim() || undefined,
+        query_type: filterMode as 'simple' | 'advanced',
+        params: filterMode === 'simple' ? simpleFilter : undefined,
+        conditions: filterMode === 'advanced' ? conditions : undefined,
+        logic: filterMode === 'advanced' ? logic : undefined,
+        group_by: filterMode === 'advanced' ? groupBy || undefined : undefined,
+        order_by: filterMode === 'advanced' ? orderBy || undefined : undefined,
+      };
+
+      console.log('[CustomFilter] Saving query:', queryData);
+      const saved = await api.saveQuery(queryData);
+      setSavedQueries([...savedQueries, saved]);
+      setShowSaveModal(false);
+      setSaveName('');
+      setSaveDescription('');
+      alert('Filter saved successfully!');
+    } catch (error) {
+      console.error('[CustomFilter] Error saving query:', error);
+      alert('Error saving filter');
+    }
+  };
+
+  const handleLoadQuery = (query: SavedQuery) => {
+    console.log('[CustomFilter] Loading query:', query);
+
+    if (query.query_type === 'simple' && query.params) {
+      setFilterMode('simple');
+      setSimpleFilter(query.params);
+    } else if (query.query_type === 'advanced' && query.conditions) {
+      setFilterMode('advanced');
+      setConditions(query.conditions);
+      setLogic(query.logic || 'AND');
+      setGroupBy(query.group_by || '');
+      setOrderBy(query.order_by || '');
+    }
+
+    setShowLoadModal(false);
+    setResults(null);
+  };
+
+  const handleDeleteQuery = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this saved filter?')) {
+
+      return;
+    }
+
+    try {
+      await api.deleteSavedQuery(id);
+      setSavedQueries(savedQueries.filter(q => q.id !== id));
+    } catch (error) {
+      console.error('[CustomFilter] Error deleting query:', error);
+      alert('Error deleting filter');
     }
   };
 
@@ -268,12 +340,29 @@ const CustomFilterBuilder = ({ onClose, onApplyFilter }: CustomFilterBuilderProp
             <Filter size={24} className="text-primary-main" />
             <h2 className="text-xl font-bold text-text-primary">Custom Filter Builder</h2>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <X size={24} className="text-text-secondary" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowLoadModal(true)}
+              className="flex items-center gap-2 px-3 py-2 border border-default rounded-lg text-text-secondary hover:bg-gray-100"
+            >
+              <FolderOpen size={18} />
+              Load Filter
+            </button>
+            <button
+              onClick={() => setShowSaveModal(true)}
+              disabled={!results}
+              className="flex items-center gap-2 px-3 py-2 border border-default rounded-lg text-text-secondary hover:bg-gray-100 disabled:opacity-50"
+            >
+              <Bookmark size={18} />
+              Save Filter
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <X size={24} className="text-text-secondary" />
+            </button>
+          </div>
         </div>
 
         {/* Mode Toggle */}
@@ -693,6 +782,103 @@ const CustomFilterBuilder = ({ onClose, onApplyFilter }: CustomFilterBuilderProp
           </div>
         </div>
       </div>
+
+      {/* Load Filter Modal */}
+      {showLoadModal && (
+        <div className="fixed inset-0 bg-black/50 z-[110] flex items-center justify-center p-4">
+          <div className="bg-background-paper w-full max-w-md rounded-xl shadow-2xl">
+            <div className="flex items-center justify-between p-4 border-b border-default">
+              <h3 className="text-lg font-semibold text-text-primary">Load Saved Filter</h3>
+              <button onClick={() => setShowLoadModal(false)} className="p-1 hover:bg-gray-100 rounded">
+                <X size={20} className="text-text-secondary" />
+              </button>
+            </div>
+            <div className="p-4 max-h-96 overflow-y-auto">
+              {savedQueries.length === 0 ? (
+                <div className="text-center text-text-secondary py-8">
+                  <FolderOpen size={48} className="mx-auto mb-4 opacity-30" />
+                  <p>No saved filters yet</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {savedQueries.map(query => (
+                    <div
+                      key={query.id}
+                      className="flex items-center justify-between p-3 border border-default rounded-lg hover:bg-gray-50"
+                    >
+                      <div className="flex-1 cursor-pointer" onClick={() => handleLoadQuery(query)}>
+                        <div className="font-medium text-text-primary">{query.name}</div>
+                        {query.description && (
+                          <div className="text-sm text-text-secondary">{query.description}</div>
+                        )}
+                        <div className="text-xs text-text-secondary mt-1">
+                          {query.query_type === 'simple' ? 'Simple Filter' : 'Query Builder'}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteQuery(query.id)}
+                        className="p-2 hover:bg-red-50 rounded text-red-500"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Save Filter Modal */}
+      {showSaveModal && (
+        <div className="fixed inset-0 bg-black/50 z-[110] flex items-center justify-center p-4">
+          <div className="bg-background-paper w-full max-w-md rounded-xl shadow-2xl">
+            <div className="flex items-center justify-between p-4 border-b border-default">
+              <h3 className="text-lg font-semibold text-text-primary">Save Filter</h3>
+              <button onClick={() => setShowSaveModal(false)} className="p-1 hover:bg-gray-100 rounded">
+                <X size={20} className="text-text-secondary" />
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-2">Filter Name *</label>
+                <input
+                  type="text"
+                  value={saveName}
+                  onChange={e => setSaveName(e.target.value)}
+                  placeholder="e.g. Barcelona Away Wins"
+                  className="w-full px-3 py-2 border border-default rounded-md text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-2">Description (optional)</label>
+                <textarea
+                  value={saveDescription}
+                  onChange={e => setSaveDescription(e.target.value)}
+                  placeholder="Describe what this filter does..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-default rounded-md text-sm resize-none"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 p-4 border-t border-default">
+              <button
+                onClick={() => setShowSaveModal(false)}
+                className="px-4 py-2 border border-default rounded-lg text-text-secondary hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveQuery}
+                className="px-4 py-2 bg-primary-main text-white rounded-lg hover:bg-primary-dark"
+              >
+                Save Filter
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
