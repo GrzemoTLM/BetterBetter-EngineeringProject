@@ -61,6 +61,8 @@ export const API_ENDPOINTS = {
     SUMMARY: '/api/coupons/summary/',
     BALANCE_TREND: '/api/coupons/balance-trend/',
     MONTHLY_BALANCE_TREND: '/api/coupons/monthly-balance-trend/',
+    FILTER_UNIVERSAL: '/api/coupons/filter/universal/',
+    FILTER_QUERY_BUILDER: '/api/coupons/filter/query-builder/',
   },
   MONITORING: {
     SYSTEM_METRICS: '/api/monitoring/system-metrics/',

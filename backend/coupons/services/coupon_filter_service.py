@@ -243,6 +243,7 @@ class UniversalCouponFilterService:
                 value='won',
                 order=order_idx
             )
+            order_idx += 1
         elif filter_mode == 'won_bets':
             AnalyticsQueryCondition.objects.create(
                 group=group,
@@ -251,6 +252,50 @@ class UniversalCouponFilterService:
                 value='win',
                 order=order_idx
             )
+            order_idx += 1
+        elif filter_mode == 'won_bets_lost_coupons':
+            AnalyticsQueryCondition.objects.create(
+                group=group,
+                field='bets__result',
+                operator='equals',
+                value='win',
+                order=order_idx
+            )
+            order_idx += 1
+            AnalyticsQueryCondition.objects.create(
+                group=group,
+                field='status',
+                operator='equals',
+                value='lost',
+                order=order_idx
+            )
+            order_idx += 1
+        elif filter_mode == 'lost_bets':
+            AnalyticsQueryCondition.objects.create(
+                group=group,
+                field='bets__result',
+                operator='equals',
+                value='lost',
+                order=order_idx
+            )
+            order_idx += 1
+        elif filter_mode == 'lost_bets_won_coupons':
+            AnalyticsQueryCondition.objects.create(
+                group=group,
+                field='bets__result',
+                operator='equals',
+                value='lost',
+                order=order_idx
+            )
+            order_idx += 1
+            AnalyticsQueryCondition.objects.create(
+                group=group,
+                field='status',
+                operator='equals',
+                value='won',
+                order=order_idx
+            )
+            order_idx += 1
 
         return query
 
@@ -264,6 +309,8 @@ class UniversalCouponFilterService:
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
     ) -> tuple[AnalyticsQuery, QuerySet]:
+        from django.db.models import Exists, OuterRef, Q
+
         query = UniversalCouponFilterService.build_universal_filter_query(
             user=user,
             team_name=team_name,
@@ -274,8 +321,46 @@ class UniversalCouponFilterService:
             end_date=end_date,
         )
 
-        builder = AnalyticsQueryBuilder(query)
-        coupons = builder.apply()
+        coupons = Coupon.objects.filter(user=user)
+
+        if start_date:
+            coupons = coupons.filter(created_at__date__gte=start_date)
+        if end_date:
+            coupons = coupons.filter(created_at__date__lte=end_date)
+
+        bet_filter = Q()
+
+        if team_name:
+            if position == 'home':
+                bet_filter &= Q(event__home_team__icontains=team_name)
+            elif position == 'away':
+                bet_filter &= Q(event__away_team__icontains=team_name)
+            else:
+                bet_filter &= (Q(event__home_team__icontains=team_name) | Q(event__away_team__icontains=team_name))
+
+        if bet_type_code:
+            bet_filter &= Q(bet_type__code=bet_type_code)
+
+        if filter_mode == 'won_bets':
+            bet_filter &= Q(result='win')
+        elif filter_mode == 'won_bets_lost_coupons':
+            bet_filter &= Q(result='win')
+            coupons = coupons.filter(status='lost')
+        elif filter_mode == 'lost_bets':
+            bet_filter &= Q(result='lost')
+        elif filter_mode == 'lost_bets_won_coupons':
+            bet_filter &= Q(result='lost')
+            coupons = coupons.filter(status='won')
+        elif filter_mode == 'won_coupons':
+            coupons = coupons.filter(status='won')
+
+        if bet_filter:
+            bet_subquery = Bet.objects.filter(
+                coupon=OuterRef('pk')
+            ).filter(bet_filter)
+            coupons = coupons.filter(Exists(bet_subquery))
+
+        coupons = coupons.distinct()
 
         return query, coupons
 

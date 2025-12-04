@@ -7,6 +7,57 @@ import type { TicketCategory, CreateTicketRequest, Ticket, CreateCommentRequest,
 import type { Strategy, CreateStrategyRequest } from '../types/strategies';
 import type { Coupon, CreateCouponRequest, BetType, OcrExtractResponse } from '../types/coupons';
 import type { Bet } from '../types/coupons';
+
+// Filter types for universal filter and query builder
+export interface UniversalFilterParams {
+  team_name?: string;
+  position?: 'home' | 'away';
+  filter_mode?: 'all' | 'won_coupons' | 'lost_coupons' | 'in_progress_coupons' | 'won_bets' | 'lost_bets' | 'won_bets_lost_coupons' | 'all_bets';
+  bet_type_code?: string;
+  discipline?: string;
+  coupon_type?: string;
+  bookmaker?: string;
+  date_from?: string;
+  date_to?: string;
+  min_odds?: string;
+  max_odds?: string;
+}
+
+export interface QueryCondition {
+  field: string;
+  operator: 'equals' | 'not_equals' | 'contains' | 'gt' | 'gte' | 'lt' | 'lte' | 'in' | 'not_in';
+  value: string | number | boolean | string[] | number[];
+}
+
+export interface QueryBuilderRequest {
+  conditions: QueryCondition[];
+  logic?: 'AND' | 'OR';
+  group_by?: string;
+  order_by?: string;
+  limit?: number;
+}
+
+export interface FilterResult {
+  coupons: Coupon[];
+  results?: Coupon[];
+  count: number;
+  won_count?: number;
+  lost_count?: number;
+  win_rate?: number;
+  total_stake?: string;
+  total_won?: string;
+  profit?: string;
+  roi?: number;
+  query_id?: number;
+  summary?: {
+    total_stake?: number;
+    total_payout?: number;
+    profit?: number;
+    win_rate?: number;
+    roi?: number;
+  };
+}
+
 export interface AlertRule {
   id?: number | string;
   rule_type: string;
@@ -1097,6 +1148,30 @@ class ApiService {
       return response.data.points || [];
     } catch (error) {
       console.error('[API] getMonthlyBalanceTrend - error raw:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async filterCouponsUniversal(params: UniversalFilterParams): Promise<FilterResult> {
+    try {
+      const response = await this.axiosInstance.get<FilterResult>(
+        API_ENDPOINTS.COUPONS.FILTER_UNIVERSAL,
+        { params }
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async filterCouponsQueryBuilder(query: QueryBuilderRequest): Promise<FilterResult> {
+    try {
+      const response = await this.axiosInstance.post<FilterResult>(
+        API_ENDPOINTS.COUPONS.FILTER_QUERY_BUILDER,
+        query
+      );
+      return response.data;
+    } catch (error) {
       throw new Error(this.getErrorMessage(error));
     }
   }

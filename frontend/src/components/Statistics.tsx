@@ -241,7 +241,12 @@ const Statistics = () => {
 
       {/* Custom Filter Builder Modal */}
       {showCustomFilter && (
-        <CustomFilterBuilder onClose={() => setShowCustomFilter(false)} />
+        <CustomFilterBuilder
+          onClose={() => setShowCustomFilter(false)}
+          onApplyFilter={(results) => {
+            console.log('[Statistics] Custom filter applied:', results.length, 'coupons');
+          }}
+        />
       )}
 
       {/* Create Notification Modal */}

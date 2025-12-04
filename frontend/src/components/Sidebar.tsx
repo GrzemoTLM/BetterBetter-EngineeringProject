@@ -101,7 +101,7 @@ const Sidebar = ({ activeView, onViewChange, onLogout, onLanguageChange }: Sideb
   ];
 
   return (
-    <div className="fixed left-0 top-0 h-screen w-[260px] bg-background-sidebar z-[100] flex flex-col">
+    <div className="sidebar-container fixed left-0 top-0 h-screen w-[260px] bg-background-sidebar z-[100] flex flex-col">
       <div className="flex flex-col pt-8 flex-1">
         {navItems.map((item, index) => {
           const Icon = item.icon;
