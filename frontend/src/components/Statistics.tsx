@@ -270,7 +270,11 @@ const Statistics = () => {
 
 
       {/* Section C: Charts Area */}
-      <StatisticsCharts />
+      <StatisticsCharts
+        customFilterActive={customFilterActive}
+        customFilterResults={customFilterResults}
+        filteredCoupons={filteredCoupons}
+      />
 
 
       {/* Section D: Detailed Data & Reports */}

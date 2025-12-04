@@ -15,8 +15,16 @@ import {
 } from 'recharts';
 import { useEffect, useState } from 'react';
 import api from '../services/api';
+import type { Coupon } from '../types/coupons';
+import type { FilterResult } from '../services/api';
 
-const StatisticsCharts = () => {
+interface StatisticsChartsProps {
+  customFilterActive?: boolean;
+  customFilterResults?: FilterResult | null;
+  filteredCoupons?: Coupon[] | null;
+}
+
+const StatisticsCharts = ({ customFilterActive = false, customFilterResults, filteredCoupons }: StatisticsChartsProps) => {
   const [profitData, setProfitData] = useState<Array<{ month: string; profit: number }>>([]);
   const [profitLoading, setProfitLoading] = useState(false);
   const [profitError, setProfitError] = useState<string | null>(null);
@@ -32,7 +40,120 @@ const StatisticsCharts = () => {
   const [pieLoading, setPieLoading] = useState(false);
   const [pieError, setPieError] = useState<string | null>(null);
 
+  // Calculate chart data from filtered coupons
   useEffect(() => {
+    if (customFilterActive && filteredCoupons && filteredCoupons.length > 0) {
+      // Calculate pie chart data from filtered coupons
+      const wonCoupons = filteredCoupons.filter(c => {
+        const status = String(c.status || '').toLowerCase();
+        return status.includes('won') || status === 'win';
+      });
+      const lostCoupons = filteredCoupons.filter(c => {
+        const status = String(c.status || '').toLowerCase();
+        return status.includes('lost') || status === 'lose';
+      });
+
+      const wonCount = wonCoupons.length;
+      const lostCount = lostCoupons.length;
+      const totalFinished = wonCount + lostCount;
+
+      if (totalFinished > 0) {
+        const wonPercentage = Math.round((wonCount / totalFinished) * 100);
+        const lostPercentage = 100 - wonPercentage;
+        setPieData([
+          { name: 'Won', value: wonPercentage, count: wonCount, color: '#10B981' },
+          { name: 'Lost', value: lostPercentage, count: lostCount, color: '#EF4444' },
+        ]);
+      }
+
+      // Calculate profit by month from filtered coupons
+      const monthlyProfit: Record<string, number> = {};
+      filteredCoupons.forEach(coupon => {
+        const date = new Date(coupon.created_at);
+        const monthKey = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+        const stake = parseFloat(String(coupon.bet_stake)) || 0;
+        const status = String(coupon.status || '').toLowerCase();
+
+        if (!monthlyProfit[monthKey]) monthlyProfit[monthKey] = 0;
+
+        if (status.includes('won') || status === 'win') {
+          const payout = coupon.potential_payout || stake;
+          monthlyProfit[monthKey] += payout - stake;
+        } else if (status.includes('lost') || status === 'lose') {
+          monthlyProfit[monthKey] -= stake;
+        }
+      });
+
+      const profitChartData = Object.entries(monthlyProfit)
+        .map(([month, profit]) => ({ month, profit: Math.round(profit * 100) / 100 }))
+        .sort((a, b) => {
+          const [aMonth, aYear] = a.month.split(' ');
+          const [bMonth, bYear] = b.month.split(' ');
+          const aDate = new Date(`${aMonth} 20${aYear}`);
+          const bDate = new Date(`${bMonth} 20${bYear}`);
+          return aDate.getTime() - bDate.getTime();
+        });
+
+      setProfitData(profitChartData);
+
+      // Calculate daily balance from filtered coupons (last 7 days)
+      const dailyBalance: Record<string, number> = {};
+      const now = new Date();
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        const dayKey = d.toLocaleDateString('en-US', { weekday: 'short' });
+        dailyBalance[dayKey] = 0;
+      }
+
+      filteredCoupons.forEach(coupon => {
+        const date = new Date(coupon.created_at);
+        const daysDiff = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+        if (daysDiff <= 6) {
+          const dayKey = date.toLocaleDateString('en-US', { weekday: 'short' });
+          const stake = parseFloat(String(coupon.bet_stake)) || 0;
+          const status = String(coupon.status || '').toLowerCase();
+
+          if (dailyBalance[dayKey] !== undefined) {
+            if (status.includes('won') || status === 'win') {
+              const payout = coupon.potential_payout || stake;
+              dailyBalance[dayKey] += payout - stake;
+            } else if (status.includes('lost') || status === 'lose') {
+              dailyBalance[dayKey] -= stake;
+            }
+          }
+        }
+      });
+
+      const balanceChartData = Object.entries(dailyBalance).map(([day, balance]) => ({
+        day,
+        balance: Math.round(balance * 100) / 100,
+      }));
+
+      setBalanceData(balanceChartData);
+
+      return;
+    }
+
+    if (customFilterActive && customFilterResults) {
+      const wonCount = customFilterResults.won_count || 0;
+      const lostCount = customFilterResults.lost_count || 0;
+      const totalFinished = wonCount + lostCount;
+
+      if (totalFinished > 0) {
+        const wonPercentage = Math.round((wonCount / totalFinished) * 100);
+        const lostPercentage = 100 - wonPercentage;
+        setPieData([
+          { name: 'Won', value: wonPercentage, count: wonCount, color: '#10B981' },
+          { name: 'Lost', value: lostPercentage, count: lostCount, color: '#EF4444' },
+        ]);
+      }
+    }
+  }, [customFilterActive, customFilterResults, filteredCoupons]);
+
+  useEffect(() => {
+    if (customFilterActive) return;
+
     const fetchProfitTrend = async () => {
       try {
         setProfitLoading(true);
@@ -119,7 +240,7 @@ const StatisticsCharts = () => {
     fetchProfitTrend();
     fetchBalanceTrend();
     fetchWinLossRatio();
-  }, []);
+  }, [customFilterActive]);
 
 
   return (
@@ -128,6 +249,7 @@ const StatisticsCharts = () => {
       <div className="lg:col-span-8 bg-background-paper rounded-xl shadow-sm p-5">
         <h3 className="text-lg font-semibold text-text-primary mb-4">
           Profit over time
+          {customFilterActive && <span className="text-sm font-normal text-primary-main ml-2">(Filtered)</span>}
         </h3>
         {profitLoading ? (
           <div className="flex items-center justify-center h-[300px]">
@@ -178,6 +300,7 @@ const StatisticsCharts = () => {
         <div className="bg-background-paper rounded-xl shadow-sm p-5">
           <h3 className="text-base font-semibold text-text-primary mb-4">
             Balance Trend
+            {customFilterActive && <span className="text-sm font-normal text-primary-main ml-2">(Filtered)</span>}
           </h3>
           {balanceLoading ? (
             <div className="flex items-center justify-center h-[140px]">
@@ -221,6 +344,7 @@ const StatisticsCharts = () => {
         <div className="bg-background-paper rounded-xl shadow-sm p-5">
           <h3 className="text-base font-semibold text-text-primary mb-4">
             Win/Loss Ratio
+            {customFilterActive && <span className="text-sm font-normal text-primary-main ml-2">(Filtered)</span>}
           </h3>
           {pieLoading ? (
             <div className="flex items-center justify-center h-[140px]">
@@ -251,8 +375,8 @@ const StatisticsCharts = () => {
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: number, name: string, props: { payload: { count: number } }) => {
-                    const count = props.payload.count;
+                  formatter={(value: number, name: string, props) => {
+                    const count = (props?.payload as { count?: number })?.count ?? 0;
                     return [`${value}% (${count} coupons)`, name];
                   }}
                   contentStyle={{

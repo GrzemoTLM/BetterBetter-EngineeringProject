@@ -197,22 +197,124 @@ const CustomFilterBuilder = ({ onClose, onApplyFilter }: CustomFilterBuilderProp
     }
   };
 
-  const handleLoadQuery = (query: SavedQuery) => {
+  const handleLoadQuery = async (query: SavedQuery) => {
     console.log('[CustomFilter] Loading query:', query);
-
-    if (query.query_type === 'simple' && query.params) {
-      setFilterMode('simple');
-      setSimpleFilter(query.params);
-    } else if (query.query_type === 'advanced' && query.conditions) {
-      setFilterMode('advanced');
-      setConditions(query.conditions);
-      setLogic(query.logic || 'AND');
-      setGroupBy(query.group_by || '');
-      setOrderBy(query.order_by || '');
-    }
-
     setShowLoadModal(false);
-    setResults(null);
+    setIsLoading(true);
+
+    try {
+      let result: FilterResult;
+
+      // Check if it's the new server format with query_groups
+      if (query.query_groups && query.query_groups.length > 0) {
+        // Extract conditions from query_groups
+        const allConditions: QueryCondition[] = [];
+        let mainLogic: 'AND' | 'OR' = 'AND';
+
+        query.query_groups.forEach((group, idx) => {
+          if (idx === 0) {
+            mainLogic = group.logic || 'AND';
+          }
+          if (group.conditions) {
+            allConditions.push(...group.conditions);
+          }
+        });
+
+        // Set up the filter mode as advanced
+        setFilterMode('advanced');
+        setConditions(allConditions);
+        setLogic(mainLogic);
+
+        // Build simple filter params from server fields
+        const simpleParams: UniversalFilterParams = {
+          filter_mode: 'all',
+        };
+
+        if (query.start_date) simpleParams.date_from = query.start_date;
+        if (query.end_date) simpleParams.date_to = query.end_date;
+        if (query.bookmaker) simpleParams.bookmaker = query.bookmaker;
+        if (query.coupon_type) simpleParams.coupon_type = query.coupon_type;
+
+        // If we have conditions, use query builder
+        if (allConditions.length > 0) {
+          const queryPayload = {
+            conditions: allConditions,
+            logic: mainLogic,
+          };
+
+          console.log('[CustomFilter] Executing loaded query builder:', queryPayload);
+          result = await api.filterCouponsQueryBuilder(queryPayload);
+        } else {
+          // Use simple filter
+          console.log('[CustomFilter] Executing loaded simple filter:', simpleParams);
+          result = await api.filterCouponsUniversal(simpleParams);
+        }
+      } else if (query.query_type === 'simple' && query.params) {
+        // Original format: simple filter with params
+        setFilterMode('simple');
+        setSimpleFilter(query.params);
+
+        const cleanParams: UniversalFilterParams = {};
+        Object.entries(query.params).forEach(([key, value]) => {
+          if (value !== undefined && value !== '' && value !== null) {
+            (cleanParams as Record<string, unknown>)[key] = value;
+          }
+        });
+
+        console.log('[CustomFilter] Executing loaded simple filter:', cleanParams);
+        result = await api.filterCouponsUniversal(cleanParams);
+      } else if (query.query_type === 'advanced' && query.conditions) {
+        // Original format: advanced filter with conditions
+        setFilterMode('advanced');
+        setConditions(query.conditions);
+        setLogic(query.logic || 'AND');
+        setGroupBy(query.group_by || '');
+        setOrderBy(query.order_by || '');
+
+        const queryPayload = {
+          conditions: query.conditions,
+          logic: query.logic || 'AND',
+          group_by: query.group_by || undefined,
+          order_by: query.order_by || undefined,
+        };
+
+        console.log('[CustomFilter] Executing loaded query builder:', queryPayload);
+        result = await api.filterCouponsQueryBuilder(queryPayload);
+      } else {
+        // Fallback: try to build a simple query from available fields
+        const simpleParams: UniversalFilterParams = {
+          filter_mode: 'all',
+        };
+
+        if (query.start_date) simpleParams.date_from = query.start_date;
+        if (query.end_date) simpleParams.date_to = query.end_date;
+        if (query.bookmaker) simpleParams.bookmaker = query.bookmaker;
+        if (query.coupon_type) simpleParams.coupon_type = query.coupon_type;
+
+        setFilterMode('simple');
+        setSimpleFilter(simpleParams);
+
+        console.log('[CustomFilter] Executing fallback simple filter:', simpleParams);
+        result = await api.filterCouponsUniversal(simpleParams);
+      }
+
+      console.log('[CustomFilter] Loaded query result:', result);
+
+      // Apply the results immediately
+      const coupons = result.coupons || result.results || [];
+      if (coupons.length > 0 || result.count >= 0) {
+        onApplyFilter?.(coupons, result);
+        onClose();
+      } else {
+        // Show results in modal if no coupons found
+        setResults(result);
+      }
+    } catch (error) {
+      console.error('[CustomFilter] Error executing loaded query:', error);
+      alert('Error executing filter');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleDeleteQuery = async (id: number) => {

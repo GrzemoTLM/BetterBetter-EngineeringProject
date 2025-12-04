@@ -37,29 +37,51 @@ export interface QueryBuilderRequest {
   limit?: number;
 }
 
+export interface QueryGroup {
+  id?: number;
+  logic: 'AND' | 'OR';
+  conditions: QueryCondition[];
+}
+
 export interface SavedQuery {
   id: number;
   name: string;
   description?: string;
-  query_type: 'simple' | 'advanced';
+  query_type?: 'simple' | 'advanced';
   params?: UniversalFilterParams;
   conditions?: QueryCondition[];
   logic?: 'AND' | 'OR';
   group_by?: string;
   order_by?: string;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
+  // Server format fields
+  start_date?: string | null;
+  end_date?: string | null;
+  bookmaker?: string | null;
+  statuses?: string[];
+  coupon_type?: string | null;
+  sort_by?: string[];
+  query_groups?: QueryGroup[];
 }
 
 export interface SaveQueryRequest {
   name: string;
   description?: string;
-  query_type: 'simple' | 'advanced';
+  query_type?: 'simple' | 'advanced';
   params?: UniversalFilterParams;
   conditions?: QueryCondition[];
   logic?: 'AND' | 'OR';
   group_by?: string;
   order_by?: string;
+  // Server format fields
+  start_date?: string | null;
+  end_date?: string | null;
+  bookmaker?: string | null;
+  statuses?: string[];
+  coupon_type?: string | null;
+  sort_by?: string[];
+  query_groups?: QueryGroup[];
 }
 
 export interface FilterResult {
