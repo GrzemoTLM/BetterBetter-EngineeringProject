@@ -120,7 +120,6 @@ const CouponsTable = forwardRef<CouponsTableRef, CouponsTableProps>(({ bulkMode 
   const { formatCurrency } = useCurrency();
 
   const fetchCoupons = useCallback(async () => {
-    // If custom filtered coupons are provided, use them directly
     if (customFilteredCoupons) {
       let sorted = [...customFilteredCoupons].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
@@ -145,7 +144,6 @@ const CouponsTable = forwardRef<CouponsTableRef, CouponsTableProps>(({ bulkMode 
       const data = await api.getCoupons(filters);
       let sorted = [...data].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-      // Filter only settled coupons if showOnlySettled is true
       if (showOnlySettled) {
         sorted = sorted.filter(coupon => {
           const status = normalizeStatus(coupon.status);
@@ -169,7 +167,7 @@ const CouponsTable = forwardRef<CouponsTableRef, CouponsTableProps>(({ bulkMode 
 
   useEffect(() => { fetchCoupons(); }, [fetchCoupons]);
 
-  // Pagination derivations
+
   const total = coupons.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const safePage = Math.min(page, totalPages - 1);
