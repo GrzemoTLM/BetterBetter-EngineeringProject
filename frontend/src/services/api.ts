@@ -1268,6 +1268,47 @@ class ApiService {
       throw new Error(this.getErrorMessage(error));
     }
   }
+
+  // Backup methods
+  async getBackups(): Promise<{ filename: string; size_bytes: number; size_kb: number; created_at: string; timestamp: string }[] | { backups: { filename: string; size_bytes: number; size_kb: number; created_at: string; timestamp: string }[] }> {
+    try {
+      const response = await this.axiosInstance.get('/api/monitoring/backup/');
+      return response.data;
+    } catch (error) {
+      console.error('[API] getBackups - error:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async createBackup(): Promise<{ message: string; filename: string; size_bytes: number; size_kb: number; timestamp: string }> {
+    try {
+      const response = await this.axiosInstance.post('/api/monitoring/backup/');
+      return response.data;
+    } catch (error) {
+      console.error('[API] createBackup - error:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async restoreBackup(filename: string): Promise<{ message: string }> {
+    try {
+      const response = await this.axiosInstance.post('/api/monitoring/restore/', { filename });
+      return response.data;
+    } catch (error) {
+      console.error('[API] restoreBackup - error:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async deleteBackup(filename: string): Promise<{ message: string }> {
+    try {
+      const response = await this.axiosInstance.delete(`/api/monitoring/backup/${filename}/`);
+      return response.data;
+    } catch (error) {
+      console.error('[API] deleteBackup - error:', error);
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
 }
 
 export default new ApiService();

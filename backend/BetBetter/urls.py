@@ -21,7 +21,7 @@ except Exception:
     schema_view = None
 
 from users.views import google_login_succes
-from monitoring.views import SystemMetricsView, LoggedInUsersView
+from monitoring.views import SystemMetricsView, LoggedInUsersView, DatabaseBackupView, DatabaseBackupDetailView, DatabaseRestoreView
 
 urlpatterns = [
     path('api/users/', include('users.urls')),
@@ -33,6 +33,9 @@ urlpatterns = [
     path('api/auth/google/success/', google_login_succes, name='google-success'),
     path("api/monitoring/system-metrics/", SystemMetricsView.as_view(), name="system-metrics"),
     path("api/monitoring/logged-in-users/", LoggedInUsersView.as_view(), name="logged-in-users"),
+    path("api/monitoring/backup/", DatabaseBackupView.as_view(), name="database-backup"),
+    path("api/monitoring/backup/<str:filename>/", DatabaseBackupDetailView.as_view(), name="database-backup-detail"),
+    path("api/monitoring/restore/", DatabaseRestoreView.as_view(), name="database-restore"),
 ]
 
 if schema_view is not None:

@@ -3,6 +3,7 @@ import UsersTable from './UsersTable';
 import ActiveUsers from './ActiveUsers';
 import TicketsAdminPage from './TicketsAdminPage';
 import SystemHealth from './SystemHealth';
+import Backups from './Backups';
 
 const AdminConsole = () => {
   return (
@@ -29,6 +30,7 @@ const AdminConsole = () => {
         <div className="lg:col-span-6 flex flex-col gap-4">
           <TicketsAdminPage />
           <SystemHealth />
+          <Backups />
         </div>
       </div>
     </div>
