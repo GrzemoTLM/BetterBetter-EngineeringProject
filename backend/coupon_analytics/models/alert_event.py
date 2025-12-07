@@ -28,7 +28,7 @@ class AlertEvent(models.Model):
     message_rendered = models.TextField(blank=True, null=True)
 
     class Meta:
-        db_table = 'coupon_alert_event'
+        db_table = "analytics_alert_event"
         unique_together = ("rule", "window_start", "window_end")
         ordering = ["-triggered_at"]
 

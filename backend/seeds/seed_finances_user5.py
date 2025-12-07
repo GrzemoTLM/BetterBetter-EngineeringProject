@@ -77,7 +77,6 @@ def seed_user5_transactions(year: int = 2025, start_month: int = 1, end_month: i
 
 
 if __name__ == "__main__":
-    # Umożliwia szybkie odpalenie z manage.py shell -c
     created = seed_user5_transactions()
     print(f"Utworzono {created} transakcji dla usera 5")
 

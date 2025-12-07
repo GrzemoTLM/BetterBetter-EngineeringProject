@@ -75,6 +75,7 @@ class AlertRule(models.Model):
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated at"))
 
     class Meta:
+        db_table = "analytics_alert_rule"
         verbose_name = _("Alert Rule")
         verbose_name_plural = _("Alert Rules")
         ordering = ["-created_at"]

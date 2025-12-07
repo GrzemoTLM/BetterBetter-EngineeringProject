@@ -61,6 +61,7 @@ class AnalyticsQuery(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        db_table = "analytics_query"
         verbose_name = "Analytics Query"
         verbose_name_plural = "Analytics Queries"
         ordering = ["-created_at"]
@@ -96,6 +97,7 @@ class AnalyticsQueryGroup(models.Model):
     )
 
     class Meta:
+        db_table = "analytics_query_group"
         verbose_name = "Analytics Query Group"
         verbose_name_plural = "Analytics Query Groups"
         ordering = ["analytics_query", "parent_id", "order"]
@@ -143,6 +145,7 @@ class AnalyticsQueryCondition(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        db_table = "analytics_query_condition"
         verbose_name = _('Query Condition')
         verbose_name_plural = _('Query Conditions')
         ordering = ['group','order']

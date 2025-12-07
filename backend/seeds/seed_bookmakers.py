@@ -59,7 +59,7 @@ def seed_bookmakers():
             print(f"🔄 Updated: {bookmaker.name}")
     
     print(f"\n{'='*50}")
-    print(f"📊 Summary:")
+    print(f"[SUMMARY]")
     print(f"   - Created: {created_count}")
     print(f"   - Updated: {updated_count}")
     print(f"   - Total: {len(POLISH_BOOKMAKERS)}")
@@ -67,8 +67,8 @@ def seed_bookmakers():
 
 
 if __name__ == "__main__":
-    print("🚀 Seeding Polish bookmakers...")
+    print("[INFO] Seeding Polish bookmakers...")
     print("="*50)
     seed_bookmakers()
-    print("\n✅ Done!")
+    print("\n[DONE]")
 

@@ -53,6 +53,7 @@ class BookmakerAccountModel(models.Model):
         help_text="Timestamp when the bookmaker account was last updated"
     )
     class Meta:
+        db_table = "finance_bookmaker_accounts"
         verbose_name = "Bookmaker Account"
         verbose_name_plural = "Bookmaker Accounts"
         constraints = [
