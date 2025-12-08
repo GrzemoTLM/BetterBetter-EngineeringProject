@@ -9,8 +9,6 @@ class UserStatus(models.TextChoices):
     DELETED = 'deleted', _('Deleted')
 
 class TwoFactorMethod(models.TextChoices):
-    SMS = 'sms', _('SMS')
-    EMAIL = 'email', _('Email')
     MOBILE_APP = 'mobile_app', _('Mobile App')
     NONE = 'none', _('None')
 

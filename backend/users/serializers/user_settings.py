@@ -1,9 +1,7 @@
 from rest_framework import serializers
 from coupons.models import Currency, Discipline, BetTypeDict
 from ..models import UserSettings, TelegramAuthCode
-from ..models.choices import TwoFactorMethod
 from django_otp.plugins.otp_totp.models import TOTPDevice
-from django_otp.plugins.otp_email.models import EmailDevice
 
 
 class UserSettingsSerializer(serializers.ModelSerializer):
@@ -53,15 +51,13 @@ class UserSettingsSerializer(serializers.ModelSerializer):
             'locale',
             'date_format',
             'notification_gate',
-            'notification_gate_ref',
             'two_factor_enabled',
-            'two_factor_method',
             'telegram_auth_code',
             'telegram_connected',
             'favourite_disciplines',
             'favourite_bet_types',
         ]
-        read_only_fields = ['two_factor_method', 'telegram_auth_code', 'telegram_connected']
+        read_only_fields = ['telegram_auth_code', 'telegram_connected']
 
     def validate_two_factor_enabled(self, value):
         if value:
@@ -101,18 +97,15 @@ class UserSettingsSerializer(serializers.ModelSerializer):
         favourite_bet_types = validated_data.pop('favourite_bet_types', None)
 
         for field in [
-            'notification_gate', 'notification_gate_ref', 'nickname', 'auto_coupon_payoff',
+            'notification_gate', 'nickname', 'auto_coupon_payoff',
             'monthly_budget_limit', 'locale', 'date_format', 'preferred_currency', 'predefined_bet_values'
         ]:
             if field in validated_data:
                 setattr(instance, field, validated_data.get(field))
         if 'two_factor_enabled' in validated_data and validated_data['two_factor_enabled'] is False:
             if instance.two_factor_enabled:
-                EmailDevice.objects.filter(user=instance.user).delete()
                 TOTPDevice.objects.filter(user=instance.user).delete()
                 instance.two_factor_enabled = False
-                instance.two_factor_method = TwoFactorMethod.NONE
-                instance.two_factor_secret = None
         instance.save()
 
         if favourite_disciplines is not None:

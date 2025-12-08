@@ -40,12 +40,7 @@ class LoginView(generics.CreateAPIView):
             settings = UserSettings.objects.filter(user=user).first()
 
             if settings and settings.two_factor_enabled:
-                method = (settings.two_factor_method or '').strip().lower()
-                if method not in ['totp', 'email']:
-                    return Response(
-                        {'error': '2FA method not set. Start setup first.'},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
+                method = 'totp'
 
                 challenge_id = TwoFactorService.create_2fa_login_challenge(user, method)
 
