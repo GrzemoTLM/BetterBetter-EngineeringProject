@@ -30,8 +30,9 @@ const BalanceChart = ({ summary }: BalanceChartProps) => {
       // Parse amount to get deposits and withdrawals
       // Assuming amount is net (deposits - withdrawals)
       // We'll need to adjust based on actual API response structure
-      const deposit = item.amount > 0 ? item.amount : 0;
-      const withdrawal = item.amount < 0 ? Math.abs(item.amount) : 0;
+      const amount = Number(item.amount);
+      const deposit = amount > 0 ? amount : 0;
+      const withdrawal = amount < 0 ? Math.abs(amount) : 0;
 
       return {
         date: formatDateWithoutTime(item.date),

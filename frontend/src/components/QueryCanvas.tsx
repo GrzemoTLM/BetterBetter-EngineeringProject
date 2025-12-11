@@ -15,7 +15,7 @@ interface QueryRow {
 }
 
 const QueryCanvas = () => {
-  const [queryRows, setQueryRows] = useState<QueryRow[]>([
+  const [queryRows, _setQueryRows] = useState<QueryRow[]>([
     { id: '1', logic: 'AND', condition: 'Sport is Football' },
     { id: '2', logic: 'OR', condition: 'Market-type is Over/Under' },
     { id: '3', logic: 'OR', condition: '= 2.5' },
@@ -60,7 +60,7 @@ const QueryCanvas = () => {
 
         {/* Query Rows */}
         <div className="space-y-3">
-          {queryRows.map((row, index) => (
+          {queryRows.map((row, _index) => (
             <div
               key={row.id}
               className="flex items-center gap-3 p-3 bg-white border border-default rounded-lg shadow-sm group hover:border-blue-300 transition-colors"

@@ -1,4 +1,4 @@
-import { FileJson, Download } from 'lucide-react';
+import { FileJson } from 'lucide-react';
 import { useState } from 'react';
 
 const FieldPalette = () => {
