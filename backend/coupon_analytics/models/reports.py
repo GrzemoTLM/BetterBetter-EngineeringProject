@@ -66,6 +66,7 @@ class Report(models.Model):
         help_text=_("Methods to deliver the report, e.g., ['email', 'dashboard']"),
     )
     class Meta:
+        db_table = "analytics_report"
         verbose_name = _("Report")
         verbose_name_plural = _("Reports")
         ordering = ["-created_at"]

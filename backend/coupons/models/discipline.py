@@ -37,6 +37,7 @@ class Discipline(models.Model):
 
 
     class Meta:
+        db_table = 'disciplines'
         ordering = ("name",)
         constraints = []
         # CheckConstraint będzie dodana w migracji

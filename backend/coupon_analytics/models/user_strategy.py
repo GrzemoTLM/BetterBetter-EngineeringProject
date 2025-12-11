@@ -41,6 +41,7 @@ class UserStrategy(models.Model):
     )
 
     class Meta:
+        db_table = "analytics_user_strategy"
         verbose_name = _("User Strategy")
         verbose_name_plural = _("User Strategies")
         ordering = ["-created_at"]

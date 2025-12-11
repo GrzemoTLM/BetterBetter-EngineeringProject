@@ -23,6 +23,7 @@ class TicketCategory(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        db_table = "ticket_categories"
         verbose_name = _('Ticket Category')
         verbose_name_plural = _('Ticket Categories')
 
@@ -100,6 +101,7 @@ class Ticket(models.Model):
     )
 
     class Meta:
+        db_table = "tickets"
         verbose_name = _('Ticket')
         verbose_name_plural = _('Tickets')
         ordering = ['-created_at']
@@ -143,6 +145,7 @@ class TicketComment(models.Model):
     )
 
     class Meta:
+        db_table = 'ticket_comments'
         verbose_name = _('Ticket Comment')
         verbose_name_plural = _('Ticket Comments')
         ordering = ['created_at']

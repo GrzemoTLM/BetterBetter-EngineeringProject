@@ -65,6 +65,9 @@ class Coupon(models.Model):
         help_text="Current balance of the coupon"
     )
 
+    class Meta:
+        db_table = 'coupons'
+
     def __str__(self):
         label = self.get_coupon_type_display()
         status = self.get_status_display()

@@ -7,6 +7,11 @@ class Strategy(models.Model):
         help_text="Name of the strategy, e.g. 'Flat Stake', 'Progressive', 'Martingale'"
     )
 
+    class Meta:
+        db_table = 'strategies'
+        verbose_name = "Strategy"
+        verbose_name_plural = "Strategies"
+
     def __str__(self):
         return self.name
 

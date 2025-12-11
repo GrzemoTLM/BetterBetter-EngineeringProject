@@ -10,26 +10,24 @@ django.setup()
 from coupons.models.currency import Currency
 
 
-# Lista walut
-# value = kurs względem PLN (1 jednostka waluty = X PLN)
 CURRENCIES = [
     {
         "code": "PLN",
         "name": "Polski złoty",
         "symbol": "zł",
-        "value": 1.00,  # Waluta bazowa
+        "value": 1.00,
     },
     {
         "code": "EUR",
         "name": "Euro",
         "symbol": "€",
-        "value": 4.32,  # ~4.32 PLN za 1 EUR
+        "value": 4.32,
     },
     {
         "code": "USD",
         "name": "Dolar amerykański",
         "symbol": "$",
-        "value": 4.05,  # ~4.05 PLN za 1 USD
+        "value": 4.05,
     },
 ]
 
@@ -55,13 +53,13 @@ def seed_currencies():
 
         if created:
             created_count += 1
-            print(f"✅ Created: {currency.code} - {currency.name} ({currency.symbol})")
+            print(f"[CREATED] {currency.code} - {currency.name} ({currency.symbol})")
         else:
             updated_count += 1
-            print(f"🔄 Updated: {currency.code} - {currency.name} ({currency.symbol})")
+            print(f"[UPDATED] {currency.code} - {currency.name} ({currency.symbol})")
 
     print(f"\n{'='*50}")
-    print(f"📊 Summary:")
+    print(f"[SUMMARY]")
     print(f"   - Created: {created_count}")
     print(f"   - Updated: {updated_count}")
     print(f"   - Total: {len(CURRENCIES)}")
@@ -69,8 +67,8 @@ def seed_currencies():
 
 
 if __name__ == "__main__":
-    print("🚀 Seeding currencies...")
+    print("[INFO] Seeding currencies...")
     print("="*50)
     seed_currencies()
-    print("\n✅ Done!")
+    print("\n[DONE]")
 

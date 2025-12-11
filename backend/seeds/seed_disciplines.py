@@ -10,9 +10,7 @@ django.setup()
 from coupons.models.discipline import Discipline, DisciplineCategory
 
 
-# Lista dyscyplin sportowych
 DISCIPLINES = [
-    # Team sports - Sporty drużynowe
     {"code": "SOC", "name": "Piłka nożna", "category": DisciplineCategory.TEAM},
     {"code": "BASK", "name": "Koszykówka", "category": DisciplineCategory.TEAM},
     {"code": "VOLL", "name": "Siatkówka", "category": DisciplineCategory.TEAM},
@@ -29,14 +27,12 @@ DISCIPLINES = [
     {"code": "FLRB", "name": "Floorball", "category": DisciplineCategory.TEAM},
     {"code": "BNDY", "name": "Bandy", "category": DisciplineCategory.TEAM},
 
-    # Racket sports - Sporty rakietowe
     {"code": "TEN", "name": "Tenis", "category": DisciplineCategory.RACKET},
     {"code": "TABL", "name": "Tenis stołowy", "category": DisciplineCategory.RACKET},
     {"code": "BADM", "name": "Badminton", "category": DisciplineCategory.RACKET},
     {"code": "SQSH", "name": "Squash", "category": DisciplineCategory.RACKET},
     {"code": "PADL", "name": "Padel", "category": DisciplineCategory.RACKET},
 
-    # Combat sports - Sporty walki
     {"code": "BOX", "name": "Boks", "category": DisciplineCategory.COMBAT},
     {"code": "MMA", "name": "MMA", "category": DisciplineCategory.COMBAT},
     {"code": "WRES", "name": "Zapasy", "category": DisciplineCategory.COMBAT},
@@ -46,7 +42,6 @@ DISCIPLINES = [
     {"code": "TAEK", "name": "Taekwondo", "category": DisciplineCategory.COMBAT},
     {"code": "FENK", "name": "Szermierka", "category": DisciplineCategory.COMBAT},
 
-    # Precision sports - Sporty precyzyjne
     {"code": "GOLF", "name": "Golf", "category": DisciplineCategory.PRECISION},
     {"code": "DART", "name": "Rzutki", "category": DisciplineCategory.PRECISION},
     {"code": "ARCH", "name": "Łucznictwo", "category": DisciplineCategory.PRECISION},
@@ -54,7 +49,6 @@ DISCIPLINES = [
     {"code": "CURL", "name": "Curling", "category": DisciplineCategory.PRECISION},
     {"code": "SHOO", "name": "Strzelectwo", "category": DisciplineCategory.PRECISION},
 
-    # Motorsport - Sporty motorowe
     {"code": "F1", "name": "Formuła 1", "category": DisciplineCategory.MOTOR},
     {"code": "MOTO", "name": "MotoGP", "category": DisciplineCategory.MOTOR},
     {"code": "RALL", "name": "Rajdy samochodowe", "category": DisciplineCategory.MOTOR},
@@ -64,7 +58,6 @@ DISCIPLINES = [
     {"code": "INDY", "name": "IndyCar", "category": DisciplineCategory.MOTOR},
     {"code": "WRC", "name": "WRC", "category": DisciplineCategory.MOTOR},
 
-    # Endurance sports - Sporty wytrzymałościowe
     {"code": "CYCL", "name": "Kolarstwo", "category": DisciplineCategory.ENDURANCE},
     {"code": "ATHL", "name": "Lekkoatletyka", "category": DisciplineCategory.ENDURANCE},
     {"code": "SWIM", "name": "Pływanie", "category": DisciplineCategory.ENDURANCE},
@@ -78,11 +71,9 @@ DISCIPLINES = [
     {"code": "BOBS", "name": "Bobsleje", "category": DisciplineCategory.ENDURANCE},
     {"code": "LUGE", "name": "Saneczkarstwo", "category": DisciplineCategory.ENDURANCE},
 
-    # Cue sports - Sporty bilardowe
     {"code": "SNOK", "name": "Snooker", "category": DisciplineCategory.CUE},
     {"code": "POOL", "name": "Bilard", "category": DisciplineCategory.CUE},
 
-    # Esports - Sporty elektroniczne
     {"code": "LOL", "name": "League of Legends", "category": DisciplineCategory.ESPORT},
     {"code": "CS2", "name": "Counter-Strike 2", "category": DisciplineCategory.ESPORT},
     {"code": "DOTA", "name": "Dota 2", "category": DisciplineCategory.ESPORT},
@@ -104,7 +95,6 @@ DISCIPLINES = [
     {"code": "WZON", "name": "Warzone", "category": DisciplineCategory.ESPORT},
     {"code": "TFT", "name": "Teamfight Tactics", "category": DisciplineCategory.ESPORT},
 
-    # Other - Inne
     {"code": "CHES", "name": "Szachy", "category": DisciplineCategory.OTHER},
     {"code": "HORS", "name": "Wyścigi konne", "category": DisciplineCategory.OTHER},
     {"code": "GREY", "name": "Wyścigi chartów", "category": DisciplineCategory.OTHER},
@@ -116,49 +106,36 @@ DISCIPLINES = [
 
 
 def seed_disciplines():
-    """
-    Seed the database with sports and esports disciplines.
-    Uses update_or_create to avoid duplicates.
-    """
     created_count = 0
     updated_count = 0
 
-    for discipline_data in DISCIPLINES:
-        discipline, created = Discipline.objects.update_or_create(
-            code=discipline_data["code"],
+    for disc_data in DISCIPLINES:
+        disc, created = Discipline.objects.update_or_create(
+            code=disc_data["code"],
             defaults={
-                "name": discipline_data["name"],
-                "category": discipline_data["category"],
+                "name": disc_data["name"],
+                "category": disc_data["category"],
                 "is_active": True,
             }
         )
 
         if created:
             created_count += 1
-            print(f"✅ Created: {discipline.code} - {discipline.name} ({discipline.category})")
+            print(f"[CREATED] {disc.code} - {disc.name}")
         else:
             updated_count += 1
-            print(f"🔄 Updated: {discipline.code} - {discipline.name} ({discipline.category})")
+            print(f"[UPDATED] {disc.code} - {disc.name}")
 
-    # Podsumowanie po kategoriach
-    print(f"\n{'='*60}")
-    print(f"📊 Summary:")
+    print(f"\n{'='*50}")
+    print(f"[SUMMARY]")
     print(f"   - Created: {created_count}")
     print(f"   - Updated: {updated_count}")
     print(f"   - Total: {len(DISCIPLINES)}")
-    print(f"\n📂 By category:")
-    
-    for category in DisciplineCategory:
-        count = sum(1 for d in DISCIPLINES if d["category"] == category)
-        if count > 0:
-            print(f"   - {category.label}: {count}")
-    
-    print(f"{'='*60}")
+    print(f"{'='*50}")
 
 
 if __name__ == "__main__":
-    print("🚀 Seeding sports and esports disciplines...")
-    print("="*60)
+    print("[INFO] Seeding disciplines...")
+    print("="*50)
     seed_disciplines()
-    print("\n✅ Done!")
-
+    print("\n[DONE]")

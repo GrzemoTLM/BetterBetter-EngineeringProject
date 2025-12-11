@@ -63,6 +63,7 @@ class Bet(models.Model):
     )
 
     class Meta:
+        db_table = 'bets'
         verbose_name = "Bet"
         verbose_name_plural = "Bets"
 

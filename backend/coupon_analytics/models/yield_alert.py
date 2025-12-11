@@ -21,9 +21,9 @@ class YieldAlert(models.Model):
     sent_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
+        db_table = "analytics_yield_alert"
         unique_together = ('user', 'period', 'period_start')
         ordering = ['-period_start']
-        db_table = 'coupon_yield_alert'
 
     def __str__(self):
         return f"YieldAlert(user={self.user_id}, period={self.period}, start={self.period_start}, yield={self.yield_value})"

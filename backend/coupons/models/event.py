@@ -45,6 +45,7 @@ class Event(models.Model):
     )
 
     class Meta:
+        db_table = 'events'
         verbose_name = _("Event")
         verbose_name_plural = _("Events")
         ordering = ("-start_time",)

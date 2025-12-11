@@ -2,7 +2,6 @@ import uuid
 from django.core.cache import cache
 from django.contrib.auth import get_user_model
 from django_otp.plugins.otp_totp.models import TOTPDevice
-from django_otp.plugins.otp_email.models import EmailDevice
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from ..models import UserSettings
@@ -17,7 +16,7 @@ class TwoFactorService:
 
     @staticmethod
     def start_2fa_setup(user: User, method: str) -> dict:
-        if method not in ['totp', 'email', 'none']:
+        if method not in ['totp', 'none']:
             raise ValueError('Invalid 2FA method')
 
         try:
@@ -26,9 +25,7 @@ class TwoFactorService:
             raise ValueError('User settings not found')
 
         if method == 'none':
-            EmailDevice.objects.filter(user=user).delete()
             TOTPDevice.objects.filter(user=user).delete()
-            settings.two_factor_method = None
             settings.two_factor_enabled = False
             settings.save()
             return {'detail': 'Two-factor authentication disabled'}
@@ -36,7 +33,6 @@ class TwoFactorService:
         if settings.two_factor_enabled:
             raise ValueError('2FA already enabled')
 
-        EmailDevice.objects.filter(user=user).delete()
         TOTPDevice.objects.filter(user=user).delete()
 
         if method == 'totp':
@@ -45,20 +41,8 @@ class TwoFactorService:
                 confirmed=False,
                 name='mobile_app_device'
             )
-            settings.two_factor_method = 'totp'
             settings.save()
             return {'otp_uri': device.config_url}
-
-        elif method == 'email':
-            device = EmailDevice.objects.create(
-                user=user,
-                confirmed=True,
-                name='email_device'
-            )
-            device.generate_challenge()
-            settings.two_factor_method = 'email'
-            settings.save()
-            return {'detail': 'Verification code sent to your email'}
 
     @staticmethod
     def verify_2fa_setup(user: User, code: str) -> dict:
@@ -70,8 +54,8 @@ class TwoFactorService:
         except UserSettings.DoesNotExist:
             raise ValueError('User settings not found')
 
-        method = (settings.two_factor_method or '').lower()
-        if method not in ['totp', 'email']:
+        method = 'totp'
+        if method not in ['totp']:
             raise ValueError('2FA method not set. Start setup first.')
 
         if settings.two_factor_enabled:
@@ -94,22 +78,9 @@ class TwoFactorService:
                 device.confirmed = True
                 device.save()
 
-        elif method == 'email':
-            device = EmailDevice.objects.filter(
-                user=user,
-                name='email_device'
-            ).first()
-            if not device:
-                device = EmailDevice.objects.filter(user=user).first()
-            if not device:
-                raise ValueError('Email device not found. Start setup again.')
-
-            if not device.verify_token(code):
-                raise ValueError('Invalid code')
-
         settings.two_factor_enabled = True
         settings.save()
-        return {'detail': f'Successfully verified ({method})'}
+        return {'detail': f'Successfully verified (totp)'}
 
     @staticmethod
     def create_2fa_login_challenge(user: User, method: str) -> str:
@@ -119,14 +90,6 @@ class TwoFactorService:
             {"user_id": user.id, "method": method},
             timeout=TwoFactorService.LOGIN_2FA_TTL,
         )
-
-        if method == 'email':
-            device = (
-                EmailDevice.objects.filter(user=user, name="email_device").first()
-                or EmailDevice.objects.filter(user=user).first()
-            )
-            if device:
-                device.generate_challenge()
 
         return challenge_id
 
@@ -153,16 +116,6 @@ class TwoFactorService:
             ).first()
             if not device:
                 device = TOTPDevice.objects.filter(user=user).first()
-            if not device or not device.verify_token(code):
-                raise ValueError('Invalid code')
-
-        elif method == "email":
-            device = EmailDevice.objects.filter(
-                user=user,
-                name='email_device'
-            ).first()
-            if not device:
-                device = EmailDevice.objects.filter(user=user).first()
             if not device or not device.verify_token(code):
                 raise ValueError('Invalid code')
         else:

@@ -2,7 +2,7 @@ from django.conf import settings
 from django.db import models
 
 from coupons.models import Currency, Discipline, BetTypeDict
-from .choices import NotificationGate, TwoFactorMethod
+from .choices import NotificationGate
 
 
 class UserSettings(models.Model):
@@ -30,22 +30,7 @@ class UserSettings(models.Model):
         choices=NotificationGate.choices,
         default=NotificationGate.NONE
     )
-    notification_gate_ref = models.CharField(
-        max_length=255,
-        blank=True,
-        null=True
-    )
     two_factor_enabled = models.BooleanField(default=False)
-    two_factor_method = models.CharField(
-        max_length=10,
-        choices=TwoFactorMethod.choices,
-        default=TwoFactorMethod.NONE
-    )
-    two_factor_secret = models.CharField(
-        max_length=255,
-        blank=True,
-        null=True
-    )
     predefined_bet_values = models.JSONField(default=list, blank=True)
 
     favourite_disciplines = models.ManyToManyField(

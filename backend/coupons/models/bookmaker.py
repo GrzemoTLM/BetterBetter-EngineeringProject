@@ -14,6 +14,7 @@ class Bookmaker(models.Model):
         return self.name
 
     class Meta:
+        db_table = 'bookmakers'
         verbose_name = "Bookmaker"
         verbose_name_plural = "Bookmakers"
 

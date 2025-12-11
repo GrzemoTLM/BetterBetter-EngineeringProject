@@ -16,6 +16,5 @@ def create_user_settings(sender, instance, created, **kwargs):
             date_format='DD-MM-YYYY',
             monthly_budget_limit=50.00,
             notification_gate='none',
-            two_factor_enabled=False,
-            two_factor_method='none'
+            two_factor_enabled=False
         )

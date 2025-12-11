@@ -11,5 +11,6 @@ class BetTypeDict(models.Model):
         return f"{self.code} - {self.description}"
 
     class Meta:
+        db_table = 'bet_type_dict'
         verbose_name = "Bet Type"
         verbose_name_plural = "Bet Types"
