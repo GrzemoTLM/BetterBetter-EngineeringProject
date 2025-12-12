@@ -97,12 +97,12 @@ def check_and_send_streak_loss_alert(user: User) -> None:
             logger.warning(f"[CHECK_ALERT] Invalid threshold for rule {rule.id}")
             continue
 
-        # Szukaj OSTATNIEGO alertu dla tej reguły
+        # Szukaj OSTATNIEGO alertu dla tej reguły (po dacie utworzenia)
         last_alert = AlertEvent.objects.filter(
             rule=rule,
             user=user,
             metric='streak_loss',
-        ).order_by('-metric_value').first()
+        ).order_by('-id').first()
 
         last_streak = 0
         if last_alert:
@@ -119,8 +119,11 @@ def check_and_send_streak_loss_alert(user: User) -> None:
 
         logger.debug(f"[CHECK_ALERT] Current streak: {current_streak}, threshold: {threshold}")
 
-        # Zdecyduj czy wysłać alert
-        should_send = current_streak >= threshold
+        # Sprawdź czy streak przekracza threshold (greater than = >)
+        # Threshold 2 oznacza: alert przy 3+ przegranych
+        if current_streak <= threshold:
+            logger.debug(f"[CHECK_ALERT] Current streak {current_streak} <= threshold {threshold}, SKIPPING")
+            continue
 
         try:
             # Stwórz alert z metric_value = aktualny streak
@@ -137,10 +140,7 @@ def check_and_send_streak_loss_alert(user: User) -> None:
                 sent_at=None,  # ← Bot wyśle i ustawi sent_at
             )
 
-            if should_send:
-                logger.info(f"[CHECK_ALERT] Created AlertEvent ID {alert.id} (pending send) with metric_value={alert.metric_value} (streak increased {last_streak} → {current_streak})")
-            else:
-                logger.debug(f"[CHECK_ALERT] Created AlertEvent ID {alert.id} (stored, streak {current_streak} < threshold {threshold})")
+            logger.info(f"[CHECK_ALERT] Created AlertEvent ID {alert.id} (pending send) with metric_value={alert.metric_value} (streak increased {last_streak} → {current_streak})")
 
         except Exception as e:
             logger.error(f"[CHECK_ALERT] Error creating AlertEvent: {e}", exc_info=True)

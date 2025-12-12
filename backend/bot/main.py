@@ -40,7 +40,7 @@ def main() -> None:
     application.add_handler(CommandHandler("ingame", ingame))
 
     application.job_queue.run_repeating(send_pending_alert_events, interval=5, first=2)
-    application.job_queue.run_repeating(check_budget_exceeded, interval=30, first=5)
+    application.job_queue.run_repeating(check_budget_exceeded, interval=3600, first=10)  # Co godzinę, max 1 powiadomienie dziennie
     application.job_queue.run_repeating(send_pending_reports, interval=60, first=3)  # Co minutę (60 sekund)
 
     logger.info("Bot started with JobQueue alert events, budget monitoring, and reports tasks...")
