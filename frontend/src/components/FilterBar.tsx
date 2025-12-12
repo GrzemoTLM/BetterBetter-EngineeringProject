@@ -1,66 +1,9 @@
-import { ChevronDown, Calendar, Download } from 'lucide-react';
+import { Calendar, Download } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useDateFormatter } from '../hooks/useDateFormatter';
 import { exportTransactionsToPDF } from '../utils/pdfExport';
 import type { Transaction, TransactionSummary } from '../types/finances';
 
-interface DropdownProps {
-  label: string;
-  options: string[];
-}
-
-const Dropdown = ({ label, options }: DropdownProps) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [selected, setSelected] = useState(options[0]);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsOpen(false);
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen]);
-
-  return (
-    <div className="relative" ref={dropdownRef}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="bg-background-paper border border-border-light rounded-sm px-3 py-2 text-sm text-text-primary flex items-center justify-between min-w-[120px] hover:border-border-medium transition-colors"
-      >
-        <span>{selected || label}</span>
-        <ChevronDown size={16} className="ml-2" />
-      </button>
-      {isOpen && (
-        <div className="absolute top-full left-0 mt-1 w-full bg-background-paper border border-border-light rounded-sm shadow-dropdown z-10">
-          {options.map((option, index) => (
-            <button
-              key={index}
-              onClick={() => {
-                setSelected(option);
-                setIsOpen(false);
-              }}
-              className="w-full text-left px-3 py-2 text-sm text-text-primary hover:bg-background-table-header transition-colors"
-            >
-              {option}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
 
 interface DatePickerProps {
   label: string;

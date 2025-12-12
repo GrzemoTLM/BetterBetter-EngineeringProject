@@ -45,6 +45,9 @@ class UserSettings(models.Model):
         related_name='user_favourite_settings'
     )
 
+    # Śledzenie powiadomień o przekroczeniu budżetu
+    budget_exceeded_notified_at = models.DateTimeField(null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

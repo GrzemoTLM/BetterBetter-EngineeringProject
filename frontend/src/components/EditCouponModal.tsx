@@ -87,7 +87,7 @@ const EditCouponModal = ({ couponId, isOpen, onClose, onUpdated }: EditCouponMod
     }
   };
 
-  const computeMultiplier = (c: Coupon) => c.bets.reduce((acc, b) => {
+  const computeMultiplier = (c: Coupon) => (c.bets ?? []).reduce((acc, b) => {
      const o = parseFloat(String(b.odds));
      return isNaN(o) ? acc : acc * o;
    }, 1);
@@ -197,7 +197,7 @@ const EditCouponModal = ({ couponId, isOpen, onClose, onUpdated }: EditCouponMod
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-default">
-                      {coupon.bets.map((b) => (
+                      {(coupon.bets ?? []).map((b) => (
                         <tr key={`${b.id ?? `${b.event_name}-${b.line}-${b.odds}`}`} className="bg-white">
                           <td className="px-4 py-2 text-sm text-text-primary">{b.event_name}</td>
                           <td className="px-4 py-2 text-sm text-text-secondary">{String(b.bet_type)}</td>

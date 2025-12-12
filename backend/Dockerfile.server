@@ -1,0 +1,30 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Zainstaluj zależności systemowe dla PaddleOCR i innych pakietów
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    g++ \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgomp1 \
+    libgl1 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+ENV DJANGO_SETTINGS_MODULE=BetBetter.settings
+
+# Odsłoń port Django
+EXPOSE 8000
+
+# Uruchom serwer Django
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

@@ -2,7 +2,7 @@ import { Plus, Trash2, Search, Check, X } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import type { Strategy } from '../types/strategies';
-import type { Bet as BetData, BetType as BetTypeOption, Discipline as DisciplineOption } from '../types/coupons';
+import type { Bet as BetData, BetType as BetTypeOption, Discipline as DisciplineOption, OcrExtractResponse } from '../types/coupons';
 import type { BookmakerAccountCreateResponse } from '../types/finances';
 import type { Coupon } from '../types/coupons';
 
@@ -52,7 +52,7 @@ const BetSlip = ({
   const [couponId, setCouponId] = useState<number | null>(initialCouponId ?? null);
   const [multiplier, setMultiplier] = useState<number>(1);
   const [potentialPayout, setPotentialPayout] = useState<number>(0);
-  const [showOcrDropzone, setShowOcrDropzone] = useState(false);
+  const [_showOcrDropzone, setShowOcrDropzone] = useState(false);
   const [ocrSuccessVisible, setOcrSuccessVisible] = useState(false);
   const ocrFileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -434,10 +434,6 @@ const BetSlip = ({
   }, [favoriteDisciplines, favoriteBetTypes]);
 
 
-  const handleOpenOCRPicker = () => {
-    // zamiast paska progresu po prostu otwieramy file picker
-    ocrFileInputRef.current?.click();
-  };
 
   const handleOCRFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -462,7 +458,7 @@ const BetSlip = ({
 
     console.log('[UI] BetSlip - received coupon from OCR:', initialCouponFromOcr);
 
-    const mappedBets: Bet[] = (initialCouponFromOcr.bets || []).map((b, idx) => ({
+    const mappedBets: Bet[] = (initialCouponFromOcr.bets || []).map((b: BetData, idx: number) => ({
       id: Date.now() + idx,
       event_name: String(b.event_name ?? ''),
       bet_type: b.bet_type,
