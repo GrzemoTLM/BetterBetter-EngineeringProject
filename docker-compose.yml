@@ -1,0 +1,100 @@
+# BetBetter - Full Stack Docker Compose
+# Ten plik uruchamia całą aplikację: frontend, backend (API), bota Telegram i bazę danych
+# Uruchom z głównego katalogu: docker compose up -d --build
+
+services:
+  # ==================== BAZA DANYCH ====================
+  db:
+    image: postgres:16
+    container_name: betbetter_postgres
+    restart: always
+    env_file:
+      - ./backend/.env
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./backend/pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==================== BACKEND API (Django) ====================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.server
+    container_name: betbetter_backend
+    restart: unless-stopped
+    working_dir: /app
+    env_file:
+      - ./backend/.env
+    environment:
+      DJANGO_SETTINGS_MODULE: BetBetter.settings
+      DB_HOST: db
+      DB_PORT: 5432
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app  # Dla development - hot reload
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+
+  # ==================== FRONTEND (React + Nginx) ====================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:8000
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
+        VITE_TELEGRAM_BOT_USERNAME: ${VITE_TELEGRAM_BOT_USERNAME:-BetterBetter_bot}
+    container_name: betbetter_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+  # ==================== TELEGRAM BOT ====================
+  telegram_bot:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: betbetter_telegram_bot
+    restart: unless-stopped
+    working_dir: /app
+    command: python bot/main.py
+    env_file:
+      - ./backend/.env
+    environment:
+      DJANGO_SETTINGS_MODULE: BetBetter.settings_bot
+      DB_HOST: db
+      DB_PORT: 5432
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ==================== PGADMIN (opcjonalnie) ====================
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: betbetter_pgadmin
+    restart: unless-stopped
+    profiles:
+      - admin  # Uruchom z: docker compose --profile admin up
+    env_file:
+      - ./backend/.env
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+
+

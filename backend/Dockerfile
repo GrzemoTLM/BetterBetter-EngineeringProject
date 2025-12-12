@@ -5,8 +5,9 @@ WORKDIR /app
 # Zainstaluj build tools potrzebne dla psutil
 RUN apk add --no-cache gcc python3-dev musl-dev linux-headers
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Użyj requirements-bot.txt (bez PaddleOCR)
+COPY requirements-bot.txt .
+RUN pip install --no-cache-dir -r requirements-bot.txt
 
 # Usuń build tools po instalacji żeby zmniejszyć rozmiar obrazu
 RUN apk del gcc python3-dev musl-dev linux-headers
