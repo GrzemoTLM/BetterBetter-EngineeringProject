@@ -21,7 +21,6 @@ const Register = ({ onRegister, onBackToLogin }: RegisterProps) => {
     e.preventDefault();
     setLocalError(null);
 
-    // Validation
     if (!formData.username.trim()) {
       setLocalError('Username is required');
       return;
@@ -44,8 +43,6 @@ const Register = ({ onRegister, onBackToLogin }: RegisterProps) => {
 
     try {
       await register(formData.username, formData.email, formData.password);
-      // Registration successful - AuthContext will handle token and user
-      // Check if 2FA is required (currently register doesn't return challenge_id, but we check anyway)
       onRegister();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Registration error';

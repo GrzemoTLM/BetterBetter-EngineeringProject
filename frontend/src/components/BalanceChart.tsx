@@ -20,16 +20,12 @@ const BalanceChart = ({ summary }: BalanceChartProps) => {
   const [isStacked, setIsStacked] = useState(false);
   const { formatDateWithoutTime } = useDateFormatter();
 
-  // Transform summary.by_date into chart data
   const data = useMemo(() => {
     if (!summary?.by_date || summary.by_date.length === 0) {
       return [];
     }
 
     return summary.by_date.map((item) => {
-      // Parse amount to get deposits and withdrawals
-      // Assuming amount is net (deposits - withdrawals)
-      // We'll need to adjust based on actual API response structure
       const amount = Number(item.amount);
       const deposit = amount > 0 ? amount : 0;
       const withdrawal = amount < 0 ? Math.abs(amount) : 0;

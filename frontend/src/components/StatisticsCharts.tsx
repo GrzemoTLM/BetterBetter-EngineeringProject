@@ -40,10 +40,8 @@ const StatisticsCharts = ({ customFilterActive = false, customFilterResults, fil
   const [pieLoading, setPieLoading] = useState(false);
   const [pieError, setPieError] = useState<string | null>(null);
 
-  // Calculate chart data from filtered coupons
   useEffect(() => {
     if (customFilterActive && filteredCoupons && filteredCoupons.length > 0) {
-      // Calculate pie chart data from filtered coupons
       const wonCoupons = filteredCoupons.filter(c => {
         const status = String(c.status || '').toLowerCase();
         return status.includes('won') || status === 'win';
@@ -66,7 +64,6 @@ const StatisticsCharts = ({ customFilterActive = false, customFilterResults, fil
         ]);
       }
 
-      // Calculate profit by month from filtered coupons
       const monthlyProfit: Record<string, number> = {};
       filteredCoupons.forEach(coupon => {
         const date = new Date(coupon.created_at);
@@ -96,7 +93,6 @@ const StatisticsCharts = ({ customFilterActive = false, customFilterResults, fil
 
       setProfitData(profitChartData);
 
-      // Calculate daily balance from filtered coupons (last 7 days)
       const dailyBalance: Record<string, number> = {};
       const now = new Date();
       for (let i = 6; i >= 0; i--) {

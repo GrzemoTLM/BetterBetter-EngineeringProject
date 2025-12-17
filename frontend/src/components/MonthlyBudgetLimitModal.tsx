@@ -20,7 +20,6 @@ const MonthlyBudgetLimitModal: React.FC<MonthlyBudgetLimitModalProps> = ({
 
   useEffect(() => {
     if (isOpen && currentLimit) {
-      // Remove any currency formatting if present
       const cleanValue = String(currentLimit).replace(/[^\d.]/g, '');
       setBudgetLimit(cleanValue);
     }

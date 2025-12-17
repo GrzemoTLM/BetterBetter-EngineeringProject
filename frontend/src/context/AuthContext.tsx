@@ -20,7 +20,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       try {
         console.log('AuthContext: Initializing...');
         const savedToken = apiService.getToken();
-        console.log('AuthContext: Token from localStorage:', savedToken ? 'Found ✅' : 'Not found ❌');
+        console.log('AuthContext: Token from sessionStorage:', savedToken ? 'Found ✅' : 'Not found ❌');
 
         if (savedToken) {
           setToken(savedToken);
@@ -52,7 +52,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const response = await apiService.login({ email, password });
 
-      // Only set user and token if there's no 2FA challenge
       if (!response.challenge_id && response.access) {
         setToken(response.access);
         const currentUser = await apiService.getCurrentUser();
@@ -88,7 +87,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
-  const register = useCallback(async (username: string, email: string, password: string) => {
+  const register =
+      useCallback(async (username: string, email: string, password: string) => {
     setIsLoading(true);
     setError(null);
     try {

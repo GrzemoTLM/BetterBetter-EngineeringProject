@@ -321,10 +321,8 @@ const Tickets = () => {
                   <div className="space-y-2">
                     {tickets
                       .sort((a, b) => {
-                        // Resolved na dnie
                         if (a.status === 'resolved' && b.status !== 'resolved') return 1;
                         if (a.status !== 'resolved' && b.status === 'resolved') return -1;
-                        // Closed také na dnie (po resolved)
                         if (a.status === 'closed' && b.status !== 'closed') return 1;
                         if (a.status !== 'closed' && b.status === 'closed') return -1;
                         return 0;

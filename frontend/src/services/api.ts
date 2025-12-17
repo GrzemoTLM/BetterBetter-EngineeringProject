@@ -8,7 +8,6 @@ import type { Strategy, CreateStrategyRequest } from '../types/strategies';
 import type { Coupon, CreateCouponRequest, BetType, OcrExtractResponse } from '../types/coupons';
 import type { Bet } from '../types/coupons';
 
-// Filter types for universal filter and query builder
 export interface UniversalFilterParams {
   team_name?: string;
   position?: 'home' | 'away';
@@ -55,7 +54,6 @@ export interface SavedQuery {
   order_by?: string;
   created_at?: string;
   updated_at?: string;
-  // Server format fields
   start_date?: string | null;
   end_date?: string | null;
   bookmaker?: string | null;
@@ -74,7 +72,6 @@ export interface SaveQueryRequest {
   logic?: 'AND' | 'OR';
   group_by?: string;
   order_by?: string;
-  // Server format fields
   start_date?: string | null;
   end_date?: string | null;
   bookmaker?: string | null;
@@ -159,7 +156,6 @@ export interface LoggedInUser {
 }
 
 export interface CouponSummary {
-  // shape will be clarified from backend response; keep it generic for now
   [key: string]: unknown;
 }
 
@@ -183,7 +179,6 @@ export interface MonthlyBalanceTrendResponse {
   points: MonthlyBalanceTrendPoint[];
 }
 
-// New: summary per bookmaker accounts
 export type BookmakerAccountsSummaryItem = {
   account_id: number;
   bookmaker: string;
@@ -219,7 +214,6 @@ export interface ReportToggleResponse {
   is_active: boolean;
 }
 
-// Strategies - Summary types
 export type StrategySummaryItem = {
   strategy_id: number;
   strategy_name: string;
@@ -378,7 +372,6 @@ class ApiService {
           try {
             return JSON.stringify(data);
           } catch {
-            // ignore
           }
         }
       }
@@ -463,7 +456,6 @@ class ApiService {
       }
     }
     catch {
-      // Silently handle logout errors
     }
     finally {
       this.removeToken();
@@ -771,7 +763,6 @@ class ApiService {
     }
   }
 
-  // New: fetch bookmaker accounts summary
   async getBookmakerAccountsSummary(params?: Record<string, string>): Promise<BookmakerAccountsSummary> {
     try {
       const response = await this.axiosInstance.get<BookmakerAccountsSummary>(API_ENDPOINTS.FINANCES.BOOKMAKER_ACCOUNTS_SUMMARY, {
@@ -886,7 +877,6 @@ class ApiService {
     }
   }
 
-  // Strategies
   async getStrategies(): Promise<Strategy[]> {
     try {
       const response = await this.axiosInstance.get<Strategy[]>(API_ENDPOINTS.STRATEGIES.LIST);
@@ -931,7 +921,6 @@ class ApiService {
     }
   }
 
-  // Strategies - Summary
   async getStrategiesSummary(params?: Record<string, string>): Promise<StrategySummaryResponse> {
     try {
       const response = await this.axiosInstance.get<StrategySummaryResponse>(API_ENDPOINTS.STRATEGIES.SUMMARY_LIST, { params });
@@ -950,7 +939,6 @@ class ApiService {
     }
   }
 
-  // Coupons
   async createCoupon(data: CreateCouponRequest): Promise<Coupon> {
     try {
       console.log('[API] createCoupon - URL:', API_ENDPOINTS.COUPONS.CREATE);
@@ -1174,7 +1162,6 @@ class ApiService {
     }
   }
 
-  // OCR: upload image and parse coupon data
   async extractCouponViaOCR(file: File): Promise<OcrExtractResponse> {
     try {
       const formData = new FormData();
@@ -1312,7 +1299,6 @@ class ApiService {
     }
   }
 
-  // Backup methods
   async getBackups(): Promise<{ filename: string; size_bytes: number; size_kb: number; created_at: string; timestamp: string }[] | { backups: { filename: string; size_bytes: number; size_kb: number; created_at: string; timestamp: string }[] }> {
     try {
       const response = await this.axiosInstance.get('/api/monitoring/backup/');

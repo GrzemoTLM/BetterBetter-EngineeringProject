@@ -29,7 +29,6 @@ const ManageStrategiesModal = ({
       const data = await api.getStrategies();
       setStrategies(data);
     } catch {
-      // Silently fail
     } finally {
       setLoading(false);
     }
@@ -56,7 +55,6 @@ const ManageStrategiesModal = ({
       setNewStrategyName('');
       setNewStrategyDescription('');
     } catch {
-      // Silently fail
     } finally {
       setLoadingCreate(false);
     }
@@ -73,7 +71,6 @@ const ManageStrategiesModal = ({
         onStrategiesChange(updatedStrategies);
       }
     } catch {
-      // Silently fail
     } finally {
       setDeletingId(null);
     }

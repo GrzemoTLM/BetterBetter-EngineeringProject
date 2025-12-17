@@ -1,7 +1,7 @@
-import { X } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import {X} from 'lucide-react';
+import {useEffect, useState} from 'react';
 import apiService from '../services/api';
-import type { BookmakerUserAccount } from '../types/finances';
+import type {BookmakerUserAccount} from '../types/finances';
 
 interface WithdrawModalProps {
   onClose: () => void;

@@ -20,7 +20,6 @@ const LanguageModal: React.FC<LanguageModalProps> = ({
   const [error, setError] = useState<string | null>(null);
 
 
-  // Map language code to locale
   const languageToLocale = (lang: Language): string => {
     return lang === 'pl' ? 'pl-PL' : 'en-US';
   };

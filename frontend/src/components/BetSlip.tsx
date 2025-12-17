@@ -56,7 +56,6 @@ const BetSlip = ({
   const [ocrSuccessVisible, setOcrSuccessVisible] = useState(false);
   const ocrFileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Fetch bookmaker accounts, bet types, disciplines and user favourites on component mount
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -114,10 +113,8 @@ const BetSlip = ({
     };
 
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Sync coupon id if AddCoupon supplies it after mount
   useEffect(() => {
     if (initialCouponId && !couponId) {
       setCouponId(initialCouponId);
@@ -128,14 +125,11 @@ const BetSlip = ({
           setCouponBookmakerAccountId((existing as Coupon).bookmaker_account ?? null);
           setCouponBookmakerName((existing as Coupon).bookmaker ?? '');
         } catch {
-          // ignore
         }
       })();
     }
- // eslint-disable-next-line react-hooks/exhaustive-deps
    }, [initialCouponId]);
 
-  // Ensure default strategy gets set once strategies are fetched
   useEffect(() => {
     if (!strategy && strategies && strategies.length > 0) {
       const defaultName = strategies[0].name;
@@ -194,9 +188,7 @@ const BetSlip = ({
 
     try {
       setLoading(true);
-      // Update stake in database
       await api.updateCouponStake(couponId, finalStake);
-      // Recalculate
       const updatedCoupon = await api.recalculateCoupon(couponId);
       applyCouponMetrics(updatedCoupon);
     } catch (error) {
@@ -209,15 +201,11 @@ const BetSlip = ({
   const handleRemoveBet = async (id: number) => {
     const betToRemove = bets.find(bet => bet.id === id);
 
-    // If bet is confirmed, it must be removed on server (when backend supports it)
     if (betToRemove?.confirmed && couponId) {
       try {
         setLoading(true);
-        // TODO: Backend should support DELETE /api/coupons/coupons/{id}/bets/{bet_id}/
-        // For now, remove locally and recalc
         setBets(bets.filter((bet) => bet.id !== id));
 
-        // Recalculate
         const updatedCoupon = await api.recalculateCoupon(couponId);
         applyCouponMetrics(updatedCoupon);
       } catch (error) {
@@ -226,7 +214,6 @@ const BetSlip = ({
         setLoading(false);
       }
     } else {
-      // If not confirmed, just remove locally
       setBets(bets.filter((bet) => bet.id !== id));
     }
   };
@@ -240,7 +227,6 @@ const BetSlip = ({
     const betToConfirm = bets.find(bet => bet.id === id);
     if (!betToConfirm) return;
 
-    // Validate bet fields
     if (!betToConfirm.event_name || !betToConfirm.bet_type || !betToConfirm.line || !betToConfirm.odds) {
       alert('Please fill in all bet fields (Event, Type, Line, Odds)');
       return;
@@ -249,7 +235,6 @@ const BetSlip = ({
     try {
       setLoading(true);
 
-      // Add single bet to API
       const betData = {
         event_name: betToConfirm.event_name,
         bet_type: betToConfirm.bet_type,
@@ -263,7 +248,6 @@ const BetSlip = ({
 
       await api.addSingleBetToCoupon(couponId, betData);
 
-      // Recalculate coupon and then fetch fresh coupon
       const recalcResult = await api.recalculateCoupon(couponId);
       console.log('[UI] After add bet - recalc result:', recalcResult);
       const refreshed = await api.getCoupon(couponId);
@@ -271,7 +255,6 @@ const BetSlip = ({
       console.log('[UI] After add bet - refreshed coupon:', { multiplier: refreshed.multiplier, potential_payout: refreshed.potential_payout });
       applyCouponMetrics(refreshed);
 
-      // Mark bet as confirmed locally
       setBets(bets.map((bet) => (bet.id === id ? { ...bet, confirmed: true } : bet)));
     } catch (error) {
       console.error('Error confirming bet:', error);
@@ -298,7 +281,6 @@ const BetSlip = ({
     setBets(prevBets => {
       return prevBets.map((bet) => {
         if (bet.id === id) {
-          // For discipline, convert to number (ID)
           if (field === 'discipline') {
             if (!value || value === '') {
               return { ...bet, discipline: null };
@@ -320,7 +302,6 @@ const BetSlip = ({
       });
     });
 
-    // If discipline changed, fetch bet types for that discipline
     if (field === 'discipline' && value) {
       try {
         const disciplineId = parseInt(value, 10);
@@ -442,7 +423,6 @@ const BetSlip = ({
       console.log('[UI] OCR - Selected file:', file.name, file.type, file.size);
       const result = await api.extractCouponViaOCR(file);
       console.log('[UI] OCR - Server response:', result);
-      // po sukcesie chowamy ewentualny dropzone i pokażemy modal sukcesu po sparsowaniu
       setShowOcrDropzone(false);
     } catch (err) {
       console.error('[UI] OCR - Error:', err);

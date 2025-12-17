@@ -1,4 +1,3 @@
-// Typy finansowe
 export type TransactionType = 'DEPOSIT' | 'WITHDRAWAL';
 
 export interface BookmakerAccount {

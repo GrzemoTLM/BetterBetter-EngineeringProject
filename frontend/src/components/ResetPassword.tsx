@@ -98,7 +98,6 @@ const ResetPassword = ({ onBackToLogin, onResetSent }: ResetPasswordProps) => {
     }
   };
 
-  // Step 1: Enter Email
   if (step === 'email') {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background-page p-4">
@@ -165,7 +164,6 @@ const ResetPassword = ({ onBackToLogin, onResetSent }: ResetPasswordProps) => {
     );
   }
 
-  // Step 2: Enter Code
   if (step === 'code') {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background-page p-4">
@@ -243,7 +241,6 @@ const ResetPassword = ({ onBackToLogin, onResetSent }: ResetPasswordProps) => {
     );
   }
 
-  // Step 3: Set New Password
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background-page p-4">
       <div className="w-full max-w-[480px] bg-background-card rounded-2xl shadow-xl p-10">

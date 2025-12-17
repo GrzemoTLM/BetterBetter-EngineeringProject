@@ -1,4 +1,3 @@
-// pl.json - Polskie tłumaczenia
 export const pl = {
   common: {
     save: 'Zapisz',

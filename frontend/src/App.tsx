@@ -35,10 +35,8 @@ function AppContent() {
   >('dashboard');
   const [challengeId, setChallengeId] = useState<string | null>(null);
 
-  // Check if user is superuser
   const isSuperuser = user?.is_superuser === true;
 
-  // Money Flow state
   type MoneyFlowFilters = Record<string, string>;
   const [moneyFlowFilters, setMoneyFlowFilters] = useState<MoneyFlowFilters>({});
   const [chartMode, setChartMode] = useState<'value' | 'count'>('value');
@@ -49,7 +47,6 @@ function AppContent() {
   const [moneyFlowLoading, setMoneyFlowLoading] = useState(false);
   const [moneyFlowError, setMoneyFlowError] = useState<string | null>(null);
 
-  // Sync authState with isAuthenticated
   useEffect(() => {
     if (isAuthenticated && authState !== 'authenticated') {
       setAuthState('authenticated');
@@ -58,22 +55,18 @@ function AppContent() {
     }
   }, [isAuthenticated, authState]);
 
-  // If trying to access admin panel without superuser rights, redirect to dashboard
   useEffect(() => {
     if (activeView === 'admin' && !isSuperuser) {
       setActiveView('dashboard');
     }
   }, [activeView, isSuperuser]);
 
-  // Fetch money flow data when authenticated and on money-flow view
   useEffect(() => {
     if (isAuthenticated && activeView === 'money-flow') {
       fetchMoneyFlowData(moneyFlowFilters);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, activeView]);
 
-  // Show loading during auth initialization
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background-page">
@@ -82,7 +75,6 @@ function AppContent() {
     );
   }
 
-  // Authentication flow handlers
   const handleLoginContinue = (challengeId?: string) => {
     if (challengeId) {
       setChallengeId(challengeId);
@@ -110,7 +102,6 @@ function AppContent() {
     setAuthState('login');
   };
 
-  // Show authentication screens if not authenticated
   if (!isAuthenticated) {
     if (authState === 'login') {
       return (
@@ -153,14 +144,12 @@ function AppContent() {
     );
   }
 
-  // Logout handler
   const handleLogout = () => {
     logout();
     setAuthState('login');
     setChallengeId(null);
   };
 
-  // Money Flow data fetching
   const fetchMoneyFlowData = async (filters?: MoneyFlowFilters) => {
     if (!isAuthenticated) return;
 
@@ -175,7 +164,6 @@ function AppContent() {
 
       setTransactions(transactionsData);
 
-      // Calculate filtered summary from transaction data
       let filtered = summaryData;
 
       if (filters && Object.keys(filters).length > 0) {
@@ -210,7 +198,6 @@ function AppContent() {
     }
   };
 
-  // Money Flow filter handlers
   const handleApplyFilters = (filters: MoneyFlowFilters) => {
     setMoneyFlowFilters(filters);
     fetchMoneyFlowData(filters);
@@ -235,7 +222,6 @@ function AppContent() {
     }
   };
 
-  // Show main app if authenticated
   return (
     <div className="min-h-screen">
       <Sidebar

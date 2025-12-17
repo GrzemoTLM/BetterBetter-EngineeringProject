@@ -62,7 +62,6 @@ const EditCouponModal = ({ couponId, isOpen, onClose, onUpdated }: EditCouponMod
       console.log('[GET] coupon on close', { couponId, status: refreshed.status });
       onUpdated?.(refreshed);
     } catch {
-      // ignore
     } finally {
       setLoading(false);
       onClose();

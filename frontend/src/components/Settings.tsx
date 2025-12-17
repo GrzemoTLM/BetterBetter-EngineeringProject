@@ -53,7 +53,6 @@ const Settings = () => {
 
       setSettings(settingsWithCurrency);
 
-      // Synchronize language from backend locale
       if (data.locale && data.locale.startsWith('pl')) {
         setLanguage('pl');
       } else if (data.locale && data.locale.startsWith('en')) {
@@ -107,7 +106,6 @@ const Settings = () => {
       const settingsWithCurrency = {
         ...updated,
         basic_currency: updatedWithPreferred.preferred_currency || updated.basic_currency || 'USD',
-        // Ensure predefined_bet_values is always an array
         predefined_bet_values: Array.isArray(updated.predefined_bet_values)
           ? updated.predefined_bet_values
           : []
@@ -137,7 +135,6 @@ const Settings = () => {
   };
 
   const handle2FAVerificationSuccess = async () => {
-    // After successful verification, update settings to reflect 2FA is enabled
     if (settings) {
       setSettings({
         ...settings,

@@ -19,7 +19,6 @@ const Help = () => {
     description: '',
   });
 
-  // Fetch categories on component mount
   useEffect(() => {
     const fetchCategories = async () => {
       try {
