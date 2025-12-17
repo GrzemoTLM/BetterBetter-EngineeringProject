@@ -12,9 +12,10 @@ interface AddCouponProps {
   onCouponCreated?: () => void;
   initialCouponId?: number;
   initialBookmakerAccountId?: number;
+  initialBets?: Array<{ event_name: string; bet_type: string; line: string; odds: string; start_time?: string; discipline?: string | null }>;
 }
 
-const AddCoupon = ({ onClose, strategies = [], onCouponCreated, initialCouponId, initialBookmakerAccountId }: AddCouponProps) => {
+const AddCoupon = ({ onClose, strategies = [], onCouponCreated, initialCouponId, initialBookmakerAccountId, initialBets }: AddCouponProps) => {
   const [fetchedStrategies, setFetchedStrategies] = useState<Strategy[]>(strategies);
   const [ocrCoupon, setOcrCoupon] = useState<OcrExtractResponse | null>(null);
 
@@ -65,6 +66,7 @@ const AddCoupon = ({ onClose, strategies = [], onCouponCreated, initialCouponId,
               initialCouponId={initialCouponId}
               initialBookmakerAccountId={initialBookmakerAccountId ?? ocrCoupon?.bookmaker_account}
               initialCouponFromOcr={ocrCoupon}
+              initialBets={initialBets}
             />
           </div>
         </div>

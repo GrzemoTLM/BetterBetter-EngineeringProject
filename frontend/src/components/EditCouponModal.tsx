@@ -1,18 +1,28 @@
-import { X, CheckCircle } from 'lucide-react';
+import { X, CheckCircle, Copy } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import api from '../services/api';
 import type { Coupon } from '../types/coupons';
 import { useCurrency } from '../hooks/useCurrency';
 import { CheckCircle as CheckIcon, XCircle as XIcon, Circle as PendingIcon } from 'lucide-react';
 
+interface CopiedBet {
+  event_name: string;
+  bet_type: string;
+  line: string;
+  odds: string;
+  start_time?: string;
+  discipline?: string | null;
+}
+
 interface EditCouponModalProps {
   couponId: number;
   isOpen: boolean;
   onClose: () => void;
   onUpdated?: (updated: Coupon) => void;
+  onCopy?: (bets: CopiedBet[]) => void;
 }
 
-const EditCouponModal = ({ couponId, isOpen, onClose, onUpdated }: EditCouponModalProps) => {
+const EditCouponModal = ({ couponId, isOpen, onClose, onUpdated, onCopy }: EditCouponModalProps) => {
   const [coupon, setCoupon] = useState<Coupon | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,9 +51,7 @@ const EditCouponModal = ({ couponId, isOpen, onClose, onUpdated }: EditCouponMod
 
     try {
       setLoading(true);
-      console.log('[PATCH] force win coupon', { couponId });
       const updated = await api.forceWinCoupon(couponId);
-      console.log('[GET] coupon after force win', { couponId, status: updated.status });
       setCoupon(updated);
       onUpdated?.(updated);
       onClose();
@@ -59,12 +67,28 @@ const EditCouponModal = ({ couponId, isOpen, onClose, onUpdated }: EditCouponMod
     try {
       setLoading(true);
       const refreshed = await api.getCoupon(couponId);
-      console.log('[GET] coupon on close', { couponId, status: refreshed.status });
       onUpdated?.(refreshed);
-    } catch {
+    } catch (err) {
+      console.error('Failed to refresh coupon on close', err);
     } finally {
       setLoading(false);
       onClose();
+    }
+  };
+
+  const handleCopyCoupon = async () => {
+    if (!coupon) return;
+    try {
+      setLoading(true);
+      const copyData = await api.copyCoupon(couponId);
+      if (copyData.bets && onCopy) {
+        onCopy(copyData.bets);
+        onClose();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to copy coupon');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -74,7 +98,6 @@ const EditCouponModal = ({ couponId, isOpen, onClose, onUpdated }: EditCouponMod
     if (!proceed) return;
     try {
       setLoading(true);
-      console.log('[DELETE] coupon', { couponId: coupon.id });
       await api.deleteCoupon(coupon.id);
       onUpdated?.(coupon);
       onClose();
@@ -221,10 +244,8 @@ const EditCouponModal = ({ couponId, isOpen, onClose, onUpdated }: EditCouponMod
                                     try {
                                       setLoading(true);
                                       const betIdentifier = b.id ?? `${b.event_name}-${b.line}-${b.odds}`;
-                                      console.log('[PATCH] settle bet won', { couponId, betId: betIdentifier });
                                       await api.settleBet(couponId, betIdentifier, 'won');
                                       const refreshed = await api.getCoupon(couponId);
-                                      console.log('[GET] coupon after bet won', { couponId, status: refreshed.status });
                                       setCoupon(refreshed);
                                       onUpdated?.(refreshed);
                                     } catch (err) {
@@ -244,10 +265,8 @@ const EditCouponModal = ({ couponId, isOpen, onClose, onUpdated }: EditCouponMod
                                     try {
                                       setLoading(true);
                                       const betIdentifier = b.id ?? `${b.event_name}-${b.line}-${b.odds}`;
-                                      console.log('[PATCH] settle bet lost', { couponId, betId: betIdentifier });
                                       await api.settleBet(couponId, betIdentifier, 'lost');
                                       const refreshed = await api.getCoupon(couponId);
-                                      console.log('[GET] coupon after bet lost', { couponId, status: refreshed.status });
                                       setCoupon(refreshed);
                                       onUpdated?.(refreshed);
                                     } catch (err) {
@@ -271,7 +290,16 @@ const EditCouponModal = ({ couponId, isOpen, onClose, onUpdated }: EditCouponMod
               </div>
 
               <div className="flex justify-end gap-2">
-                {/* Hide force win if coupon is already settled */}
+                {(coupon.status || '').toLowerCase().includes('progress') && (
+                  <button
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                    onClick={handleCopyCoupon}
+                    disabled={loading}
+                  >
+                    <Copy size={18} />
+                    Copy Bets
+                  </button>
+                )}
                 {!['won','lost'].includes((coupon.status || '').toLowerCase()) && (
                   <button
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-emerald-600 text-white hover:bg-emerald-700"

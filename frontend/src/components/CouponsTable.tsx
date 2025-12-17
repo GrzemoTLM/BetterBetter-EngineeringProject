@@ -7,6 +7,15 @@ import type { Coupon } from '../types/coupons';
 import { useCurrency } from '../hooks/useCurrency';
 import EditCouponModal from './EditCouponModal';
 
+interface CopiedBet {
+  event_name: string;
+  bet_type: string;
+  line: string;
+  odds: string;
+  start_time?: string;
+  discipline?: string | null;
+}
+
 interface CouponsTableProps {
   bulkMode?: boolean;
   selectedIds?: Set<number>;
@@ -15,6 +24,7 @@ interface CouponsTableProps {
   hideEdit?: boolean;
   showOnlySettled?: boolean;
   customFilteredCoupons?: Coupon[] | null;
+  onCopyBets?: (bets: CopiedBet[]) => void;
 }
 
 export interface CouponsTableRef {
@@ -108,7 +118,7 @@ const renderStatusBadge = (derived: string): ReactNode => (
   </span>
 );
 
-const CouponsTable = forwardRef<CouponsTableRef, CouponsTableProps>(({ bulkMode = false, selectedIds = new Set(), onToggleSelect, filters, hideEdit = false, showOnlySettled = false, customFilteredCoupons }, ref) => {
+const CouponsTable = forwardRef<CouponsTableRef, CouponsTableProps>(({ bulkMode = false, selectedIds = new Set(), onToggleSelect, filters, hideEdit = false, showOnlySettled = false, customFilteredCoupons, onCopyBets }, ref) => {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -211,6 +221,7 @@ const CouponsTable = forwardRef<CouponsTableRef, CouponsTableProps>(({ bulkMode 
         isOpen={isEditOpen && editingCouponId !== null}
         onClose={() => setIsEditOpen(false)}
         onUpdated={async () => { await fetchCoupons(); }}
+        onCopy={onCopyBets}
       />
       <div className="p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">

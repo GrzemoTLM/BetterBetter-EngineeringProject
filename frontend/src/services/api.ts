@@ -991,6 +991,26 @@ class ApiService {
     }
   }
 
+  async copyCoupon(id: number): Promise<{ bets: Array<{ event_name: string; bet_type: string; line: string; odds: string; start_time?: string; discipline?: string | null }> }> {
+    try {
+      const url = `${API_ENDPOINTS.COUPONS.LIST}${id}/copy/`;
+      const response = await this.axiosInstance.get(url);
+
+      const data = response.data;
+      if (Array.isArray(data)) {
+        return { bets: data };
+      }
+
+      if (data.bets) {
+        return data;
+      }
+
+      return data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
   async addBetsToCoupon(
     couponId: number,
     bets: Array<{
