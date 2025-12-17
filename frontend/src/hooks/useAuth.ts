@@ -1,6 +1,3 @@
-/**
- * Hook do użytkowania AuthContext
- */
 
 import { useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';

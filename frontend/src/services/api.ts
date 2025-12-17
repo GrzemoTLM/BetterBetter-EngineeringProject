@@ -235,6 +235,8 @@ export type StrategySummaryDetail = StrategySummaryItem;
 
 class ApiService {
   private axiosInstance: AxiosInstance;
+  private isRefreshing = false;
+  private refreshSubscribers: Array<(token: string) => void> = [];
 
   constructor() {
     this.axiosInstance = axios.create({
@@ -258,10 +260,50 @@ class ApiService {
       (response) => {
         return response;
       },
-      (error) => {
-        if (error.response?.status === 401) {
-          this.removeToken();
-          window.location.href = '/login';
+      async (error) => {
+        const originalRequest = error.config;
+
+        if (error.response?.status === 401 && !originalRequest._retry) {
+          if (this.isRefreshing) {
+            return new Promise((resolve) => {
+              this.refreshSubscribers.push((token: string) => {
+                originalRequest.headers.Authorization = `Bearer ${token}`;
+                resolve(this.axiosInstance(originalRequest));
+              });
+            });
+          }
+
+          originalRequest._retry = true;
+          this.isRefreshing = true;
+
+          const refreshToken = this.getRefreshToken();
+          if (!refreshToken) {
+            this.isRefreshing = false;
+            this.removeToken();
+            window.location.href = '/login';
+            return Promise.reject(error);
+          }
+
+          try {
+            const response = await axios.post(`${API_BASE_URL}${API_ENDPOINTS.AUTH.REFRESH}`, {
+              refresh: refreshToken,
+            });
+
+            const newAccessToken = response.data.access;
+            this.setToken(newAccessToken);
+
+            this.refreshSubscribers.forEach((callback) => callback(newAccessToken));
+            this.refreshSubscribers = [];
+
+            originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+            return this.axiosInstance(originalRequest);
+          } catch (refreshError) {
+            this.removeToken();
+            window.location.href = '/login';
+            return Promise.reject(refreshError);
+          } finally {
+            this.isRefreshing = false;
+          }
         }
 
         return Promise.reject(error);
@@ -270,24 +312,24 @@ class ApiService {
   }
 
   setToken(token: string): void {
-    localStorage.setItem('auth_token', token);
+    sessionStorage.setItem('auth_token', token);
   }
 
   getToken(): string | null {
-    return localStorage.getItem('auth_token');
+    return sessionStorage.getItem('auth_token');
   }
 
   setRefreshToken(token: string): void {
-    localStorage.setItem('refresh_token', token);
+    sessionStorage.setItem('refresh_token', token);
   }
 
   getRefreshToken(): string | null {
-    return localStorage.getItem('refresh_token');
+    return sessionStorage.getItem('refresh_token');
   }
 
   removeToken(): void {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('refresh_token');
+    sessionStorage.removeItem('auth_token');
+    sessionStorage.removeItem('refresh_token');
   }
 
   private getErrorMessage(error: unknown): string {
@@ -395,7 +437,8 @@ class ApiService {
 
   async register(data: RegisterRequest): Promise<AuthResponse> {
     try {
-      const response = await this.axiosInstance.post<AuthResponse>(API_ENDPOINTS.AUTH.REGISTER, data);
+      const response =
+          await this.axiosInstance.post<AuthResponse>(API_ENDPOINTS.AUTH.REGISTER, data);
       if (response.data.access) {
         this.setToken(response.data.access);
         if (response.data.refresh) {
