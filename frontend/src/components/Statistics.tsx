@@ -16,7 +16,6 @@ import type { Coupon } from '../types/coupons';
 import type { FilterResult } from '../services/api';
 
 const Statistics = () => {
-  // Dates empty by default – only sent when provided
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [bookmakerAccountId, setBookmakerAccountId] = useState<'All' | number>('All');
@@ -29,7 +28,6 @@ const Statistics = () => {
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
 
-  // Custom filter results
   const [customFilterResults, setCustomFilterResults] = useState<FilterResult | null>(null);
   const [filteredCoupons, setFilteredCoupons] = useState<Coupon[] | null>(null);
   const [customFilterActive, setCustomFilterActive] = useState(false);
@@ -86,7 +84,6 @@ const Statistics = () => {
   }, [loadSummary]);
 
   const handleApplyFilters = () => {
-    // Clear custom filter when applying regular filters
     setCustomFilterResults(null);
     setFilteredCoupons(null);
     setCustomFilterActive(false);

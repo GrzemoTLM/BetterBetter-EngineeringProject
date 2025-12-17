@@ -19,11 +19,9 @@ export function parseOcrToBets(ocr: OcrExtractResponse): ParsedOcrBet[] {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    // heurystyka: linia z myślnikiem traktujemy jako nazwę meczu
     if (line.includes('-')) {
       const eventLine = line;
 
-      // szukamy w kolejnych kilku liniach czegoś typu "Wynik meczu: 2"
       let betTypeLineIndex = -1;
       for (let j = i + 1; j < Math.min(i + 6, lines.length); j++) {
         if (/Wynik meczu/i.test(lines[j])) {
@@ -37,7 +35,6 @@ export function parseOcrToBets(ocr: OcrExtractResponse): ParsedOcrBet[] {
         const match = betTypeLine.match(/Wynik meczu:\s*(\S+)/i);
         const lineValue = match?.[1] ?? '';
 
-        // kurs: pierwsza liczba po linii z typem
         let odds = '';
         for (let k = betTypeLineIndex + 1; k < Math.min(betTypeLineIndex + 6, lines.length); k++) {
           const oddsMatch = lines[k].match(/^\d+([.,]\d+)?$/);
@@ -54,7 +51,6 @@ export function parseOcrToBets(ocr: OcrExtractResponse): ParsedOcrBet[] {
           odds: odds || '1.00',
         });
 
-        // na razie zakładamy jeden bet na kupon – wyjdziemy po znalezieniu pierwszego
         break;
       }
     }

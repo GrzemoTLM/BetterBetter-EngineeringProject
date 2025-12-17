@@ -26,7 +26,6 @@ const TwoFactorModal: React.FC<TwoFactorModalProps> = ({
   const [copied, setCopied] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  // Step 1: Generate QR code when modal opens and isEnabling is true
   useEffect(() => {
     if (isOpen && isEnabling) {
       generateQRCode();
@@ -38,13 +37,11 @@ const TwoFactorModal: React.FC<TwoFactorModalProps> = ({
       setIsLoading(true);
       setError(null);
       
-      // Call setup endpoint to get QR URI
       const response = await apiService.startTwoFactor({ method: 'totp' });
       
       if (response.otp_uri) {
         setSecret(response.secret || null);
         
-        // Generate QR code from URI
         const qrDataUrl = await QRCode.toDataURL(response.otp_uri, {
           errorCorrectionLevel: 'H',
           type: 'image/png',
@@ -87,13 +84,11 @@ const TwoFactorModal: React.FC<TwoFactorModalProps> = ({
       setIsVerifying(true);
       setError(null);
       
-      // Call verify endpoint
       await apiService.verifyTwoFactor({ code: verificationCode });
       
       setSuccess(true);
       setStep('verify');
       
-      // Call success callback after showing success message
       setTimeout(() => {
         onVerificationSuccess();
         handleClose();

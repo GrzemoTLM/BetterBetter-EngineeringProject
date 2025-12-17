@@ -27,7 +27,6 @@ const SystemHealth = () => {
       }
     }, 5000);
 
-    // initial fetch
     (async () => {
       try {
         setLoading(true);

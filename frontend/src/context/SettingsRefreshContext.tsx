@@ -12,7 +12,6 @@ export const SettingsRefreshProvider: React.FC<{ children: React.ReactNode }> = 
 };
 
 export interface UserSettingsExtended {
-  // ...existing fields...
   favourite_disciplines?: number[];
   favourite_bet_types?: number[];
 }

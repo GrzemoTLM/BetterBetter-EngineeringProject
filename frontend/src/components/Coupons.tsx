@@ -19,12 +19,18 @@ const Coupons = () => {
   const [selectedBookmakerAccountId, setSelectedBookmakerAccountId] = useState<number | null>(null);
   const [showSelectBookmaker, setShowSelectBookmaker] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [copiedBets, setCopiedBets] = useState<Array<{ event_name: string; bet_type: string; line: string; odds: string; start_time?: string; discipline?: string | null }> | null>(null);
   const couponsTableRef = useRef<CouponsTableRef>(null);
 
   const handleCouponCreated = () => {
     if (couponsTableRef.current) {
       couponsTableRef.current.refetch();
     }
+  };
+
+  const handleCopyBets = (bets: Array<{ event_name: string; bet_type: string; line: string; odds: string; start_time?: string; discipline?: string | null }>) => {
+    setCopiedBets(bets);
+    setShowSelectBookmaker(true);
   };
 
   const handleOpenAddCoupon = () => {
@@ -138,6 +144,7 @@ const Coupons = () => {
               return next;
             });
           }}
+          onCopyBets={handleCopyBets}
         />
 
         {/* Action Bar */}
@@ -158,11 +165,13 @@ const Coupons = () => {
             setShowAddCoupon(false);
             setNewCouponId(null);
             setSelectedBookmakerAccountId(null);
+            setCopiedBets(null);
           }}
           strategies={strategies}
           onCouponCreated={handleCouponCreated}
           initialCouponId={newCouponId ?? undefined}
           initialBookmakerAccountId={selectedBookmakerAccountId ?? undefined}
+          initialBets={copiedBets ?? undefined}
         />
       )}
 

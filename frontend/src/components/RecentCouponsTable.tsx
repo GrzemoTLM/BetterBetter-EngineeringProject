@@ -14,7 +14,6 @@ const RecentCouponsTable = () => {
       try {
         setLoading(true);
         const data = await api.getCoupons();
-        // Sort by creation date (newest first) and take last 5
         const recentCoupons = data
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
           .slice(0, 5);

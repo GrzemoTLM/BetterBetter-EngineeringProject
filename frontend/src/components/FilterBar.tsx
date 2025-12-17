@@ -102,7 +102,6 @@ const FilterBar = ({
   const [selectedBookmaker, setSelectedBookmaker] = useState(filters.bookmaker || '');
   const [selectedTransactionType, setSelectedTransactionType] = useState(filters.transaction_type || '');
 
-  // Sync local state with props
   useEffect(() => {
     setStartDate(filters.date_from || '');
     setEndDate(filters.date_to || '');

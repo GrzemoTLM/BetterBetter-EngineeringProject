@@ -28,11 +28,9 @@ const Login = ({ onContinue, onNavigateToRegister, onNavigateToReset }: LoginPro
     try {
       const response = await login(email, password);
       
-      // If 2FA is required, pass challenge_id to parent
       if (response?.challenge_id) {
         onContinue(response.challenge_id);
       } else {
-        // Login successful without 2FA
         onContinue();
       }
     } catch (err) {
@@ -92,7 +90,6 @@ const Login = ({ onContinue, onNavigateToRegister, onNavigateToReset }: LoginPro
           }
 
           console.log('Redirecting...');
-          // Reload to trigger auth check
           window.location.reload();
         } catch (err) {
           console.error('Google login error:', err);

@@ -26,7 +26,6 @@ const Sidebar = ({ activeView, onViewChange, onLogout, onLanguageChange }: Sideb
   const { user } = useAuth();
   const [isChangingLanguage, setIsChangingLanguage] = useState(false);
 
-  // Check if user is superuser
   const isSuperuser = user?.is_superuser === true;
 
   console.log('Sidebar: User data:', user);

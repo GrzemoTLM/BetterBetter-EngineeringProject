@@ -1,7 +1,6 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const ResultsBarChart = () => {
-  // Dummy data for last week
   const data = [
     { day: 'Mon', value: 1200 },
     { day: 'Tue', value: 1900 },

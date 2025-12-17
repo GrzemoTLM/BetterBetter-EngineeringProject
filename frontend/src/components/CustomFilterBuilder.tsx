@@ -205,9 +205,7 @@ const CustomFilterBuilder = ({ onClose, onApplyFilter }: CustomFilterBuilderProp
     try {
       let result: FilterResult;
 
-      // Check if it's the new server format with query_groups
       if (query.query_groups && query.query_groups.length > 0) {
-        // Extract conditions from query_groups
         const allConditions: QueryCondition[] = [];
         let mainLogic: 'AND' | 'OR' = 'AND';
 
@@ -220,12 +218,10 @@ const CustomFilterBuilder = ({ onClose, onApplyFilter }: CustomFilterBuilderProp
           }
         });
 
-        // Set up the filter mode as advanced
         setFilterMode('advanced');
         setConditions(allConditions);
         setLogic(mainLogic);
 
-        // Build simple filter params from server fields
         const simpleParams: UniversalFilterParams = {
           filter_mode: 'all',
         };
@@ -235,7 +231,6 @@ const CustomFilterBuilder = ({ onClose, onApplyFilter }: CustomFilterBuilderProp
         if (query.bookmaker) simpleParams.bookmaker = query.bookmaker;
         if (query.coupon_type) simpleParams.coupon_type = query.coupon_type;
 
-        // If we have conditions, use query builder
         if (allConditions.length > 0) {
           const queryPayload = {
             conditions: allConditions,
@@ -245,12 +240,10 @@ const CustomFilterBuilder = ({ onClose, onApplyFilter }: CustomFilterBuilderProp
           console.log('[CustomFilter] Executing loaded query builder:', queryPayload);
           result = await api.filterCouponsQueryBuilder(queryPayload);
         } else {
-          // Use simple filter
           console.log('[CustomFilter] Executing loaded simple filter:', simpleParams);
           result = await api.filterCouponsUniversal(simpleParams);
         }
       } else if (query.query_type === 'simple' && query.params) {
-        // Original format: simple filter with params
         setFilterMode('simple');
         setSimpleFilter(query.params);
 
@@ -264,7 +257,6 @@ const CustomFilterBuilder = ({ onClose, onApplyFilter }: CustomFilterBuilderProp
         console.log('[CustomFilter] Executing loaded simple filter:', cleanParams);
         result = await api.filterCouponsUniversal(cleanParams);
       } else if (query.query_type === 'advanced' && query.conditions) {
-        // Original format: advanced filter with conditions
         setFilterMode('advanced');
         setConditions(query.conditions);
         setLogic(query.logic || 'AND');
@@ -281,7 +273,6 @@ const CustomFilterBuilder = ({ onClose, onApplyFilter }: CustomFilterBuilderProp
         console.log('[CustomFilter] Executing loaded query builder:', queryPayload);
         result = await api.filterCouponsQueryBuilder(queryPayload);
       } else {
-        // Fallback: try to build a simple query from available fields
         const simpleParams: UniversalFilterParams = {
           filter_mode: 'all',
         };
@@ -300,13 +291,11 @@ const CustomFilterBuilder = ({ onClose, onApplyFilter }: CustomFilterBuilderProp
 
       console.log('[CustomFilter] Loaded query result:', result);
 
-      // Apply the results immediately
       const coupons = result.coupons || result.results || [];
       if (coupons.length > 0 || result.count >= 0) {
         onApplyFilter?.(coupons, result);
         onClose();
       } else {
-        // Show results in modal if no coupons found
         setResults(result);
       }
     } catch (error) {

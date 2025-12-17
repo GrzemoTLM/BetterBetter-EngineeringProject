@@ -1,6 +1,3 @@
-/**
- * Typy dla modułu autentykacji
- */
 
 export interface LoginRequest {
   email: string;

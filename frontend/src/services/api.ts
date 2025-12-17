@@ -8,7 +8,6 @@ import type { Strategy, CreateStrategyRequest } from '../types/strategies';
 import type { Coupon, CreateCouponRequest, BetType, OcrExtractResponse } from '../types/coupons';
 import type { Bet } from '../types/coupons';
 
-// Filter types for universal filter and query builder
 export interface UniversalFilterParams {
   team_name?: string;
   position?: 'home' | 'away';
@@ -55,7 +54,6 @@ export interface SavedQuery {
   order_by?: string;
   created_at?: string;
   updated_at?: string;
-  // Server format fields
   start_date?: string | null;
   end_date?: string | null;
   bookmaker?: string | null;
@@ -74,7 +72,6 @@ export interface SaveQueryRequest {
   logic?: 'AND' | 'OR';
   group_by?: string;
   order_by?: string;
-  // Server format fields
   start_date?: string | null;
   end_date?: string | null;
   bookmaker?: string | null;
@@ -159,7 +156,6 @@ export interface LoggedInUser {
 }
 
 export interface CouponSummary {
-  // shape will be clarified from backend response; keep it generic for now
   [key: string]: unknown;
 }
 
@@ -183,7 +179,6 @@ export interface MonthlyBalanceTrendResponse {
   points: MonthlyBalanceTrendPoint[];
 }
 
-// New: summary per bookmaker accounts
 export type BookmakerAccountsSummaryItem = {
   account_id: number;
   bookmaker: string;
@@ -219,7 +214,6 @@ export interface ReportToggleResponse {
   is_active: boolean;
 }
 
-// Strategies - Summary types
 export type StrategySummaryItem = {
   strategy_id: number;
   strategy_name: string;
@@ -235,6 +229,8 @@ export type StrategySummaryDetail = StrategySummaryItem;
 
 class ApiService {
   private axiosInstance: AxiosInstance;
+  private isRefreshing = false;
+  private refreshSubscribers: Array<(token: string) => void> = [];
 
   constructor() {
     this.axiosInstance = axios.create({
@@ -258,10 +254,50 @@ class ApiService {
       (response) => {
         return response;
       },
-      (error) => {
-        if (error.response?.status === 401) {
-          this.removeToken();
-          window.location.href = '/login';
+      async (error) => {
+        const originalRequest = error.config;
+
+        if (error.response?.status === 401 && !originalRequest._retry) {
+          if (this.isRefreshing) {
+            return new Promise((resolve) => {
+              this.refreshSubscribers.push((token: string) => {
+                originalRequest.headers.Authorization = `Bearer ${token}`;
+                resolve(this.axiosInstance(originalRequest));
+              });
+            });
+          }
+
+          originalRequest._retry = true;
+          this.isRefreshing = true;
+
+          const refreshToken = this.getRefreshToken();
+          if (!refreshToken) {
+            this.isRefreshing = false;
+            this.removeToken();
+            window.location.href = '/login';
+            return Promise.reject(error);
+          }
+
+          try {
+            const response = await axios.post(`${API_BASE_URL}${API_ENDPOINTS.AUTH.REFRESH}`, {
+              refresh: refreshToken,
+            });
+
+            const newAccessToken = response.data.access;
+            this.setToken(newAccessToken);
+
+            this.refreshSubscribers.forEach((callback) => callback(newAccessToken));
+            this.refreshSubscribers = [];
+
+            originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+            return this.axiosInstance(originalRequest);
+          } catch (refreshError) {
+            this.removeToken();
+            window.location.href = '/login';
+            return Promise.reject(refreshError);
+          } finally {
+            this.isRefreshing = false;
+          }
         }
 
         return Promise.reject(error);
@@ -270,24 +306,24 @@ class ApiService {
   }
 
   setToken(token: string): void {
-    localStorage.setItem('auth_token', token);
+    sessionStorage.setItem('auth_token', token);
   }
 
   getToken(): string | null {
-    return localStorage.getItem('auth_token');
+    return sessionStorage.getItem('auth_token');
   }
 
   setRefreshToken(token: string): void {
-    localStorage.setItem('refresh_token', token);
+    sessionStorage.setItem('refresh_token', token);
   }
 
   getRefreshToken(): string | null {
-    return localStorage.getItem('refresh_token');
+    return sessionStorage.getItem('refresh_token');
   }
 
   removeToken(): void {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('refresh_token');
+    sessionStorage.removeItem('auth_token');
+    sessionStorage.removeItem('refresh_token');
   }
 
   private getErrorMessage(error: unknown): string {
@@ -336,7 +372,6 @@ class ApiService {
           try {
             return JSON.stringify(data);
           } catch {
-            // ignore
           }
         }
       }
@@ -395,7 +430,8 @@ class ApiService {
 
   async register(data: RegisterRequest): Promise<AuthResponse> {
     try {
-      const response = await this.axiosInstance.post<AuthResponse>(API_ENDPOINTS.AUTH.REGISTER, data);
+      const response =
+          await this.axiosInstance.post<AuthResponse>(API_ENDPOINTS.AUTH.REGISTER, data);
       if (response.data.access) {
         this.setToken(response.data.access);
         if (response.data.refresh) {
@@ -420,7 +456,6 @@ class ApiService {
       }
     }
     catch {
-      // Silently handle logout errors
     }
     finally {
       this.removeToken();
@@ -728,7 +763,6 @@ class ApiService {
     }
   }
 
-  // New: fetch bookmaker accounts summary
   async getBookmakerAccountsSummary(params?: Record<string, string>): Promise<BookmakerAccountsSummary> {
     try {
       const response = await this.axiosInstance.get<BookmakerAccountsSummary>(API_ENDPOINTS.FINANCES.BOOKMAKER_ACCOUNTS_SUMMARY, {
@@ -843,7 +877,6 @@ class ApiService {
     }
   }
 
-  // Strategies
   async getStrategies(): Promise<Strategy[]> {
     try {
       const response = await this.axiosInstance.get<Strategy[]>(API_ENDPOINTS.STRATEGIES.LIST);
@@ -888,7 +921,6 @@ class ApiService {
     }
   }
 
-  // Strategies - Summary
   async getStrategiesSummary(params?: Record<string, string>): Promise<StrategySummaryResponse> {
     try {
       const response = await this.axiosInstance.get<StrategySummaryResponse>(API_ENDPOINTS.STRATEGIES.SUMMARY_LIST, { params });
@@ -907,7 +939,6 @@ class ApiService {
     }
   }
 
-  // Coupons
   async createCoupon(data: CreateCouponRequest): Promise<Coupon> {
     try {
       console.log('[API] createCoupon - URL:', API_ENDPOINTS.COUPONS.CREATE);
@@ -955,6 +986,26 @@ class ApiService {
       const url = `${API_ENDPOINTS.COUPONS.LIST}${id}/`;
       const response = await this.axiosInstance.get<Coupon>(url);
       return response.data;
+    } catch (error) {
+      throw new Error(this.getErrorMessage(error));
+    }
+  }
+
+  async copyCoupon(id: number): Promise<{ bets: Array<{ event_name: string; bet_type: string; line: string; odds: string; start_time?: string; discipline?: string | null }> }> {
+    try {
+      const url = `${API_ENDPOINTS.COUPONS.LIST}${id}/copy/`;
+      const response = await this.axiosInstance.get(url);
+
+      const data = response.data;
+      if (Array.isArray(data)) {
+        return { bets: data };
+      }
+
+      if (data.bets) {
+        return data;
+      }
+
+      return data;
     } catch (error) {
       throw new Error(this.getErrorMessage(error));
     }
@@ -1131,7 +1182,6 @@ class ApiService {
     }
   }
 
-  // OCR: upload image and parse coupon data
   async extractCouponViaOCR(file: File): Promise<OcrExtractResponse> {
     try {
       const formData = new FormData();
@@ -1269,7 +1319,6 @@ class ApiService {
     }
   }
 
-  // Backup methods
   async getBackups(): Promise<{ filename: string; size_bytes: number; size_kb: number; created_at: string; timestamp: string }[] | { backups: { filename: string; size_bytes: number; size_kb: number; created_at: string; timestamp: string }[] }> {
     try {
       const response = await this.axiosInstance.get('/api/monitoring/backup/');

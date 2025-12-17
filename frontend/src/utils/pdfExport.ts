@@ -88,7 +88,6 @@ export const exportTransactionsToPDF = (data: ExportData) => {
         margin: { left: 14 }
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       yPosition = (doc as any).lastAutoTable.finalY + 10;
     }
 
@@ -117,7 +116,6 @@ export const exportTransactionsToPDF = (data: ExportData) => {
         margin: { left: 14 }
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       yPosition = (doc as any).lastAutoTable.finalY + 10;
     }
   }

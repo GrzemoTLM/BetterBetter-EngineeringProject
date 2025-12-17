@@ -26,26 +26,21 @@ const toNumber = (v: unknown): number | undefined => {
 const StatisticsKPIs = ({ summary }: StatisticsKPIsProps) => {
   const s = (summary as Record<string, unknown>) || {};
 
-  // Totals
   const totalCoupons = toNumber(s.total_coupons) ?? toNumber(s.count) ?? 0;
   const wonCoupons = toNumber(s.won_coupons) ?? toNumber(s.won_count) ?? 0;
   const lostCoupons = toNumber(s.lost_coupons) ?? toNumber(s.lost_count) ?? 0;
 
-  // Win rate calculated only from finished coupons (won + lost), excluding in_progress
   const finishedCoupons = wonCoupons + lostCoupons;
   const winRatePercent = finishedCoupons > 0 ? (wonCoupons / finishedCoupons) * 100 : 0;
 
-  // Money-related values (strings or numbers)
   const totalStake = toNumber(s.total_stake) ?? 0;
   const realizedProfit = toNumber(s.realized_profit) ?? toNumber(s.profit) ?? 0;
 
-  // Yield (prefer explicit yield, then roi, then derive from profit/totalStake)
   const yieldFromSummary = toNumber(s.yield);
   const roiMaybe = toNumber(s.roi);
   const derivedYield = totalStake ? (realizedProfit / totalStake) * 100 : 0;
   const yieldPercent = yieldFromSummary ?? roiMaybe ?? derivedYield;
 
-  // Avg odds / multiplier (check avg_coupon_odds first, then avg_multiplier, then avg_odds)
   const avgMultiplier = toNumber(s.avg_coupon_odds) ?? toNumber(s.avg_multiplier) ?? toNumber(s.avg_odds) ?? 0;
 
   const formatMoney = (value: number) =>

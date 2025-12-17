@@ -71,7 +71,6 @@ const TicketsHelpPage = () => {
       const detailedTicket = await api.getTicketDetail(ticket.id.toString());
       setSelectedTicket(detailedTicket);
       } catch {
-        // Silently fail
       } finally {
       setLoadingDetail(false);
     }
@@ -125,7 +124,6 @@ const TicketsHelpPage = () => {
 
       setCommentContent('');
     } catch {
-      // Silently fail
     } finally {
       setLoadingComment(false);
     }

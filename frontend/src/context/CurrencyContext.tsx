@@ -26,7 +26,6 @@ export const CurrencyProvider: React.FC<CurrencyProviderProps> = ({ children }) 
   useEffect(() => {
     const loadCurrency = async () => {
       try {
-        // Only load if user is authenticated
         const token = apiService.getToken();
         if (!token) {
           setCurrencyState('USD');
@@ -72,7 +71,6 @@ export const CurrencyProvider: React.FC<CurrencyProviderProps> = ({ children }) 
       maximumFractionDigits: 2
     });
 
-    // For USD, symbol before number; for EUR and PLN, symbol after number
     if (currency === 'USD') {
       return `${getCurrencySymbol()}${formatted}`;
     } else {
