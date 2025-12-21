@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
+import { useAuth } from '../hooks/useAuth';
 import type { Ticket } from '../types/tickets';
 import {
   AlertCircle,
@@ -12,6 +13,7 @@ import {
 } from 'lucide-react';
 
 const TicketsAdminPage = () => {
+  const { user } = useAuth();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -21,22 +23,28 @@ const TicketsAdminPage = () => {
   const [commentContent, setCommentContent] = useState('');
   const [loadingComment, setLoadingComment] = useState(false);
 
-  useEffect(() => {
-    fetchTickets();
-  }, []);
-
   const fetchTickets = async () => {
     try {
       setLoading(true);
-      const data = await api.getTickets();
+      const params = user?.is_superuser ? { admin: true } : {};
+      console.log('Fetching tickets with params:', params);
+      const data = await api.getTickets(params);
+      console.log('Fetched tickets:', data);
       setTickets(data);
       setError(null);
-    } catch {
+    } catch (error) {
+      console.error('Error fetching tickets:', error);
       setError('Failed to load tickets');
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (user) {
+      fetchTickets();
+    }
+  }, [user]);
 
   const handleSelectTicket = async (ticket: Ticket) => {
     try {
@@ -253,7 +261,8 @@ const TicketsAdminPage = () => {
               </button>
             ) : (
               <h3 className="text-lg font-semibold text-text-primary">Support Tickets</h3>
-            )}
+            )
+            }
             <button
               onClick={() => {
                 setShowModal(false);

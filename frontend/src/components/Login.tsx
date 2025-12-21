@@ -110,7 +110,7 @@ const Login = ({ onContinue, onNavigateToRegister, onNavigateToReset }: LoginPro
       <div className="w-full max-w-[480px] bg-background-card rounded-2xl shadow-xl p-10">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-heading mb-2">BetBetter</h1>
+          <h1 className="text-4xl font-bold text-heading mb-2">BetterBetter</h1>
         </div>
 
         {/* Error Display */}
