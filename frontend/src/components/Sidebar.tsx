@@ -109,11 +109,10 @@ const Sidebar = ({ activeView, onViewChange, onLogout, onLanguageChange }: Sideb
             <div
               key={index}
               onClick={() => onViewChange(item.view)}
-              className={`flex items-center px-6 py-3 gap-2 cursor-pointer transition-colors ${
-                isActive
+              className={`flex items-center px-6 py-3 gap-2 cursor-pointer transition-colors ${isActive
                   ? 'bg-white/8 text-text-sidebar-active border-l-4 border-secondary-main'
                   : 'text-text-sidebar-inactive hover:text-text-sidebar-active'
-              }`}
+                }`}
             >
               <Icon size={20} />
               <span className="text-sm font-medium">{item.label}</span>
@@ -122,35 +121,30 @@ const Sidebar = ({ activeView, onViewChange, onLogout, onLanguageChange }: Sideb
         })}
       </div>
 
-      {/* Logout Button */}
       <div className="border-t border-white/10 p-4 space-y-3">
-        {/* Language Selector */}
         <div className="flex gap-2">
           <button
             onClick={() => handleLanguageChange('pl')}
             disabled={isChangingLanguage}
-            className={`flex-1 px-3 py-2 rounded text-xs font-medium transition-colors ${
-              language === 'pl'
+            className={`flex-1 px-3 py-2 rounded text-xs font-medium transition-colors ${language === 'pl'
                 ? 'bg-secondary-main text-white'
                 : 'bg-white/10 text-text-sidebar-inactive hover:text-text-sidebar-active'
-            } disabled:opacity-50`}
+              } disabled:opacity-50`}
           >
             🇵🇱 PL
           </button>
           <button
             onClick={() => handleLanguageChange('en')}
             disabled={isChangingLanguage}
-            className={`flex-1 px-3 py-2 rounded text-xs font-medium transition-colors ${
-              language === 'en'
+            className={`flex-1 px-3 py-2 rounded text-xs font-medium transition-colors ${language === 'en'
                 ? 'bg-secondary-main text-white'
                 : 'bg-white/10 text-text-sidebar-inactive hover:text-text-sidebar-active'
-            } disabled:opacity-50`}
+              } disabled:opacity-50`}
           >
             🇬🇧 EN
           </button>
         </div>
 
-        {/* Logout Button */}
         <button
           onClick={onLogout}
           className="w-full flex items-center px-6 py-3 gap-2 text-text-sidebar-inactive hover:text-text-sidebar-active transition-colors"

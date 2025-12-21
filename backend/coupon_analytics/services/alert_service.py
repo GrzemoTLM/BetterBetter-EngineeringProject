@@ -37,13 +37,11 @@ def _compute_metric_value(rule: AlertRule, *, user: User, start: datetime, end: 
         return _dec_or_none(summary.get(key))
 
     if metric == 'loss':
-        # Licz NETTO sumę balance WSZYSTKICH kuponów (wygrane i przegranym)
-        # balance może być ujemny (strata) lub dodatni (zysk)
         agg = Coupon.objects.filter(
             user=user,
             created_at__gte=start,
             created_at__lte=end,
-            status__in=[Coupon.CouponStatus.LOST, Coupon.CouponStatus.WON]  # ← Oba!
+            status__in=[Coupon.CouponStatus.LOST, Coupon.CouponStatus.WON]
         ).aggregate(total_balance=Sum('balance'))
 
         total_balance = agg['total_balance']
@@ -55,9 +53,6 @@ def _compute_metric_value(rule: AlertRule, *, user: User, start: datetime, end: 
         except Exception:
             return None
 
-        # Zwróć wartość bezwzględną TYLKO jeśli ujemna (strata)
-        # Jeśli dodatnia (zysk), zwróć 0 (brak straty)
-        # np. -150 → 150, 100 → 0
         if d < 0:
             return abs(d)
         else:
