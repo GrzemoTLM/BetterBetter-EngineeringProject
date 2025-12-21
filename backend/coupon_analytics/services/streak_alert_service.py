@@ -25,18 +25,17 @@ def get_current_loss_streak(user: User) -> int:
 
 def cleanup_streak_alerts_on_win(user: User) -> None:
     """
-    Na wygraną kupon:
-    1. Usuń wszystkie stare AlertEvents dla streaku
-    2. Stwórz nowy AlertEvent ze metric_value=0 aby zaznaczyć reset
+    Upon winning a coupon:
+    1. Delete all old AlertEvents for the streak.
+    2. Create a new AlertEvent with metric_value=0 to mark the reset.
     """
-    # Usuń stare alerty
+    # Delete old alerts
     count = AlertEvent.objects.filter(
         user=user,
         metric='streak_loss'
     ).delete()[0]
     logger.debug(f"[CLEANUP] User {user.id}: deleted {count} streak alerts on WIN (sent + unsent)")
 
-    # Utwórz alert z metric_value=0 dla każdej reguły (reset streaku)
     rules = AlertRule.objects.filter(
         user=user,
         is_active=True,
@@ -52,11 +51,11 @@ def cleanup_streak_alerts_on_win(user: User) -> None:
                 metric='streak_loss',
                 comparator=rule.comparator,
                 threshold_value=rule.threshold_value,
-                metric_value=Decimal(0),  # ← RESET na 0
+                metric_value=Decimal(0),
                 window_start=now,
                 window_end=now,
-                message_rendered=f"✅ Streaka przerwana - reset (próg: {rule.threshold_value})",
-                sent_at=None,  # ← Bot wyśle i ustawi sent_at
+                message_rendered=f"Streak broken - reset (threshold: {rule.threshold_value})",
+                sent_at=None,
             )
             logger.info(f"[CLEANUP] User {user.id}: Created reset alert ID {alert.id} with metric_value=0")
         except Exception as e:
@@ -65,9 +64,9 @@ def cleanup_streak_alerts_on_win(user: User) -> None:
 
 def check_and_send_streak_loss_alert(user: User) -> None:
     """
-    Sprawdzić obecny streak i wysłać alert jeśli >= threshold.
-    Alert tworzy się zawsze (metric_value = liczba strat),
-    ale send_alert=True tylko gdy >= threshold.
+    Check current streak and send alert if >= threshold.
+    An alert is always created (metric_value = number of losses),
+    but it will be sent only if the condition is met.
     """
     logger.debug(f"[CHECK_ALERT] Starting for user {user.id}")
 
@@ -97,7 +96,6 @@ def check_and_send_streak_loss_alert(user: User) -> None:
             logger.warning(f"[CHECK_ALERT] Invalid threshold for rule {rule.id}")
             continue
 
-        # Szukaj OSTATNIEGO alertu dla tej reguły (po dacie utworzenia)
         last_alert = AlertEvent.objects.filter(
             rule=rule,
             user=user,
@@ -112,32 +110,28 @@ def check_and_send_streak_loss_alert(user: User) -> None:
                 last_streak = 0
             logger.debug(f"[CHECK_ALERT] Last alert metric_value: {last_streak}, current streak: {current_streak}")
 
-        # Jeśli obecny streak > ostatniego zapisanego, stwórz nowy alert
         if current_streak <= last_streak:
             logger.debug(f"[CHECK_ALERT] Current streak {current_streak} <= last {last_streak}, SKIPPING")
             continue
 
         logger.debug(f"[CHECK_ALERT] Current streak: {current_streak}, threshold: {threshold}")
 
-        # Sprawdź czy streak przekracza threshold (greater than = >)
-        # Threshold 2 oznacza: alert przy 3+ przegranych
         if current_streak <= threshold:
             logger.debug(f"[CHECK_ALERT] Current streak {current_streak} <= threshold {threshold}, SKIPPING")
             continue
 
         try:
-            # Stwórz alert z metric_value = aktualny streak
             alert = AlertEvent.objects.create(
                 rule=rule,
                 user=user,
                 metric='streak_loss',
                 comparator=rule.comparator,
                 threshold_value=rule.threshold_value,
-                metric_value=Decimal(current_streak),  # ← Aktualna liczba strat
+                metric_value=Decimal(current_streak),
                 window_start=now,
                 window_end=now,
-                message_rendered=f"🟥 {current_streak} przegranych z rzędu (próg: {threshold}) 🟥",
-                sent_at=None,  # ← Bot wyśle i ustawi sent_at
+                message_rendered=f"{current_streak} losses in a row (threshold: {threshold})",
+                sent_at=None,
             )
 
             logger.info(f"[CHECK_ALERT] Created AlertEvent ID {alert.id} (pending send) with metric_value={alert.metric_value} (streak increased {last_streak} → {current_streak})")
