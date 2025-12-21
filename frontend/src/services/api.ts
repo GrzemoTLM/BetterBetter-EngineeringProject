@@ -431,7 +431,7 @@ class ApiService {
   async register(data: RegisterRequest): Promise<AuthResponse> {
     try {
       const response =
-          await this.axiosInstance.post<AuthResponse>(API_ENDPOINTS.AUTH.REGISTER, data);
+        await this.axiosInstance.post<AuthResponse>(API_ENDPOINTS.AUTH.REGISTER, data);
       if (response.data.access) {
         this.setToken(response.data.access);
         if (response.data.refresh) {
@@ -561,7 +561,7 @@ class ApiService {
       const response = await this.axiosInstance.get<UserProfile[] | { results: UserProfile[] }>('/api/users/users/');
       console.log('[API] getAllUsers - status:', response.status);
       console.log('[API] getAllUsers - data:', response.data);
-      
+
       if (Array.isArray(response.data)) {
         return response.data;
       } else if (response.data && typeof response.data === 'object' && 'results' in response.data) {
@@ -698,7 +698,7 @@ class ApiService {
     } catch (error) {
       if (error instanceof AxiosError && error.response?.status === 404) {
 
-        return null; // not connected yet
+        return null;
       }
 
       throw new Error(this.getErrorMessage(error));

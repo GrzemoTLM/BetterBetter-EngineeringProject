@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
+from django.db import models
 from .models import Ticket, TicketCategory, TicketComment
 
 
@@ -28,7 +29,7 @@ class TicketAdmin(admin.ModelAdmin):
         'id', 'title', 'user', 'category', 'status', 'priority',
         'assigned_to', 'created_at'
     ]
-    list_filter = ['status', 'priority', 'category', 'created_at']
+    list_filter = ['status', 'priority', 'category', 'created_at', 'assigned_to']
     search_fields = ['title', 'description', 'user__username']
     readonly_fields = ['created_at', 'updated_at', 'resolved_at']
 
@@ -52,3 +53,7 @@ class TicketAdmin(admin.ModelAdmin):
             obj.user = request.user
         super().save_model(request, obj, form, change)
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        # Zawsze pokaż wszystkie tickety dla admina
+        return qs

@@ -1,5 +1,5 @@
 export interface Bet {
-  id?: number; // backend bet id if available
+  id?: number;
   event_name: string;
   start_time: string | null | undefined;
   bet_type: number | string;
@@ -35,8 +35,8 @@ export interface CreateCouponRequest {
   bet_stake?: string | number;
   stake?: string | number;
   placed_at?: string;
-  strategy?: string; // strategy by name
-  strategy_id?: number; // alternative: strategy by id
+  strategy?: string;
+  strategy_id?: number;
   bets?: Bet[];
 }
 
@@ -47,7 +47,7 @@ export interface Coupon extends Omit<CreateCouponRequest, 'strategy_id' | 'strat
   user: number;
   bookmaker: string;
   currency: string;
-  strategy: string | null; // backend returns strategy name
+  strategy: string | null;
   potential_payout: number;
   multiplier?: number;
   status?: string;

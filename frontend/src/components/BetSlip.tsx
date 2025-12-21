@@ -261,7 +261,7 @@ const BetSlip = ({
 
       await api.addSingleBetToCoupon(couponId, betData);
 
-      const recalcResult = await api.recalculateCoupon(couponId);
+      await api.recalculateCoupon(couponId);
       const refreshed = await api.getCoupon(couponId);
       applyCouponMetrics(refreshed);
 
@@ -504,15 +504,15 @@ const BetSlip = ({
               onChange={(e) => handleStrategyChange(e.target.value)}
               className="w-full px-4 py-2 border border-default rounded-lg text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-main focus:border-transparent bg-white"
             >
-              {strategies.length > 0 ? (
+              {strategies.length > 0 ?
                 strategies.map((s) => (
                   <option key={s.id} value={s.name}>
                     {s.name}
                   </option>
                 ))
-              ) : (
+              :
                 <option value="">No strategies available</option>
-              )}
+              }
             </select>
           </div>
         </div>

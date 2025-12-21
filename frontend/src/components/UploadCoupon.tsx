@@ -87,6 +87,11 @@ const UploadCoupon = ({ onOcrParsed }: UploadCouponProps) => {
       return;
     }
 
+    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      alert('File size too large. Please select a file smaller than 5MB.');
+      return;
+    }
+
     console.log('[UI] OCR Dropzone - Selected file:', file.name, mime, file.size);
 
     startSuccessProgress();
@@ -99,14 +104,18 @@ const UploadCoupon = ({ onOcrParsed }: UploadCouponProps) => {
         onOcrParsed(result);
       }
 
-      setFinished(true);
-      setShowDropzone(false);
       completeSuccessProgress();
-    } catch (err) {
-      console.error('[UI] OCR Dropzone - Error calling OCR API:', err);
+      setFinished(true);
+    } catch (error: any) {
+      console.error('[UI] OCR Dropzone - Error calling OCR API:', error);
       clearProgressInterval();
       setSuccessVisible(false);
-      setFinished(false);
+
+      if (error.message && error.message.includes('Cannot read tensor')) {
+        alert('OCR processing failed. The image may be corrupted or unsupported. Please try a different image.');
+      } else {
+        alert('Error processing OCR: ' + (error.message || 'Unknown error'));
+      }
     }
   };
 

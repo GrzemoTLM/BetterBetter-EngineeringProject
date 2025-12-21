@@ -36,7 +36,6 @@ def get_coupon_stats_for_period(user, start_date, end_date, query=None):
     )
 
     if query and query.filters:
-        # Apply query filters if provided
         filters = query.filters
         if 'status' in filters:
             coupons = coupons.filter(status=filters['status'])
@@ -48,7 +47,6 @@ def get_coupon_stats_for_period(user, start_date, end_date, query=None):
     lost_coupons = coupons.filter(status='lost').count()
     in_progress = coupons.filter(status='in_progress').count()
 
-    # Calculate totals
     total_stake = sum(
         c.bet_stake for c in coupons if c.bet_stake
     ) or Decimal('0')
@@ -181,7 +179,6 @@ def calculate_next_run(report, base_time=None):
     elif frequency == Report.Frequency.WEEKLY:
         next_run = base_time + timedelta(weeks=1)
     elif frequency == Report.Frequency.MONTHLY:
-        # Add ~30 days (not exact month due to date variations)
         next_run = base_time + timedelta(days=30)
     elif frequency == Report.Frequency.YEARLY:
         next_run = base_time + timedelta(days=365)
@@ -272,24 +269,19 @@ def send_pending_reports() -> None:
 
     for report in pending_reports:
         try:
-            # Sprawdź czy user ma Telegram
             try:
                 tg_user = TelegramUser.objects.get(user=report.user)
             except TelegramUser.DoesNotExist:
                 logger.warning(f"[REPORTS] User {report.user.id} has no Telegram profile, skipping")
                 continue
 
-            # Wygeneruj dane raportu
             report_data = generate_report_data(report)
 
-            # Formatuj wiadomość
             message = format_report_message(report_data)
 
-            # Wyślij do Telegrama
             sent = send_telegram_message(tg_user.telegram_id, message)
 
             if sent:
-                # Ustaw następny next_run
                 report.next_run = calculate_next_run(report, now)
                 report.save(update_fields=['next_run'])
                 logger.info(f"[REPORTS] Report ID {report.id} sent, next_run set to {report.next_run}")
